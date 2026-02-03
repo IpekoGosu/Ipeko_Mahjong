@@ -8,12 +8,16 @@ export interface Meld {
 
 export class Player {
     private readonly id: string
-    private readonly isOya: boolean
+    public readonly isOya: boolean
     readonly isAi: boolean
     private hand: Tile[] = []
     private discards: Tile[] = []
     private melds: Meld[] = []
     public lastDrawnTile: Tile | null = null
+    public isRiichi: boolean = false
+    public isDoubleRiichi: boolean = false
+    public ippatsuEligible: boolean = false
+    public riichiDeclarationTurn: number | null = null
 
     constructor(id: string, isOya: boolean = false, isAi: boolean = false) {
         this.id = id
@@ -29,6 +33,10 @@ export class Player {
 
     getHand(): Tile[] {
         return [...this.hand]
+    }
+
+    getMelds(): Meld[] {
+        return [...this.melds]
     }
 
     getDiscards(): Tile[] {
@@ -82,20 +90,24 @@ export class Player {
         this.melds.push(meld)
     }
 
+    getHandStringForRiichi(): string {
+        return this.getFullHandString()
+    }
+
     getFullHandString(): string {
         // For riichi check, we need to sort the string representation
-        const handMap: Record<string, number[]> = { m: [], p: [], s: [], z: [] }
-        this.hand.forEach((t) => handMap[t.getSuit()].push(t.getRank()))
+        const handMap: Record<string, string[]> = { m: [], p: [], s: [], z: [] }
+        this.hand.forEach((t) => {
+            const s = t.toString()
+            handMap[t.getSuit()].push(s[0])
+        })
 
         let handString = ''
-        handString +=
-            handMap.m.sort().join('') + (handMap.m.length > 0 ? 'm' : '')
-        handString +=
-            handMap.p.sort().join('') + (handMap.p.length > 0 ? 'p' : '')
-        handString +=
-            handMap.s.sort().join('') + (handMap.s.length > 0 ? 's' : '')
-        handString +=
-            handMap.z.sort().join('') + (handMap.z.length > 0 ? 'z' : '')
+        ;(['m', 'p', 's', 'z'] as const).forEach((suit) => {
+            if (handMap[suit].length > 0) {
+                handString += handMap[suit].sort().join('') + suit
+            }
+        })
         return handString
     }
     getHandString(): string {

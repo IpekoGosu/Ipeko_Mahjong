@@ -17,6 +17,13 @@ export interface Meld {
 }
 
 export interface ScoreCalculation {
-    oya: Array<number>
-    ko: Array<number>
+    han: number
+    fu: number
+    ten: number
+    yaku: Record<string, string>
+    yakuman: number
+    oya: number[]
+    ko: number[]
+    name: string
+    text: string
 }

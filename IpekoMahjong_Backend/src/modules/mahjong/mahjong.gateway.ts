@@ -98,7 +98,7 @@ export class MahjongGateway {
     @SubscribeMessage('discard-tile')
     async handleDiscardTile(
         @ConnectedSocket() client: Socket,
-        @MessageBody() data: { roomId: string; tile: string },
+        @MessageBody() data: { roomId: string; tile: string; isRiichi?: boolean },
     ): Promise<void> {
         const room = this.gameRoomService.getRoom(data.roomId)
         if (!room) return
@@ -107,6 +107,7 @@ export class MahjongGateway {
             data.roomId,
             client.id,
             data.tile,
+            data.isRiichi,
         )
         this.processGameUpdate(gameUpdate)
 
@@ -173,7 +174,11 @@ export class MahjongGateway {
      * 타패 후 다른 플레이어의 행동 가능 여부를 확인하고, 가능하면 이벤트를 보냅니다.
      * 행동이 없으면 자동으로 다음 턴을 스케줄링합니다.
      */
-    private checkAndNotifyActions(roomId: string, discarderId: string, tileString: string): void {
+    private checkAndNotifyActions(
+        roomId: string,
+        discarderId: string,
+        tileString: string,
+    ): void {
         const room = this.gameRoomService.getRoom(roomId)
         if (!room) return
 
@@ -241,7 +246,7 @@ export class MahjongGateway {
             const discardEvent = gameUpdate.events.find(
                 (e) => e.eventName === 'update-discard',
             )
-            
+
             if (discardEvent && !gameUpdate.isGameOver) {
                 const discarderId = discardEvent.payload.playerId
                 const tileString = discardEvent.payload.tile

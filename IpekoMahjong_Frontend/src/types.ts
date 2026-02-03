@@ -23,6 +23,12 @@ export interface TurnChangedPayload {
   playerId: string; // The ID of the player whose turn it is
   wallCount: number;
   deadWallCount: number;
+  dora?: TileString[]; // Updated dora indicators (e.g. after Kan)
+}
+
+// Event: 'riichi-declared'
+export interface RiichiDeclaredPayload {
+  playerId: string;
 }
 
 // Event: 'new-tile-drawn' (Only received if it's YOUR turn)
@@ -83,6 +89,7 @@ export interface PlayerState {
   discards: string[]; // List of discarded tiles
   melds: string[][]; // List of melds (e.g. [['1m', '2m', '3m']])
   isMyTurn: boolean;
+  isRiichi?: boolean;
 }
 
 export interface GameState {

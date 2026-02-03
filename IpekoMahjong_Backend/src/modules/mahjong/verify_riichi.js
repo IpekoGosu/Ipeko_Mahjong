@@ -2,28 +2,42 @@
 const Riichi = require('riichi');
 
 try {
-  console.log('Testing Riichi library...');
+  console.log('Debugging Riichi Properties...');
 
-  // Test 1: Standard format
-  const hand1 = new Riichi('123m456p789s1122z');
-  const result1 = hand1.calc();
-  console.log('Hand 1 (Standard):', 'Shanten:', result1.hairi?.now);
+  const handStr = '123m456p789s11z222z'; 
 
-  // Test 2: Verbose format (1m2m3m...)
-  const hand2 = new Riichi('1m2m3m4p5p6p7s8s9s1z1z2z2z');
-  const result2 = hand2.calc();
-  console.log('Hand 2 (Verbose):', 'Shanten:', result2.hairi?.now);
+  // Test 1: Setting Properties Manually
+  const r = new Riichi(handStr);
+  
+  // Set Options
+  r.bakaze = 0; // East? No, comment said 1=East. Let's try 0 and 1.
+  r.jikaze = 2; // South
+  r.dora = ['1m']; // Actual tiles
+  r.isTsumo = true;
+  r.extra = 'riichi'; // Guessing string format for Yaku flags
+  // If extra supports multiple, maybe comma separated? 'riichi,ippatsu'?
+  
+  // Note: The constructor parsing logic said: 
+  // if (!v.includes(m/p/s/z)) this.extra = v
+  // So maybe passing "+riichi+ippatsu" works? 
+  // But constructor overwrites extra: this.extra = v. So last one wins?
+  
+  const result = r.calc();
+  console.log('Manual Prop Set Result:', 
+    'Han:', result.han, 
+    'Yaku:', Object.keys(result.yaku)
+  );
 
-  // Test Win check
-  // Assuming a tenpai hand: 123m 456p 789s 11z 22z (waiting for 2z)
-  const tenpaiHand = new Riichi('123m456p789s1z1z2z2z');
-  const tenpaiResult = tenpaiHand.calc();
-  console.log('Tenpai Hand Shanten:', tenpaiResult.hairi?.now); // Should be 0
-  // If we add the winning tile to the hand string, shanten should be -1.
-  const winningHandStr = '123m456p789s11z222z';
-  const winningHand = new Riichi(winningHandStr);
-  const winningResult = winningHand.calc();
-  console.log('Winning Hand isAgari:', winningResult.isAgari); // Should be true
+  // Test 2: passing extra via string
+  const strWithExtra = '123m456p789s11z222z+riichi+ippatsu';
+  const r2 = new Riichi(strWithExtra);
+  // Constructor logic: this.extra = v.
+  // loop 1: extra = 'riichi'
+  // loop 2: extra = 'ippatsu'
+  // So 'riichi' is lost?
+  console.log('String Extra Test (Result):', Object.keys(r2.calc().yaku));
+  console.log('String Extra Test (Property):', r2.extra);
+
 } catch (e) {
   console.error('Error:', e);
 }

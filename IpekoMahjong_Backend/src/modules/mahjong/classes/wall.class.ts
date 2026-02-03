@@ -59,6 +59,14 @@ export class Wall {
         return this.tiles.shift() as Tile
     }
 
+    drawReplacement(): Tile | null {
+        // Draw from the "Rinshan" area of Dead Wall.
+        // For simplicity, we take from the end of deadWall array.
+        // In a full implementation, we might need to replenish deadWall from live wall.
+        if (this.deadWall.length === 0) return null
+        return this.deadWall.pop() as Tile
+    }
+
     getRemainingTiles(): number {
         return this.tiles.length
     }
