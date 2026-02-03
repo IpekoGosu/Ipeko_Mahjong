@@ -1,0 +1,15 @@
+{
+  "name": "ipeko-mahjong-root",
+  "version": "1.0.0",
+  "description": "Monorepo root for IpekoMahjong",
+  "private": true,
+  "scripts": {
+    "install:all": "npm install && cd IpekoMahjong_Backend && npm install && cd ../IpekoMahjong_Frontend && npm install",
+    "dev:backend": "cd IpekoMahjong_Backend && npm run dev",
+    "dev:frontend": "cd IpekoMahjong_Frontend && npm run dev",
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\" --names \"BACKEND,FRONTEND\" --prefix-colors \"blue,green\""
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.0"
+  }
+}

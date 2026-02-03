@@ -1,0 +1,113 @@
+import { Tile } from './tile.class'
+
+// Meld is not used in Phase 2 yet, so we can define a simple interface for it.
+export interface Meld {
+    type: 'chi' | 'pon' | 'kan'
+    tiles: Tile[]
+}
+
+export class Player {
+    private readonly id: string
+    private readonly isOya: boolean
+    readonly isAi: boolean
+    private hand: Tile[] = []
+    private discards: Tile[] = []
+    private melds: Meld[] = []
+    public lastDrawnTile: Tile | null = null
+
+    constructor(id: string, isOya: boolean = false, isAi: boolean = false) {
+        this.id = id
+        this.isOya = isOya
+        this.isAi = isAi
+    }
+
+    // ... (rest of the methods are the same)
+
+    getId(): string {
+        return this.id
+    }
+
+    getHand(): Tile[] {
+        return [...this.hand]
+    }
+
+    getDiscards(): Tile[] {
+        return [...this.discards]
+    }
+
+    draw(tile: Tile): void {
+        if (tile) {
+            this.hand.push(tile)
+            this.lastDrawnTile = tile
+            this.sortHand()
+        }
+    }
+
+    discard(tileString: string): Tile | null {
+        const tileIndex = this.hand.findIndex(
+            (t) => t.toString() === tileString,
+        )
+
+        if (tileIndex === -1) {
+            console.error(`Player ${this.id} does not have tile ${tileString}`)
+            return null // Tile not in hand
+        }
+
+        const [discardedTile] = this.hand.splice(tileIndex, 1)
+        this.discards.push(discardedTile)
+        this.lastDrawnTile = null // Reset after discard
+        return discardedTile
+    }
+
+    removeTiles(tileStrings: string[]): Tile[] {
+        const removed: Tile[] = []
+        for (const s of tileStrings) {
+            const idx = this.hand.findIndex((t) => t.toString() === s)
+            if (idx !== -1) {
+                removed.push(this.hand.splice(idx, 1)[0])
+            }
+        }
+        return removed
+    }
+
+    removeDiscard(tileString: string): Tile | null {
+        const index = this.discards.findIndex((t) => t.toString() === tileString)
+        if (index !== -1) {
+            return this.discards.splice(index, 1)[0]
+        }
+        return null
+    }
+
+    addMeld(meld: Meld): void {
+        this.melds.push(meld)
+    }
+
+    getFullHandString(): string {
+        // For riichi check, we need to sort the string representation
+        const handMap: Record<string, number[]> = { m: [], p: [], s: [], z: [] }
+        this.hand.forEach((t) => handMap[t.getSuit()].push(t.getRank()))
+
+        let handString = ''
+        handString +=
+            handMap.m.sort().join('') + (handMap.m.length > 0 ? 'm' : '')
+        handString +=
+            handMap.p.sort().join('') + (handMap.p.length > 0 ? 'p' : '')
+        handString +=
+            handMap.s.sort().join('') + (handMap.s.length > 0 ? 's' : '')
+        handString +=
+            handMap.z.sort().join('') + (handMap.z.length > 0 ? 'z' : '')
+        return handString
+    }
+    getHandString(): string {
+        return this.hand.map((tile) => tile.toString()).join('')
+    }
+
+    private sortHand(): void {
+        this.hand.sort((a, b) => {
+            if (a.getSuit() !== b.getSuit()) {
+                return a.getSuit().localeCompare(b.getSuit())
+            }
+            return a.getRank() - b.getRank()
+        })
+    }
+}
