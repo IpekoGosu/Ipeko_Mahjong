@@ -1,2 +1,63 @@
+# Gemini
 /.gemini
+
+# Dependencies
 /node_modules
+/IpekoMahjong_Backend/node_modules
+/IpekoMahjong_Frontend/node_modules
+
+# Compiled output
+/dist
+/build
+/IpekoMahjong_Backend/dist
+/IpekoMahjong_Frontend/dist
+
+# Logs
+logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Tests
+/coverage
+/.nyc_output
+
+# IDEs and editors
+/.idea
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+*.swp
+
+# VSCode
+/.vscode
+
+# Environment variables
+.env
+.env.development.local
+.env.test.local
+.env.production.local
+.env.local
+
+# Temp directory
+.temp
+.tmp
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Diagnostic reports
+report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
