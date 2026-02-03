@@ -52,10 +52,7 @@ describe('MahjongGateway', () => {
             expect(data.dora).toHaveLength(1)
 
             // Check if all events are received
-            if (
-                gameStartedReceived &&
-                turnChangedReceived
-            ) {
+            if (gameStartedReceived && turnChangedReceived) {
                 done()
             }
         })
@@ -63,10 +60,7 @@ describe('MahjongGateway', () => {
         client.on('turn-changed', (data) => {
             turnChangedReceived = true
             expect(data).toHaveProperty('playerId', client.id)
-            if (
-                gameStartedReceived &&
-                turnChangedReceived
-            ) {
+            if (gameStartedReceived && turnChangedReceived) {
                 done()
             }
         })
@@ -87,7 +81,7 @@ describe('MahjongGateway', () => {
         client.on('game-started', (data) => {
             myRoomId = data.roomId
             myHand = data.hand
-            
+
             // If I am Oya (which I am), I discard immediately to start the game
             const tileToDiscard = myHand[myHand.length - 1]
             client.emit('discard-tile', {
@@ -99,7 +93,7 @@ describe('MahjongGateway', () => {
         client.on('new-tile-drawn', (data) => {
             // This event is received when it's my turn AGAIN (after AIs played)
             // or if I wasn't Oya (but I am).
-            
+
             // If this fires, it means the round completed successfully!
             expect(data).toHaveProperty('tile')
             done()

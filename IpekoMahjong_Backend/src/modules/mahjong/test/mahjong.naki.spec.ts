@@ -14,7 +14,7 @@ describe('MahjongGame Naki (Call) System', () => {
             { id: 'ai2', isAi: true },
             { id: 'ai3', isAi: true },
         ])
-        
+
         // Mock start game to initialize
         game.startGame(roomId)
     })
@@ -22,10 +22,8 @@ describe('MahjongGame Naki (Call) System', () => {
     it('should detect PON opportunity', () => {
         const human = game.getPlayer('human')
         expect(human).toBeDefined()
-        if (!human) return
-
-        // Force human hand to have two 1m (Man)
-        (human as any).hand = [
+        if (!human) return // Force human hand to have two 1m (Man)
+        ;(human as any).hand = [
             new Tile('m', 1, false, 0),
             new Tile('m', 1, false, 1),
             new Tile('p', 1, false, 2),
@@ -43,7 +41,7 @@ describe('MahjongGame Naki (Call) System', () => {
 
         // AI1 discards 1m
         const actions = game.getPossibleActions('ai1', '1m')
-        
+
         expect(actions['human']).toBeDefined()
         expect(actions['human'].pon).toBe(true)
     })
@@ -51,11 +49,10 @@ describe('MahjongGame Naki (Call) System', () => {
     it('should detect RON opportunity', () => {
         const human = game.getPlayer('human')
         expect(human).toBeDefined()
-        if (!human) return
-
-        // Set up Tenpai on 1z (East) - Shanpon wait with 2z
-        // Hand: 111m 234m 567m 11z 22z
-        (human as any).hand = [
+        if (!human)
+            return // Set up Tenpai on 1z (East) - Shanpon wait with 2z
+            // Hand: 111m 234m 567m 11z 22z
+        ;(human as any).hand = [
             new Tile('m', 1, false, 0),
             new Tile('m', 1, false, 1),
             new Tile('m', 1, false, 2),
@@ -73,7 +70,7 @@ describe('MahjongGame Naki (Call) System', () => {
 
         // AI1 discards 1z (East)
         const actions = game.getPossibleActions('ai1', '1z')
-        
+
         expect(actions['human']).toBeDefined()
         expect(actions['human'].ron).toBe(true)
     })

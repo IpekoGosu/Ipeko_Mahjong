@@ -1,6 +1,5 @@
 import { ScoreCalculation } from '@src/modules/mahjong/interfaces/mahjong.types'
 import { Player } from './player.class'
-import { Tile } from './tile.class'
 import Riichi from 'riichi'
 
 export interface WinContext {
@@ -40,24 +39,89 @@ export class RuleManager {
         }
     }
 
-    static calculateScore(player: Player, context: WinContext): ScoreCalculation | null {
+    static getRiichiDiscards(player: Player): string[] {
+        if (!player.isHandClosed() || player.isRiichi) return []
+
+        const hand = player.getHand()
+        const uniqueTiles = Array.from(new Set(hand.map((t) => t.toString())))
+        const validDiscards: string[] = []
+
+        for (const tileStr of uniqueTiles) {
+            try {
+                // Simulate discard
+                const remainingTiles = hand.map((t) => t.toString())
+                const idx = remainingTiles.indexOf(tileStr)
+                if (idx > -1) remainingTiles.splice(idx, 1)
+
+                // Convert to string for riichi library
+                const testHandStr =
+                    this.convertTilesToRiichiString(remainingTiles)
+                const result = new Riichi(testHandStr).calc()
+
+                // hairi.now 0 means Tenpai
+                const shanten = result.hairi?.now ?? 100
+                const shanten7and13 = result.hairi7and13?.now ?? 100
+
+                if (shanten === 0 || shanten7and13 === 0) {
+                    validDiscards.push(tileStr)
+                }
+            } catch (e) {
+                console.error(
+                    `Error calculating shanten for tile ${tileStr}:`,
+                    e,
+                )
+            }
+        }
+
+        return validDiscards
+    }
+
+    private static convertTilesToRiichiString(tiles: string[]): string {
+        const groups: Record<string, string[]> = { m: [], p: [], s: [], z: [] }
+        tiles.forEach((t) => {
+            const rank = t[0]
+            const suit = t[1]
+            if (groups[suit]) groups[suit].push(rank)
+        })
+
+        let result = ''
+        ;(['m', 'p', 's', 'z'] as const).forEach((suit) => {
+            if (groups[suit].length > 0) {
+                result += groups[suit].sort().join('') + suit
+            }
+        })
+        return result
+    }
+
+    static calculateScore(
+        player: Player,
+        context: WinContext,
+    ): ScoreCalculation | null {
         // 1. Construct Hand String
         let handStr = player.getHandStringForRiichi()
-        
+
         // Add melds
         const melds = player.getMelds()
         if (melds.length > 0) {
-            melds.forEach(meld => {
-                // Format: +123m or +111z
-                const meldStr = meld.tiles.map(t => t.toString()).join('')
-                handStr += `+${meldStr}`
+            melds.forEach((meld) => {
+                // The riichi library expects melds in format: "123m" or "111z"
+                const suit = meld.tiles[0].getSuit()
+                const ranks = meld.tiles
+                    .map((t) => {
+                        const s = t.toString()
+                        return s[0] // Get rank ('0' for aka, '1'-'9' otherwise)
+                    })
+                    .sort()
+                    .join('')
+                handStr += `+${ranks}${suit}`
             })
         }
 
-        // Add winning tile for Ron
+        // Add winning tile for Ron as a separate segment
+        // This sets isTsumo = false in the library constructor automatically
         if (!context.isTsumo) {
             if (!context.winningTile) {
-                console.error("Winning tile required for Ron")
+                console.error('Winning tile required for Ron')
                 return null
             }
             handStr += `+${context.winningTile}`
@@ -73,15 +137,15 @@ export class RuleManager {
         // Winds
         // 1z=East(1), 2z=South(2), etc.
         riichi.bakaze = parseInt(context.bakaze[0])
-        // Seat wind: Player doesn't store seat wind directly usually, 
+        // Seat wind: Player doesn't store seat wind directly usually,
         // but let's assume MahjongGame passes correct generic seat index or we derive it.
         // For now, let's assume the context or player should provide it.
         // Actually, Player.isOya is known.
         // If we don't have exact seat, default to 2 (South) unless Oya (1).
-        // ideally, Player should know their wind. 
-        // Let's assume for now: Oya=1, others=2 (Ko). 
+        // ideally, Player should know their wind.
+        // Let's assume for now: Oya=1, others=2 (Ko).
         // To be precise, we need the wind. Let's add it to Player or Context later.
-        riichi.jikaze = player.isOya ? 1 : 2 
+        riichi.jikaze = player.isOya ? 1 : 2
 
         // Dora (Convert indicators to actual tiles)
         riichi.dora = context.dora.map((d) => this.getActualDora(d))
@@ -94,7 +158,7 @@ export class RuleManager {
         if (context.isHaitei || context.isHoutei) extra += 'h'
         if (context.isRinshan || context.isChankan) extra += 'k'
         if (context.isTenhou || context.isChiihou) extra += 't'
-        
+
         riichi.extra = extra
 
         // 4. Calculate
@@ -104,7 +168,7 @@ export class RuleManager {
         if (!result.isAgari) {
             return null
         }
-        
+
         // Check for Yaku Nashi (No Yaku)
         // If not Yakuman and Han is 0, it's invalid.
         if (result.yakuman === 0 && result.han === 0) {

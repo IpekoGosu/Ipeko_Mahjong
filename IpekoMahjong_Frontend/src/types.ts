@@ -16,6 +16,7 @@ export interface GameStartedPayload {
   dora: TileString[]; // Initial dora indicators
   wallCount: number;
   deadWallCount: number;
+  riichiDiscards?: TileString[];
 }
 
 // Event: 'turn-changed'
@@ -34,6 +35,8 @@ export interface RiichiDeclaredPayload {
 // Event: 'new-tile-drawn' (Only received if it's YOUR turn)
 export interface NewTileDrawnPayload {
   tile: TileString;
+  riichiDiscards?: TileString[];
+  canTsumo?: boolean;
 }
 
 // Event: 'update-discard'
@@ -57,12 +60,13 @@ export interface UpdateMeldPayload {
   playerId: string;
   type: "chi" | "pon" | "kan" | "ron";
   tiles: TileString[]; // The tiles involved in the meld (e.g., ['1m', '2m', '3m'])
+  stolenFrom?: string; // Player ID whose discard was taken
 }
 
 // Event: 'game-over'
 export interface GameOverPayload {
-  reason: "tsumo" | "ryuukyoku" | "player-disconnected";
-  winnerId?: string; // Present if reason is 'tsumo'
+  reason: "tsumo" | "ron" | "ryuukyoku" | "player-disconnected";
+  winnerId?: string; // Present if reason is 'tsumo' or 'ron'
   disconnectedPlayerId?: string; // Present if reason is 'player-disconnected'
   score?: {
     han: number;
@@ -87,7 +91,7 @@ export interface PlayerState {
   isAi: boolean;
   handCount: number; // For opponents (starts at 13)
   discards: string[]; // List of discarded tiles
-  melds: string[][]; // List of melds (e.g. [['1m', '2m', '3m']])
+  melds: { tiles: string[], stolenFrom?: string }[]; // List of melds with metadata
   isMyTurn: boolean;
   isRiichi?: boolean;
 }
@@ -105,5 +109,7 @@ export interface GameState {
   dealerId: string | null;
   actionRequest: AskActionPayload | null;
   gameOverData: GameOverPayload | null;
+  riichiDiscards: string[];
+  canTsumo: boolean;
   logs: string[];
 }

@@ -9,6 +9,7 @@ import { Server, Socket } from 'socket.io'
 import { GameRoomService } from './service/game-room.service'
 import { GameUpdate } from './classes/mahjong.game.class'
 import { WinstonLoggerService } from '@src/common/logger/winston.logger.service'
+import { RuleManager } from './classes/rule.manager'
 
 @WebSocketGateway({
     cors: {
@@ -76,6 +77,7 @@ export class MahjongGateway {
                 dora: room.mahjongGame.getDora().map((t) => t.toString()),
                 wallCount: room.mahjongGame.getWallCount(),
                 deadWallCount: room.mahjongGame.getDeadWallCount(),
+                riichiDiscards: RuleManager.getRiichiDiscards(human),
             })
         }
 
@@ -98,21 +100,36 @@ export class MahjongGateway {
     @SubscribeMessage('discard-tile')
     async handleDiscardTile(
         @ConnectedSocket() client: Socket,
-        @MessageBody() data: { roomId: string; tile: string; isRiichi?: boolean },
+        @MessageBody()
+        data: { roomId: string; tile: string; isRiichi?: boolean },
     ): Promise<void> {
-        const room = this.gameRoomService.getRoom(data.roomId)
-        if (!room) return
+        try {
+            const room = this.gameRoomService.getRoom(data.roomId)
+            if (!room) return
 
-        const gameUpdate = await room.mahjongGame.discardTile(
-            data.roomId,
-            client.id,
-            data.tile,
-            data.isRiichi,
-        )
-        this.processGameUpdate(gameUpdate)
+            const gameUpdate = await room.mahjongGame.discardTile(
+                data.roomId,
+                client.id,
+                data.tile,
+                data.isRiichi,
+            )
+            this.processGameUpdate(gameUpdate)
 
-        if (!gameUpdate.isGameOver) {
-            this.checkAndNotifyActions(data.roomId, client.id, data.tile)
+            // Only check actions if the discard was successful (i.e. no error events)
+            const hasError = gameUpdate.events.some(
+                (e) => e.eventName === 'error',
+            )
+            if (!gameUpdate.isGameOver && !hasError) {
+                this.checkAndNotifyActions(data.roomId, client.id, data.tile)
+            }
+        } catch (error) {
+            this.logger.error(
+                `Error in handleDiscardTile: ${error.message}`,
+                error.stack,
+            )
+            client.emit('error', {
+                message: 'Internal server error during discard',
+            })
         }
     }
 
@@ -121,11 +138,24 @@ export class MahjongGateway {
         @ConnectedSocket() client: Socket,
         @MessageBody() data: { roomId: string },
     ): void {
-        const room = this.gameRoomService.getRoom(data.roomId)
-        if (!room) return
+        try {
+            const room = this.gameRoomService.getRoom(data.roomId)
+            if (!room) return
 
-        const gameUpdate = room.mahjongGame.declareTsumo(data.roomId, client.id)
-        this.processGameUpdate(gameUpdate)
+            const gameUpdate = room.mahjongGame.declareTsumo(
+                data.roomId,
+                client.id,
+            )
+            this.processGameUpdate(gameUpdate)
+        } catch (error) {
+            this.logger.error(
+                `Error in handleDeclareTsumo: ${error.message}`,
+                error.stack,
+            )
+            client.emit('error', {
+                message: 'Internal server error during tsumo',
+            })
+        }
     }
 
     @SubscribeMessage('select-action')
@@ -139,31 +169,38 @@ export class MahjongGateway {
             consumedTiles?: string[]
         },
     ): void {
-        const room = this.gameRoomService.getRoom(data.roomId)
-        if (!room) return
+        try {
+            const room = this.gameRoomService.getRoom(data.roomId)
+            if (!room) return
 
-        // 스킵인 경우, (실제로는 모든 대상자가 스킵했는지 확인해야 하지만)
-        // 여기서는 타이머가 끝날 때까지 기다리거나, 바로 진행할 수 있습니다.
-        // 간단히 구현하기 위해 스킵은 무시하고 타이머 만료를 기다리게 하거나,
-        // 타이머를 취소하지 않습니다.
-        if (data.type === 'skip') {
-            return
+            // 스킵인 경우
+            if (data.type === 'skip') {
+                return
+            }
+
+            // 행동을 선택한 경우 타이머를 취소하고 행동을 수행합니다.
+            if (room.timer) {
+                clearTimeout(room.timer)
+                room.timer = undefined
+            }
+
+            const gameUpdate = room.mahjongGame.performAction(
+                data.roomId,
+                client.id,
+                data.type,
+                data.tile,
+                data.consumedTiles,
+            )
+            this.processGameUpdate(gameUpdate)
+        } catch (error) {
+            this.logger.error(
+                `Error in handleSelectAction: ${error.message}`,
+                error.stack,
+            )
+            client.emit('error', {
+                message: 'Internal server error during action',
+            })
         }
-
-        // 행동을 선택한 경우 타이머를 취소하고 행동을 수행합니다.
-        if (room.timer) {
-            clearTimeout(room.timer)
-            room.timer = undefined
-        }
-
-        const gameUpdate = room.mahjongGame.performAction(
-            data.roomId,
-            client.id,
-            data.type,
-            data.tile,
-            data.consumedTiles,
-        )
-        this.processGameUpdate(gameUpdate)
     }
 
     // #endregion
@@ -234,31 +271,44 @@ export class MahjongGateway {
      * 5초 뒤에 다음 턴을 진행하도록 스케줄링합니다.
      */
     private scheduleNextTurn(roomId: string, delay: number = 5000): void {
+        const room = this.gameRoomService.getRoom(roomId)
+        if (!room) return
+
+        // Clear existing timer if any
+        if (room.timer) {
+            clearTimeout(room.timer)
+            room.timer = undefined
+        }
+
         const timer = setTimeout(async () => {
-            const room = this.gameRoomService.getRoom(roomId)
-            if (!room) return
+            try {
+                const currentRoom = this.gameRoomService.getRoom(roomId)
+                if (!currentRoom) return
 
-            const gameUpdate = await room.mahjongGame.proceedToNextTurn(roomId)
-            this.processGameUpdate(gameUpdate)
+                const gameUpdate =
+                    await currentRoom.mahjongGame.proceedToNextTurn(roomId)
+                this.processGameUpdate(gameUpdate)
 
-            // 다음 턴이 AI여서 바로 타패한 경우, 다시 다음 턴을 스케줄링합니다.
-            // 단, 타패 후 행동(론/후로) 체크가 필요합니다.
-            const discardEvent = gameUpdate.events.find(
-                (e) => e.eventName === 'update-discard',
-            )
+                // 다음 턴이 AI여서 바로 타패한 경우, 다시 다음 턴을 스케줄링합니다.
+                const discardEvent = gameUpdate.events.find(
+                    (e) => e.eventName === 'update-discard',
+                )
 
-            if (discardEvent && !gameUpdate.isGameOver) {
-                const discarderId = discardEvent.payload.playerId
-                const tileString = discardEvent.payload.tile
-                // AI 타패 후 행동 체크
-                this.checkAndNotifyActions(roomId, discarderId, tileString)
+                if (discardEvent && !gameUpdate.isGameOver) {
+                    const discarderId = discardEvent.payload.playerId
+                    const tileString = discardEvent.payload.tile
+                    // AI 타패 후 행동 체크
+                    this.checkAndNotifyActions(roomId, discarderId, tileString)
+                }
+            } catch (error) {
+                console.error(
+                    `Error in scheduled next turn for room ${roomId}:`,
+                    error,
+                )
             }
         }, delay)
 
-        const room = this.gameRoomService.getRoom(roomId)
-        if (room) {
-            room.timer = timer
-        }
+        room.timer = timer
     }
 
     // #endregion

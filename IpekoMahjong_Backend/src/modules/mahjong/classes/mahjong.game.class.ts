@@ -1,6 +1,7 @@
 import { Wall } from './wall.class'
-import { Player, Meld } from './player.class'
+import { Player } from './player.class'
 import { Tile } from './tile.class'
+import { Meld } from '../interfaces/mahjong.types'
 import { SimpleAI } from '../ai/simple.ai'
 import { RuleManager, WinContext } from './rule.manager'
 import Riichi from 'riichi'
@@ -51,60 +52,9 @@ export class MahjongGame {
     /** 게임을 시작하고 첫 턴의 정보를 반환합니다. */
     async startGame(roomId: string): Promise<GameUpdate> {
         console.log('Starting game')
-        const currentPlayer = this.getCurrentTurnPlayer()
-
-        // AI 턴 처리 (Oya가 AI인 경우)
-        if (currentPlayer.isAi) {
-            if (currentPlayer.lastDrawnTile) {
-                let tileToDiscard: string
-                if (currentPlayer.isRiichi) {
-                    tileToDiscard = currentPlayer.lastDrawnTile.toString()
-                } else {
-                    tileToDiscard = SimpleAI.decideDiscard(
-                        currentPlayer.getHand().map((t) => t.toString()),
-                    )
-                }
-                const discardResult = await this.discardTile(
-                    roomId,
-                    currentPlayer.getId(),
-                    tileToDiscard,
-                )
-                return {
-                    ...discardResult,
-                    events: [
-                        {
-                            eventName: 'turn-changed',
-                            payload: {
-                                playerId: currentPlayer.getId(),
-                                wallCount: this.wall.getRemainingTiles(),
-                                deadWallCount: this.wall.getRemainingDeadWall(),
-                                dora: this.getDora().map((t) => t.toString()),
-                            },
-                            to: 'all',
-                        },
-                        ...discardResult.events,
-                    ],
-                }
-            }
-        }
-
-        // 사람 플레이어 턴 (이미 14장을 가지고 시작함)
-        return {
-            roomId,
-            isGameOver: false,
-            events: [
-                {
-                    eventName: 'turn-changed',
-                    payload: {
-                        playerId: currentPlayer.getId(),
-                        wallCount: this.wall.getRemainingTiles(),
-                        deadWallCount: this.wall.getRemainingDeadWall(),
-                        dora: this.getDora().map((t) => t.toString()),
-                    },
-                    to: 'all',
-                },
-            ],
-        }
+        // Deal 13 tiles has been done in constructor dealInitialHands
+        // Now trigger the first draw for the current turn player (Oya)
+        return this.drawTileForCurrentPlayer(roomId)
     }
 
     /** 현재 턴인 플레이어가 타일을 버립니다. */
@@ -135,33 +85,51 @@ export class MahjongGame {
 
         // Handle Riichi Declaration
         if (isRiichi) {
-            // TODO: Proper Riichi validation (closed hand, tenpai, not already in riichi, etc.)
-            if (player.isRiichi) {
-                return {
-                    roomId,
-                    isGameOver: false,
-                    events: [{ eventName: 'error', payload: { message: 'Already in Riichi' }, to: 'player', playerId }],
-                }
-            }
-            player.isRiichi = true
-            player.ippatsuEligible = true
-            player.riichiDeclarationTurn = this.turnCounter
-            
-            if (!this.anyCallDeclared && player.getDiscards().length === 0) {
-                player.isDoubleRiichi = true
-            }
-        }
-
-        // Enforce Tsumogiri during Riichi (cannot discard other tiles)
-        if (player.isRiichi && !isRiichi) { // Already in Riichi (not the declaration discard)
-            if (player.lastDrawnTile && player.lastDrawnTile.toString() !== tileString) {
+            const validRiichiDiscards = RuleManager.getRiichiDiscards(player)
+            if (
+                player.isRiichi ||
+                !player.isHandClosed() ||
+                !validRiichiDiscards.includes(tileString)
+            ) {
                 return {
                     roomId,
                     isGameOver: false,
                     events: [
                         {
                             eventName: 'error',
-                            payload: { message: 'Must discard drawn tile during Riichi' },
+                            payload: { message: 'Invalid Riichi declaration' },
+                            to: 'player',
+                            playerId,
+                        },
+                    ],
+                }
+            }
+            player.isRiichi = true
+            player.ippatsuEligible = true
+            player.riichiDeclarationTurn = this.turnCounter
+
+            if (!this.anyCallDeclared && player.getDiscards().length === 0) {
+                player.isDoubleRiichi = true
+            }
+        }
+
+        // Enforce Tsumogiri during Riichi (cannot discard other tiles)
+        if (player.isRiichi && !isRiichi) {
+            // Already in Riichi (not the declaration discard)
+            if (
+                player.lastDrawnTile &&
+                player.lastDrawnTile.toString() !== tileString
+            ) {
+                return {
+                    roomId,
+                    isGameOver: false,
+                    events: [
+                        {
+                            eventName: 'error',
+                            payload: {
+                                message:
+                                    'Must discard drawn tile during Riichi',
+                            },
                             to: 'player',
                             playerId,
                         },
@@ -185,7 +153,7 @@ export class MahjongGame {
                 ],
             }
         }
-        
+
         // Handle Ippatsu Expiration
         if (player.isRiichi && player.ippatsuEligible) {
             // If this is NOT the declaration turn, Ippatsu expires.
@@ -303,25 +271,32 @@ export class MahjongGame {
             let hasAction = false
 
             // 1. Check Ron
-            const context: WinContext = {
-                bakaze: '1z',
-                dora: this.getDora().map(t => t.toString()),
-                isTsumo: false,
-                winningTile: tileString,
-                isRiichi: player.isRiichi,
-                isDoubleRiichi: player.isDoubleRiichi,
-                isIppatsu: player.ippatsuEligible,
-                isHoutei: this.wall.getRemainingTiles() === 0,
-                isRinshan: false,
-                isChankan: false, 
-                isTenhou: false,
-                isChiihou: false,
-            }
-            
-            const ronScore = RuleManager.calculateScore(player, context)
-            if (ronScore) {
-                possibleActions.ron = true
-                hasAction = true
+            try {
+                const context: WinContext = {
+                    bakaze: '1z',
+                    dora: this.getDora().map((t) => t.toString()),
+                    isTsumo: false,
+                    winningTile: tileString,
+                    isRiichi: player.isRiichi,
+                    isDoubleRiichi: player.isDoubleRiichi,
+                    isIppatsu: player.ippatsuEligible,
+                    isHoutei: this.wall.getRemainingTiles() === 0,
+                    isRinshan: false,
+                    isChankan: false,
+                    isTenhou: false,
+                    isChiihou: false,
+                }
+
+                const ronScore = RuleManager.calculateScore(player, context)
+                if (ronScore) {
+                    possibleActions.ron = true
+                    hasAction = true
+                }
+            } catch (e) {
+                console.error(
+                    `Error checking Ron for player ${player.getId()}:`,
+                    e,
+                )
             }
 
             // Players in Riichi cannot declare Chi, Pon, or Daiminkan
@@ -333,12 +308,18 @@ export class MahjongGame {
             }
 
             // 2. Check Pon/Kan
-            const count = hand.filter((t) => t.toString() === tileString).length
-            if (count >= 2) {
+            const rank =
+                parseInt(tileString[0]) === 0 ? 5 : parseInt(tileString[0])
+            const suit = tileString[1]
+            const matches = hand.filter(
+                (t) => t.getRank() === rank && t.getSuit() === suit,
+            )
+
+            if (matches.length >= 2) {
                 possibleActions.pon = true
                 hasAction = true
             }
-            if (count >= 3) {
+            if (matches.length >= 3) {
                 possibleActions.kan = true
                 hasAction = true
             }
@@ -373,43 +354,108 @@ export class MahjongGame {
         if (!player) throw new Error('Player not found')
 
         if (actionType === 'ron') {
-            return this.declareTsumo(roomId, playerId) // Reusing tsumo logic for now
+            const result = this.verifyRon(player, tileString)
+            if (result.isAgari) {
+                return {
+                    roomId,
+                    isGameOver: true,
+                    reason: 'tsumo', // We can use a more general 'win' or 'ron' later
+                    events: [
+                        {
+                            eventName: 'game-over',
+                            payload: {
+                                reason: 'ron',
+                                winnerId: playerId,
+                                score: result.score,
+                            },
+                            to: 'all',
+                        },
+                    ],
+                }
+            } else {
+                return {
+                    roomId,
+                    isGameOver: false,
+                    events: [
+                        {
+                            eventName: 'error',
+                            payload: { message: 'Invalid Ron' },
+                            to: 'player',
+                            playerId,
+                        },
+                    ],
+                }
+            }
         }
 
         // Clear Ippatsu for all players
         this.players.forEach((p) => (p.ippatsuEligible = false))
         this.anyCallDeclared = true
 
-        // 1. Remove tiles from hand
-        const removedTiles = player.removeTiles(consumedTiles)
+        // 1. Prepare tiles to remove from hand
+        let tilesToMove = [...consumedTiles]
+
+        // Auto-detect if consumedTiles is empty for Chi/Pon/Kan (Stolen from discard)
+        if (
+            tilesToMove.length === 0 &&
+            (actionType === 'chi' ||
+                actionType === 'pon' ||
+                actionType === 'kan')
+        ) {
+            const rank =
+                parseInt(tileString[0]) === 0 ? 5 : parseInt(tileString[0])
+            const suit = tileString[1]
+            const isSelfAction = !this.activeDiscard
+
+            if (actionType === 'pon') {
+                const matches = player
+                    .getHand()
+                    .filter((t) => t.getRank() === rank && t.getSuit() === suit)
+                if (matches.length >= 2)
+                    tilesToMove = matches.slice(0, 2).map((t) => t.toString())
+            } else if (actionType === 'kan') {
+                const matches = player
+                    .getHand()
+                    .filter((t) => t.getRank() === rank && t.getSuit() === suit)
+                const needed = isSelfAction ? 4 : 3
+                if (matches.length >= needed)
+                    tilesToMove = matches
+                        .slice(0, needed)
+                        .map((t) => t.toString())
+            } else if (actionType === 'chi') {
+                // Chi requires specific sequences. This is complex to auto-detect without knowing which option was picked.
+                // However, Chi from AI is not yet implemented, and human FE always sends consumedTiles.
+                // For now, if empty, we might have an issue.
+            }
+        }
+
+        const removedTiles = player.removeTiles(tilesToMove)
         let meldTiles = [...removedTiles]
 
         // 2. Handle Tile Acquisition (Daiminkan/Chi/Pon vs Ankan/Shouminkan)
-        if (this.activeDiscard && this.activeDiscard.tile.toString() === tileString) {
+        const stolenFromId = this.activeDiscard?.playerId
+        if (
+            this.activeDiscard &&
+            this.activeDiscard.tile.toString() === tileString
+        ) {
             // Stealing a discard (Daiminkan, Chi, Pon)
             const discarder = this.getPlayer(this.activeDiscard.playerId)!
             const takenTile = discarder.removeDiscard(tileString)
             if (takenTile) {
                 meldTiles.push(takenTile)
             } else {
-                 meldTiles.push(this.activeDiscard.tile) // Should not happen
+                meldTiles.push(this.activeDiscard.tile) // Should not happen
             }
             // Reset active discard since it's consumed
             this.activeDiscard = null
             // Update turn to this player
             this.currentTurnIndex = this.players.indexOf(player)
-        } else {
-            // Self Kan (Ankan or Shouminkan) - No discard involved
-            // tileString should be one of the tiles in hand?
-            // For Ankan, consumedTiles should have 4 tiles? Or 3 and we add the 4th?
-            // Let's assume removedTiles contains all necessary tiles for Self Kan.
-            // If Shouminkan, we might need to find the existing meld.
-            // For simplicity in this step, we just form the meld with removed tiles.
         }
 
         const meld: Meld = {
-            type: actionType,
-            tiles: meldTiles
+            type: actionType as any,
+            tiles: meldTiles,
+            opened: !!stolenFromId,
         }
         player.addMeld(meld)
 
@@ -419,7 +465,8 @@ export class MahjongGame {
                 payload: {
                     playerId,
                     type: actionType,
-                    tiles: meldTiles.map(t => t.toString()),
+                    tiles: meldTiles.map((t) => t.toString()),
+                    stolenFrom: stolenFromId,
                 },
                 to: 'all',
             },
@@ -429,7 +476,7 @@ export class MahjongGame {
                     playerId,
                     wallCount: this.wall.getRemainingTiles(),
                     deadWallCount: this.wall.getRemainingDeadWall(),
-                    dora: this.getDora().map(t => t.toString()),
+                    dora: this.getDora().map((t) => t.toString()),
                 },
                 to: 'all',
             },
@@ -444,7 +491,11 @@ export class MahjongGame {
                 player.draw(replacementTile)
                 events.push({
                     eventName: 'new-tile-drawn',
-                    payload: { tile: replacementTile.toString() },
+                    payload: {
+                        tile: replacementTile.toString(),
+                        riichiDiscards: RuleManager.getRiichiDiscards(player),
+                        canTsumo: this.checkCanTsumo(player.getId()),
+                    },
                     to: 'player',
                     playerId: player.getId(),
                 })
@@ -550,7 +601,12 @@ export class MahjongGame {
                 },
                 {
                     eventName: 'new-tile-drawn',
-                    payload: { tile: tile.toString() },
+                    payload: {
+                        tile: tile.toString(),
+                        riichiDiscards:
+                            RuleManager.getRiichiDiscards(currentPlayer),
+                        canTsumo: this.checkCanTsumo(currentPlayer.getId()),
+                    },
                     to: 'player',
                     playerId: currentPlayer.getId(),
                 },
@@ -564,12 +620,16 @@ export class MahjongGame {
             return { isAgari: false, score: null }
         }
 
-        const isTenhou = player.isOya && this.turnCounter === 0 && !this.anyCallDeclared;
-        const isChiihou = !player.isOya && player.getDiscards().length === 0 && !this.anyCallDeclared;
+        const isTenhou =
+            player.isOya && this.turnCounter === 0 && !this.anyCallDeclared
+        const isChiihou =
+            !player.isOya &&
+            player.getDiscards().length === 0 &&
+            !this.anyCallDeclared
 
         const context: WinContext = {
             bakaze: '1z', // Default East Round
-            dora: this.getDora().map(t => t.toString()),
+            dora: this.getDora().map((t) => t.toString()),
             isTsumo: true,
             isRiichi: player.isRiichi,
             isDoubleRiichi: player.isDoubleRiichi,
@@ -579,6 +639,30 @@ export class MahjongGame {
             isChankan: false, // Tsumo cannot be Chankan
             isTenhou,
             isChiihou,
+        }
+
+        const score = RuleManager.calculateScore(player, context)
+        return { isAgari: !!score, score }
+    }
+
+    /** 플레이어의 패가 론 조건에 맞는지 검증합니다. */
+    private verifyRon(
+        player: Player,
+        winningTile: string,
+    ): { isAgari: boolean; score: any } {
+        const context: WinContext = {
+            bakaze: '1z',
+            dora: this.getDora().map((t) => t.toString()),
+            isTsumo: false,
+            winningTile: winningTile,
+            isRiichi: player.isRiichi,
+            isDoubleRiichi: player.isDoubleRiichi,
+            isIppatsu: player.ippatsuEligible,
+            isHoutei: this.wall.getRemainingTiles() === 0,
+            isRinshan: false, // Ron cannot be Rinshan
+            isChankan: false, // TODO: Implement Chankan logic
+            isTenhou: false,
+            isChiihou: false,
         }
 
         const score = RuleManager.calculateScore(player, context)
@@ -596,13 +680,6 @@ export class MahjongGame {
                     player.draw(tile)
                 }
             }
-        }
-
-        // Oya(선)에게 14번째 패(첫 쯔모)를 배패합니다.
-        const oya = this.players[0]
-        const tile = this.wall.draw()
-        if (tile) {
-            oya.draw(tile)
         }
 
         // 첫 도라패 공개
@@ -662,6 +739,13 @@ export class MahjongGame {
 
     getDeadWallCount(): number {
         return this.wall.getRemainingDeadWall()
+    }
+
+    checkCanTsumo(playerId: string): boolean {
+        const player = this.getPlayer(playerId)
+        if (!player) return false
+        const result = this.verifyTsumo(player)
+        return result.isAgari
     }
 
     // #endregion

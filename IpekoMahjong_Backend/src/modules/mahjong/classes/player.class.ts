@@ -1,10 +1,5 @@
 import { Tile } from './tile.class'
-
-// Meld is not used in Phase 2 yet, so we can define a simple interface for it.
-export interface Meld {
-    type: 'chi' | 'pon' | 'kan'
-    tiles: Tile[]
-}
+import { Meld } from '../interfaces/mahjong.types'
 
 export class Player {
     private readonly id: string
@@ -23,6 +18,12 @@ export class Player {
         this.id = id
         this.isOya = isOya
         this.isAi = isAi
+    }
+
+    // ... (keep existing methods)
+
+    isHandClosed(): boolean {
+        return this.melds.every((m) => !m.opened)
     }
 
     // ... (rest of the methods are the same)
@@ -79,7 +80,9 @@ export class Player {
     }
 
     removeDiscard(tileString: string): Tile | null {
-        const index = this.discards.findIndex((t) => t.toString() === tileString)
+        const index = this.discards.findIndex(
+            (t) => t.toString() === tileString,
+        )
         if (index !== -1) {
             return this.discards.splice(index, 1)[0]
         }
@@ -91,13 +94,26 @@ export class Player {
     }
 
     getHandStringForRiichi(): string {
-        return this.getFullHandString()
-    }
+        // Concealed tiles are those currently in this.hand
+        const handTiles = this.getHand()
+        let tilesToSort = [...handTiles]
 
-    getFullHandString(): string {
-        // For riichi check, we need to sort the string representation
+        let lastTileStr = ''
+
+        // If we have a drawn tile (Tsumo case), we must place it at the end
+        // for the riichi library to correctly identify it as the agari tile.
+        if (this.lastDrawnTile) {
+            const idx = tilesToSort.findIndex(
+                (t) => t.id === this.lastDrawnTile!.id,
+            )
+            if (idx !== -1) {
+                const [lastTile] = tilesToSort.splice(idx, 1)
+                lastTileStr = lastTile.toString()
+            }
+        }
+
         const handMap: Record<string, string[]> = { m: [], p: [], s: [], z: [] }
-        this.hand.forEach((t) => {
+        tilesToSort.forEach((t) => {
             const s = t.toString()
             handMap[t.getSuit()].push(s[0])
         })
@@ -108,7 +124,8 @@ export class Player {
                 handString += handMap[suit].sort().join('') + suit
             }
         })
-        return handString
+
+        return handString + lastTileStr
     }
     getHandString(): string {
         return this.hand.map((tile) => tile.toString()).join('')

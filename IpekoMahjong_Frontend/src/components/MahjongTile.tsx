@@ -35,8 +35,8 @@ const MahjongTile: React.FC<MahjongTileProps> = ({ tile, onClick, isDrawn, class
     }
     
     const colors: Record<string, string> = {
-      'm': 'text-black',
-      'p': 'text-blue-700',
+      'm': 'text-blue-700',
+      'p': 'text-red-700',
       's': 'text-green-700'
     };
     
@@ -48,10 +48,10 @@ const MahjongTile: React.FC<MahjongTileProps> = ({ tile, onClick, isDrawn, class
     
     const color = colors[suit] || 'text-black';
     
-    return { text: num, subText: suitNames[suit] || suit, color, isZ: false, isAka };
+    return { text: num, subText: suitNames[suit] || suit, color, isZ: false, isAka, suit };
   };
 
-  const { text, subText, color, isZ, isAka } = getTileDisplay(tile);
+  const { text, subText, color, isZ, isAka, suit } = getTileDisplay(tile);
 
   // Heuristic: if width is small (e.g. w-4), use smaller font
   const isXS = className?.includes('w-4');
@@ -87,7 +87,14 @@ const MahjongTile: React.FC<MahjongTileProps> = ({ tile, onClick, isDrawn, class
           )}>
             {text}
           </span>
-          {!isXS && !isSmall && (
+          {(isXS || isSmall) ? (
+            <span className={cn(
+                "text-[6px] font-bold select-none opacity-70 uppercase leading-none",
+                color
+            )}>
+              {suit}
+            </span>
+          ) : (
             <span className={cn(
                 "font-bold select-none opacity-90", 
                 isMedium ? "text-[10px]" : "text-[14px]",
