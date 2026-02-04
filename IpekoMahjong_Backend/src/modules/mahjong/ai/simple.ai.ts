@@ -1,5 +1,6 @@
 import Riichi from 'riichi'
 import { GameObservation, MahjongAI } from './mahjong-ai.interface'
+import { PossibleActions, RiichiResult } from '../interfaces/mahjong.types'
 
 export class SimpleAI implements MahjongAI {
     /**
@@ -27,9 +28,9 @@ export class SimpleAI implements MahjongAI {
             if (idx > -1) remainingTiles.splice(idx, 1)
 
             const handStr = this.convertTilesToString(remainingTiles)
-            const result = new Riichi(handStr).calc()
+            const result = new Riichi(handStr).calc() as RiichiResult
 
-            const shanten = (result as any).syanten
+            const shanten = result.hairi?.now ?? 100
 
             if (shanten < minShanten) {
                 minShanten = shanten
@@ -43,7 +44,11 @@ export class SimpleAI implements MahjongAI {
     /**
      * Simple AI always skips actions for now.
      */
-    decideAction(obs: GameObservation, discardedTile: string, possibleActions: any): 'chi' | 'pon' | 'kan' | 'ron' | 'skip' {
+    decideAction(
+        _obs: GameObservation,
+        _discardedTile: string,
+        _possibleActions: PossibleActions,
+    ): 'chi' | 'pon' | 'kan' | 'ron' | 'skip' {
         return 'skip'
     }
 
@@ -62,7 +67,7 @@ export class SimpleAI implements MahjongAI {
             wallCount: 0,
             deadWallCount: 0,
             bakaze: 1,
-            turnCounter: 0
+            turnCounter: 0,
         })
     }
 

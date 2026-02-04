@@ -82,10 +82,10 @@ export class MahjongGateway {
         }
 
         // Start the game logic
-        const gameUpdate = await room.mahjongGame.startGame(room.roomId)
+        const gameUpdate = room.mahjongGame.startGame(room.roomId)
         // Use a small delay to ensure the client has processed 'game-started'
         this.processGameUpdate(gameUpdate)
-        this.handlePostUpdateActions(room.roomId, gameUpdate)
+        await this.handlePostUpdateActions(room.roomId, gameUpdate)
     }
 
     @SubscribeMessage('discard-tile')
@@ -98,7 +98,7 @@ export class MahjongGateway {
             const room = this.gameRoomService.getRoom(data.roomId)
             if (!room) return
 
-            const gameUpdate = await room.mahjongGame.discardTile(
+            const gameUpdate = room.mahjongGame.discardTile(
                 data.roomId,
                 client.id,
                 data.tile,
@@ -111,13 +111,19 @@ export class MahjongGateway {
                 (e) => e.eventName === 'error',
             )
             if (!gameUpdate.isGameOver && !hasError) {
-                this.handlePostUpdateActions(data.roomId, gameUpdate)
+                await this.handlePostUpdateActions(data.roomId, gameUpdate)
             }
         } catch (error) {
-            this.logger.error(
-                `Error in handleDiscardTile: ${error.message}`,
-                error.stack,
-            )
+            if (error instanceof Error) {
+                this.logger.error(
+                    `Error in handleDiscardTile: ${error.message}`,
+                    error.stack || '',
+                )
+            } else {
+                this.logger.error(
+                    `Unknown error in handleDiscardTile: ${String(error)}`,
+                )
+            }
             client.emit('error', {
                 message: 'Internal server error during discard',
             })
@@ -139,10 +145,16 @@ export class MahjongGateway {
             )
             this.processGameUpdate(gameUpdate)
         } catch (error) {
-            this.logger.error(
-                `Error in handleDeclareTsumo: ${error.message}`,
-                error.stack,
-            )
+            if (error instanceof Error) {
+                this.logger.error(
+                    `Error in handleDeclareTsumo: ${error.message}`,
+                    error.stack || '',
+                )
+            } else {
+                this.logger.error(
+                    `Unknown error in handleDeclareTsumo: ${String(error)}`,
+                )
+            }
             client.emit('error', {
                 message: 'Internal server error during tsumo',
             })
@@ -165,7 +177,7 @@ export class MahjongGateway {
             if (!room) return
 
             if (data.type === 'skip') {
-                const result = await room.mahjongGame.skipAction(
+                const result = room.mahjongGame.skipAction(
                     data.roomId,
                     client.id,
                 )
@@ -175,7 +187,10 @@ export class MahjongGateway {
                         room.timer = undefined
                     }
                     this.processGameUpdate(result.update)
-                    this.handlePostUpdateActions(data.roomId, result.update)
+                    await this.handlePostUpdateActions(
+                        data.roomId,
+                        result.update,
+                    )
                 }
                 return
             }
@@ -194,12 +209,18 @@ export class MahjongGateway {
                 data.consumedTiles,
             )
             this.processGameUpdate(gameUpdate)
-            this.handlePostUpdateActions(data.roomId, gameUpdate)
+            await this.handlePostUpdateActions(data.roomId, gameUpdate)
         } catch (error) {
-            this.logger.error(
-                `Error in handleSelectAction: ${error.message}`,
-                error.stack,
-            )
+            if (error instanceof Error) {
+                this.logger.error(
+                    `Error in handleSelectAction: ${error.message}`,
+                    error.stack || '',
+                )
+            } else {
+                this.logger.error(
+                    `Unknown error in handleSelectAction: ${String(error)}`,
+                )
+            }
             client.emit('error', {
                 message: 'Internal server error during action',
             })
@@ -213,27 +234,30 @@ export class MahjongGateway {
     /**
      * GameUpdate 후 추가적으로 처리해야 할 로직(AI 타패 후 행동 체크 등)을 수행합니다.
      */
-    private handlePostUpdateActions(roomId: string, update: GameUpdate): void {
+    private async handlePostUpdateActions(
+        roomId: string,
+        update: GameUpdate,
+    ): Promise<void> {
         if (update.isGameOver) return
 
         const discardEvent = update.events.find(
             (e) => e.eventName === 'update-discard',
         )
         if (discardEvent) {
-            const discarderId = discardEvent.payload.playerId
-            const tileString = discardEvent.payload.tile
-            this.checkAndNotifyActions(roomId, discarderId, tileString)
+            const discarderId = discardEvent.payload.playerId as string
+            const tileString = discardEvent.payload.tile as string
+            await this.checkAndNotifyActions(roomId, discarderId, tileString)
         }
     }
 
     /**
      * 타패 후 다른 플레이어의 행동 가능 여부를 확인하고, 가능하면 이벤트를 보냅니다.
      */
-    private checkAndNotifyActions(
+    private async checkAndNotifyActions(
         roomId: string,
         discarderId: string,
         tileString: string,
-    ): void {
+    ): Promise<void> {
         const room = this.gameRoomService.getRoom(roomId)
         if (!room) return
 
@@ -246,37 +270,53 @@ export class MahjongGateway {
         if (hasActions) {
             console.log('Possible actions:', actions)
             // 행동이 가능한 플레이어에게 선택지를 보냅니다.
-            Object.entries(actions).forEach(async ([playerId, actionData]) => {
+            for (const [playerId, actionData] of Object.entries(actions)) {
                 const player = room.mahjongGame.getPlayer(playerId)
                 if (player?.isAi && player.ai) {
                     // AI decides action
-                    const observation = (room.mahjongGame as any).createGameObservation(player)
-                    const decision = player.ai.decideAction(observation, tileString, actionData)
-                    
+                    const observation =
+                        room.mahjongGame.createGameObservation(player)
+                    const decision = player.ai.decideAction(
+                        observation,
+                        tileString,
+                        actionData,
+                    )
+
                     if (decision === 'skip') {
-                        const result = await room.mahjongGame.skipAction(roomId, playerId)
+                        const result = room.mahjongGame.skipAction(
+                            roomId,
+                            playerId,
+                        )
                         if (result.shouldProceed && result.update) {
                             if (room.timer) {
                                 clearTimeout(room.timer)
                                 room.timer = undefined
                             }
                             this.processGameUpdate(result.update)
-                            this.handlePostUpdateActions(roomId, result.update)
+                            await this.handlePostUpdateActions(
+                                roomId,
+                                result.update,
+                            )
                         }
                     } else {
                         // AI performs action (Chi, Pon, Kan, Ron)
                         // For now, SimpleAI only skips, so we'll implement this part when needed.
                         // But let's add a placeholder.
-                        const gameUpdate = room.mahjongGame.performAction(roomId, playerId, decision, tileString)
+                        const gameUpdate = room.mahjongGame.performAction(
+                            roomId,
+                            playerId,
+                            decision,
+                            tileString,
+                        )
                         this.processGameUpdate(gameUpdate)
-                        this.handlePostUpdateActions(roomId, gameUpdate)
+                        await this.handlePostUpdateActions(roomId, gameUpdate)
                     }
                 } else {
                     this.server
                         .to(playerId)
                         .emit('ask-action', { ...actionData, tile: tileString })
                 }
-            })
+            }
             // 5초 대기 (아무도 선택하지 않으면 다음 턴)
             this.scheduleNextTurn(roomId, 5000)
         } else {
@@ -324,21 +364,31 @@ export class MahjongGateway {
             room.timer = undefined
         }
 
-        const timer = setTimeout(async () => {
-            try {
-                const currentRoom = this.gameRoomService.getRoom(roomId)
-                if (!currentRoom) return
+        const timer = setTimeout(() => {
+            void (async () => {
+                try {
+                    const currentRoom = this.gameRoomService.getRoom(roomId)
+                    if (!currentRoom) return
 
-                const gameUpdate =
-                    await currentRoom.mahjongGame.proceedToNextTurn(roomId)
-                this.processGameUpdate(gameUpdate)
-                this.handlePostUpdateActions(roomId, gameUpdate)
-            } catch (error) {
-                console.error(
-                    `Error in scheduled next turn for room ${roomId}:`,
-                    error,
-                )
-            }
+                    const gameUpdate =
+                        currentRoom.mahjongGame.proceedToNextTurn(roomId)
+                    this.processGameUpdate(gameUpdate)
+
+                    await this.handlePostUpdateActions(roomId, gameUpdate)
+                } catch (error) {
+                    if (error instanceof Error) {
+                        console.error(
+                            `Error in scheduled next turn for room ${roomId}:`,
+                            error,
+                        )
+                    } else {
+                        console.error(
+                            `Unknown error in scheduled next turn for room ${roomId}:`,
+                            String(error),
+                        )
+                    }
+                }
+            })()
         }, delay)
 
         room.timer = timer

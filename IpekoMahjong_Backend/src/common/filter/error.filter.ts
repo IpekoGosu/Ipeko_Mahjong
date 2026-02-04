@@ -35,7 +35,8 @@ export class CommonErrorFilter implements ExceptionFilter {
 
 interface ExceptionResponse {
     message: string | string[]
-    [key: string]: any
+    error?: string
+    statusCode?: number
 }
 
 @Catch(HttpException)
@@ -45,7 +46,19 @@ export class HttpErrorFilter implements ExceptionFilter {
         const response = ctx.getResponse<Response>()
         const request = ctx.getRequest<Request>()
         const status = exception.getStatus()
-        const exceptionResponse = exception.getResponse() as ExceptionResponse
+        const exceptionResponse = exception.getResponse()
+
+        let message = exception.message
+        if (
+            typeof exceptionResponse === 'object' &&
+            exceptionResponse !== null &&
+            'message' in exceptionResponse
+        ) {
+            const resp = exceptionResponse as ExceptionResponse
+            message = Array.isArray(resp.message)
+                ? resp.message.join(', ')
+                : resp.message
+        }
 
         const data = {
             statusCode: status,
@@ -55,7 +68,7 @@ export class HttpErrorFilter implements ExceptionFilter {
             ),
             path: request.url,
             error: 'HTTP_ERROR',
-            message: exceptionResponse['message'] || exception.message,
+            message: message,
         }
 
         response.status(status).json(new CommonErrorResponse(data))

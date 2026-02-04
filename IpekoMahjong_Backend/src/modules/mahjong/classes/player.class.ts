@@ -100,7 +100,7 @@ export class Player {
     getHandStringForRiichi(): string {
         // Concealed tiles are those currently in this.hand
         const handTiles = this.getHand()
-        let tilesToSort = [...handTiles]
+        const tilesToSort = [...handTiles]
 
         let lastTileStr = ''
 

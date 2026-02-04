@@ -23,7 +23,7 @@ describe('MahjongGame Naki (Call) System', () => {
         const human = game.getPlayer('human')
         expect(human).toBeDefined()
         if (!human) return // Force human hand to have two 1m (Man)
-        ;(human as any).hand = [
+        ;(human as unknown as { hand: Tile[] }).hand = [
             new Tile('m', 1, false, 0),
             new Tile('m', 1, false, 1),
             new Tile('p', 1, false, 2),
@@ -42,8 +42,11 @@ describe('MahjongGame Naki (Call) System', () => {
         // AI1 discards 1m
         const actions = game.getPossibleActions('ai1', '1m')
 
-        expect(actions['human']).toBeDefined()
-        expect(actions['human'].pon).toBe(true)
+        const humanActions = actions['human']
+        expect(humanActions).toBeDefined()
+        if (humanActions) {
+            expect(humanActions.pon).toBe(true)
+        }
     })
 
     it('should detect RON opportunity', () => {
@@ -52,7 +55,7 @@ describe('MahjongGame Naki (Call) System', () => {
         if (!human)
             return // Set up Tenpai on 1z (East) - Shanpon wait with 2z
             // Hand: 111m 234m 567m 11z 22z
-        ;(human as any).hand = [
+        ;(human as unknown as { hand: Tile[] }).hand = [
             new Tile('m', 1, false, 0),
             new Tile('m', 1, false, 1),
             new Tile('m', 1, false, 2),
@@ -71,7 +74,10 @@ describe('MahjongGame Naki (Call) System', () => {
         // AI1 discards 1z (East)
         const actions = game.getPossibleActions('ai1', '1z')
 
-        expect(actions['human']).toBeDefined()
-        expect(actions['human'].ron).toBe(true)
+        const humanActions = actions['human']
+        expect(humanActions).toBeDefined()
+        if (humanActions) {
+            expect(humanActions.ron).toBe(true)
+        }
     })
 })

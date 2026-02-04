@@ -1,4 +1,4 @@
-import { MeldType } from '../interfaces/mahjong.types'
+import { MeldType, PossibleActions } from '../interfaces/mahjong.types'
 
 /**
  * Information about a player from the AI's perspective.
@@ -51,6 +51,6 @@ export interface MahjongAI {
     decideAction(
         observation: GameObservation,
         discardedTile: string,
-        possibleActions: any,
+        possibleActions: PossibleActions,
     ): 'chi' | 'pon' | 'kan' | 'ron' | 'skip'
 }

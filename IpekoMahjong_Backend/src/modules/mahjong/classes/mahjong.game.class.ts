@@ -1,11 +1,15 @@
 import { Wall } from './wall.class'
 import { Player } from './player.class'
 import { Tile } from './tile.class'
-import { Meld } from '../interfaces/mahjong.types'
+import {
+    Meld,
+    MeldType,
+    PossibleActions,
+    ScoreCalculation,
+} from '../interfaces/mahjong.types'
 import { SimpleAI } from '../ai/simple.ai'
-import { MahjongAI } from '../ai/mahjong-ai.interface'
+import { GameObservation } from '../ai/mahjong-ai.interface'
 import { RuleManager, WinContext } from './rule.manager'
-import Riichi from 'riichi'
 
 /**
  * 게임 내에서 발생하는 모든 상태 변화를 담는 객체.
@@ -17,7 +21,7 @@ export interface GameUpdate {
     reason?: 'tsumo' | 'ryuukyoku' | 'player-disconnected'
     events: {
         eventName: string
-        payload: any
+        payload: Record<string, unknown>
         to: 'all' | 'player'
         playerId?: string
     }[]
@@ -36,7 +40,7 @@ export class MahjongGame {
     private turnCounter: number = 0
     private anyCallDeclared: boolean = false
     private rinshanFlag: boolean = false
-    private pendingActions: { [playerId: string]: any } = {}
+    private pendingActions: Record<string, PossibleActions> = {}
 
     constructor(playerInfos: { id: string; isAi: boolean }[]) {
         this.wall = new Wall()
@@ -56,7 +60,7 @@ export class MahjongGame {
     // #region Public Methods - Game Flow Control
 
     /** 게임을 시작하고 첫 턴의 정보를 반환합니다. */
-    async startGame(roomId: string): Promise<GameUpdate> {
+    startGame(roomId: string): GameUpdate {
         console.log('Starting game')
         // Deal 13 tiles has been done in constructor dealInitialHands
         // Now trigger the first draw for the current turn player (Oya)
@@ -64,12 +68,12 @@ export class MahjongGame {
     }
 
     /** 현재 턴인 플레이어가 타일을 버립니다. */
-    async discardTile(
+    discardTile(
         roomId: string,
         playerId: string,
         tileString: string,
         isRiichi: boolean = false,
-    ): Promise<GameUpdate> {
+    ): GameUpdate {
         console.log(`Discarding tile: ${tileString}, isRiichi: ${isRiichi}`)
         const player = this.getPlayer(playerId)
         const currentPlayer = this.getCurrentTurnPlayer()
@@ -180,7 +184,11 @@ export class MahjongGame {
         const events: GameUpdate['events'] = [
             {
                 eventName: 'update-discard',
-                payload: { playerId, tile: tileString, isFuriten: player.isFuriten },
+                payload: {
+                    playerId,
+                    tile: tileString,
+                    isFuriten: player.isFuriten,
+                },
                 to: 'all',
             },
         ]
@@ -202,7 +210,7 @@ export class MahjongGame {
     }
 
     /** 턴을 넘기고 다음 플레이어의 턴을 진행합니다. */
-    async proceedToNextTurn(roomId: string): Promise<GameUpdate> {
+    proceedToNextTurn(roomId: string): GameUpdate {
         this.advanceTurn()
         return this.drawTileForCurrentPlayer(roomId)
     }
@@ -265,18 +273,18 @@ export class MahjongGame {
     getPossibleActions(
         discarderId: string,
         tileString: string,
-    ): { [playerId: string]: any } {
+    ): Record<string, PossibleActions> {
         const discarder = this.getPlayer(discarderId)
         if (!discarder) return {}
 
         const discarderIndex = this.players.indexOf(discarder)
-        const actions: { [playerId: string]: any } = {}
+        const actions: Record<string, PossibleActions> = {}
 
         this.players.forEach((player, index) => {
             if (player.getId() === discarderId) return
 
             const hand = player.getHand()
-            const possibleActions: any = {}
+            const possibleActions: PossibleActions = {}
             let hasAction = false
 
             // 1. Check Ron
@@ -443,7 +451,7 @@ export class MahjongGame {
         }
 
         const removedTiles = player.removeTiles(tilesToMove)
-        let meldTiles = [...removedTiles]
+        const meldTiles = [...removedTiles]
 
         // 2. Handle Tile Acquisition (Daiminkan/Chi/Pon vs Ankan/Shouminkan)
         const stolenFromId = this.activeDiscard?.playerId
@@ -466,7 +474,7 @@ export class MahjongGame {
         }
 
         const meld: Meld = {
-            type: actionType as any,
+            type: actionType as MeldType,
             tiles: meldTiles,
             opened: !!stolenFromId,
         }
@@ -533,15 +541,15 @@ export class MahjongGame {
      * 플레이어가 가능한 행동을 포기(Skip)합니다.
      * 모든 플레이어가 포기하면 다음 턴으로 진행할 수 있는 상태인지 반환합니다.
      */
-    async skipAction(
+    skipAction(
         roomId: string,
         playerId: string,
-    ): Promise<{ shouldProceed: boolean; update?: GameUpdate }> {
+    ): { shouldProceed: boolean; update?: GameUpdate } {
         delete this.pendingActions[playerId]
 
         if (Object.keys(this.pendingActions).length === 0) {
             // No more actions pending, proceed to next turn
-            const update = await this.proceedToNextTurn(roomId)
+            const update = this.proceedToNextTurn(roomId)
             return { shouldProceed: true, update }
         }
 
@@ -562,9 +570,7 @@ export class MahjongGame {
     }
 
     /** 현재 턴의 플레이어를 위해 타일을 뽑고, AI라면 자동으로 버립니다. */
-    private async drawTileForCurrentPlayer(
-        roomId: string,
-    ): Promise<GameUpdate> {
+    private drawTileForCurrentPlayer(roomId: string): GameUpdate {
         const currentPlayer = this.getCurrentTurnPlayer()
         const tile = this.wall.draw()
 
@@ -594,7 +600,8 @@ export class MahjongGame {
                 if (currentPlayer.isRiichi) {
                     tileToDiscard = currentPlayer.lastDrawnTile.toString()
                 } else if (currentPlayer.ai) {
-                    const observation = this.createGameObservation(currentPlayer)
+                    const observation =
+                        this.createGameObservation(currentPlayer)
                     tileToDiscard = currentPlayer.ai.decideDiscard(observation)
                 } else {
                     // Fallback to static if no instance (should not happen)
@@ -602,7 +609,7 @@ export class MahjongGame {
                         currentPlayer.getHand().map((t) => t.toString()),
                     )
                 }
-                const discardResult = await this.discardTile(
+                const discardResult = this.discardTile(
                     roomId,
                     currentPlayer.getId(),
                     tileToDiscard,
@@ -662,7 +669,7 @@ export class MahjongGame {
     /**
      * AI를 위한 게임 관측 정보를 생성합니다.
      */
-    public createGameObservation(player: Player): any {
+    public createGameObservation(player: Player): GameObservation {
         const myIndex = this.players.indexOf(player)
         return {
             myHand: player.getHand().map((t) => t.toString()),
@@ -692,7 +699,10 @@ export class MahjongGame {
     }
 
     /** 플레이어의 패가 쓰모 조건에 맞는지 검증합니다. */
-    private verifyTsumo(player: Player): { isAgari: boolean; score: any } {
+    private verifyTsumo(player: Player): {
+        isAgari: boolean
+        score: ScoreCalculation | null
+    } {
         if (!player || player.lastDrawnTile === null) {
             return { isAgari: false, score: null }
         }
@@ -726,7 +736,7 @@ export class MahjongGame {
     private verifyRon(
         player: Player,
         winningTile: string,
-    ): { isAgari: boolean; score: any } {
+    ): { isAgari: boolean; score: ScoreCalculation | null } {
         if (player.isFuriten) {
             return { isAgari: false, score: null }
         }

@@ -1,6 +1,19 @@
-import { ScoreCalculation } from '@src/modules/mahjong/interfaces/mahjong.types'
+import {
+    ScoreCalculation,
+    RiichiResult,
+} from '@src/modules/mahjong/interfaces/mahjong.types'
 import { Player } from './player.class'
 import Riichi from 'riichi'
+
+interface RiichiInstance {
+    isTsumo: boolean
+    isOya: boolean
+    bakaze: number
+    jikaze: number
+    dora: string[]
+    extra: string
+    calc(): RiichiResult
+}
 
 export interface WinContext {
     bakaze: string // '1z', '2z', etc.
@@ -56,7 +69,7 @@ export class RuleManager {
                 // Convert to string for riichi library
                 const testHandStr =
                     this.convertTilesToRiichiString(remainingTiles)
-                const result = new Riichi(testHandStr).calc()
+                const result = new Riichi(testHandStr).calc() as RiichiResult
 
                 // hairi.now 0 means Tenpai
                 const shanten = result.hairi?.now ?? 100
@@ -79,7 +92,7 @@ export class RuleManager {
     static calculateFuriten(player: Player): boolean {
         const hand = player.getHand().map((t) => t.toString())
         const handStr = this.convertTilesToRiichiString(hand)
-        const result = new Riichi(handStr).calc()
+        const result = new Riichi(handStr).calc() as RiichiResult
 
         // hairi.now 0 means Tenpai
         if (result.hairi?.now === 0) {
@@ -145,7 +158,7 @@ export class RuleManager {
         }
 
         console.log(`Calculating score for: ${handStr}`)
-        const riichi: any = new Riichi(handStr)
+        const riichi = new Riichi(handStr) as unknown as RiichiInstance
 
         // 2. Set Options
         riichi.isTsumo = context.isTsumo

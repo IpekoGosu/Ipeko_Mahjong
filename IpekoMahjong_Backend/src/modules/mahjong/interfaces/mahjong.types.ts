@@ -21,3 +21,28 @@ export interface ScoreCalculation {
     name: string
     text: string
 }
+
+export interface PossibleActions {
+    chi?: boolean
+    pon?: boolean
+    kan?: boolean
+    ron?: boolean
+    chiOptions?: string[][]
+}
+
+export interface RiichiResult {
+    isAgari: boolean
+    yakuman: number
+    yaku: Record<string, string>
+    han: number
+    fu: number
+    ten: number
+    name: string
+    text: string
+    oya: number[]
+    ko: number[]
+    error: boolean
+    hairi?: { now: number; wait: Record<string, number> }
+    hairi7and13?: { now: number; wait: Record<string, number> }
+    wait?: string
+}

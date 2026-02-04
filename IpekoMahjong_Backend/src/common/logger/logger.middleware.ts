@@ -13,13 +13,17 @@ export class LoggerMiddleware implements NestMiddleware {
         )
 
         // 요청 본문 로깅
-        if (Object.keys(req.body).length) {
+        if (
+            req.body &&
+            typeof req.body === 'object' &&
+            Object.keys(req.body as object).length
+        ) {
             this.logger.log(`Request Body: ${JSON.stringify(req.body)}`)
         }
 
         // 응답 본문 캡처
         const originalSend = res.send
-        res.send = (body: unknown) => {
+        res.send = (body: string | Buffer | object) => {
             res.locals.body = body // 응답 본문을 res.locals에 저장
 
             // // `body`가 배열인지 객체인지 확인
@@ -33,7 +37,7 @@ export class LoggerMiddleware implements NestMiddleware {
             //     this.logger.log(`Response Body: ${String(body)}`);
             // }
 
-            return originalSend.call(res, body) // 원래의 send 메서드 호출
+            return originalSend.call(res, body) as Response // 원래의 send 메서드 호출
         }
 
         // 응답이 끝난 후 로깅
