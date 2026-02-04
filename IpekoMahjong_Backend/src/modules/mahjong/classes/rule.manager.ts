@@ -146,7 +146,7 @@ export class RuleManager {
         const result = new Riichi(handStr).calc() as RiichiResult
 
         // hairi.now 0 means Tenpai
-        if (result.hairi?.now === 0) {
+        if (result.hairi?.now === 0 && result.hairi.wait) {
             const waits = Object.keys(result.hairi.wait)
             const discards = player.getDiscards().map((t) => t.toString())
 
@@ -208,7 +208,6 @@ export class RuleManager {
             handStr += `+${context.winningTile}`
         }
 
-        console.log(`Calculating score for: ${handStr}`)
         const riichi = new Riichi(handStr) as unknown as RiichiInstance
 
         // 2. Set Options

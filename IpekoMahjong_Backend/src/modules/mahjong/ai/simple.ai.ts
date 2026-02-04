@@ -11,7 +11,7 @@ export class SimpleAI implements MahjongAI {
      * Decides which tile to discard to minimize Shanten.
      */
     async decideDiscard(obs: GameObservation): Promise<string> {
-        await this.sleep(2000)
+        await this.sleep(1000)
 
         const handTiles = [...obs.myHand]
         if (obs.myLastDraw) {
@@ -55,7 +55,7 @@ export class SimpleAI implements MahjongAI {
         _discardedTile: string,
         _possibleActions: PossibleActions,
     ): Promise<'chi' | 'pon' | 'kan' | 'ron' | 'skip'> {
-        await this.sleep(2000)
+        await this.sleep(1000)
         return 'skip'
     }
 

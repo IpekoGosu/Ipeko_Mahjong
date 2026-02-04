@@ -277,7 +277,7 @@ export class MahjongGateway {
         const hasActions = Object.keys(actions).length > 0
 
         if (hasActions) {
-            console.log('Possible actions:', actions)
+            console.log('Possible actions:', JSON.stringify(actions))
             // 행동이 가능한 플레이어에게 선택지를 보냅니다.
             for (const [playerId, actionData] of Object.entries(actions)) {
                 const player = room.mahjongGame.getPlayer(playerId)
