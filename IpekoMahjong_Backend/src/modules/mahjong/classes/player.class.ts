@@ -97,6 +97,29 @@ export class Player {
         this.melds.push(meld)
     }
 
+    upgradePonToKan(tileToUpgrade: string, addedTile: Tile): Meld | null {
+        const rank =
+            parseInt(tileToUpgrade[0]) === 0 ? 5 : parseInt(tileToUpgrade[0])
+        const suit = tileToUpgrade[1]
+
+        const meldIndex = this.melds.findIndex(
+            (m) =>
+                m.type === 'pon' &&
+                m.tiles.some(
+                    (t) => t.getRank() === rank && t.getSuit() === suit,
+                ),
+        )
+
+        if (meldIndex !== -1) {
+            const meld = this.melds[meldIndex]
+            meld.tiles.push(addedTile)
+            meld.type = 'kan'
+            // Keep opened: true (Pon was open)
+            return meld
+        }
+        return null
+    }
+
     getHandStringForRiichi(): string {
         // Concealed tiles are those currently in this.hand
         const handTiles = this.getHand()

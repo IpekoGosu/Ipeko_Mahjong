@@ -3,10 +3,16 @@ import { GameObservation, MahjongAI } from './mahjong-ai.interface'
 import { PossibleActions, RiichiResult } from '../interfaces/mahjong.types'
 
 export class SimpleAI implements MahjongAI {
+    private sleep(ms: number) {
+        return new Promise((resolve) => setTimeout(resolve, ms))
+    }
+
     /**
      * Decides which tile to discard to minimize Shanten.
      */
-    decideDiscard(obs: GameObservation): string {
+    async decideDiscard(obs: GameObservation): Promise<string> {
+        await this.sleep(2000)
+
         const handTiles = [...obs.myHand]
         if (obs.myLastDraw) {
             // If we don't already have the last draw in the hand (it usually is added to hand in our engine)
@@ -44,21 +50,22 @@ export class SimpleAI implements MahjongAI {
     /**
      * Simple AI always skips actions for now.
      */
-    decideAction(
+    async decideAction(
         _obs: GameObservation,
         _discardedTile: string,
         _possibleActions: PossibleActions,
-    ): 'chi' | 'pon' | 'kan' | 'ron' | 'skip' {
+    ): Promise<'chi' | 'pon' | 'kan' | 'ron' | 'skip'> {
+        await this.sleep(2000)
         return 'skip'
     }
 
     /**
      * Static helper for quick access if needed, though instance usage is preferred with the interface.
      */
-    static decideDiscard(handTiles: string[]): string {
+    static async decideDiscard(handTiles: string[]): Promise<string> {
         // Temporary wrapper for existing calls if any
         const ai = new SimpleAI()
-        return ai.decideDiscard({
+        return await ai.decideDiscard({
             myHand: handTiles,
             myLastDraw: null,
             players: [],

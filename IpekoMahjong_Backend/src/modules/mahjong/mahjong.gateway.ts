@@ -10,6 +10,7 @@ import { GameRoomService } from './service/game-room.service'
 import { GameUpdate } from './classes/mahjong.game.class'
 import { WinstonLoggerService } from '@src/common/logger/winston.logger.service'
 import { RuleManager } from './classes/rule.manager'
+import { SimpleAI } from './ai/simple.ai'
 
 @WebSocketGateway({
     cors: {
@@ -167,7 +168,7 @@ export class MahjongGateway {
         @MessageBody()
         data: {
             roomId: string
-            type: 'chi' | 'pon' | 'kan' | 'ron' | 'skip'
+            type: 'chi' | 'pon' | 'kan' | 'ron' | 'skip' | 'ankan' | 'kakan'
             tile: string
             consumedTiles?: string[]
         },
@@ -248,6 +249,14 @@ export class MahjongGateway {
             const tileString = discardEvent.payload.tile as string
             await this.checkAndNotifyActions(roomId, discarderId, tileString)
         }
+
+        const turnEvent = update.events.find(
+            (e) => e.eventName === 'turn-changed',
+        )
+        if (turnEvent) {
+            const nextPlayerId = turnEvent.payload.playerId as string
+            await this.checkAndNotifyAiTurn(roomId, nextPlayerId)
+        }
     }
 
     /**
@@ -276,7 +285,7 @@ export class MahjongGateway {
                     // AI decides action
                     const observation =
                         room.mahjongGame.createGameObservation(player)
-                    const decision = player.ai.decideAction(
+                    const decision = await player.ai.decideAction(
                         observation,
                         tileString,
                         actionData,
@@ -317,11 +326,54 @@ export class MahjongGateway {
                         .emit('ask-action', { ...actionData, tile: tileString })
                 }
             }
-            // 5초 대기 (아무도 선택하지 않으면 다음 턴)
-            this.scheduleNextTurn(roomId, 5000)
+            // 15초 대기 (아무도 선택하지 않으면 다음 턴)
+            this.scheduleNextTurn(roomId, 15000)
         } else {
             // 행동할 수 있는 사람이 없으면 바로(혹은 짧은 딜레이 후) 다음 턴
             this.scheduleNextTurn(roomId, 1000)
+        }
+    }
+
+    /**
+     * AI 턴인 경우 자동으로 타패를 수행합니다. (AI 자체의 딜레이가 적용됨)
+     */
+    private async checkAndNotifyAiTurn(
+        roomId: string,
+        playerId: string,
+    ): Promise<void> {
+        try {
+            const room = this.gameRoomService.getRoom(roomId)
+            if (!room) return
+
+            const player = room.mahjongGame.getPlayer(playerId)
+            if (!player || !player.isAi) return
+
+            // AI의 타패 결정 (SimpleAI는 여기서 2초 대기함)
+            let tileToDiscard: string
+            if (player.isRiichi && player.lastDrawnTile) {
+                tileToDiscard = player.lastDrawnTile.toString()
+            } else {
+                const observation =
+                    room.mahjongGame.createGameObservation(player)
+                if (player.ai) {
+                    tileToDiscard = await player.ai.decideDiscard(observation)
+                } else {
+                    tileToDiscard = await SimpleAI.decideDiscard(
+                        player.getHand().map((t) => t.toString()),
+                    )
+                }
+            }
+
+            // 결정된 타패로 게임 진행
+            const gameUpdate = room.mahjongGame.discardTile(
+                roomId,
+                playerId,
+                tileToDiscard,
+            )
+            this.processGameUpdate(gameUpdate)
+            await this.handlePostUpdateActions(roomId, gameUpdate)
+        } catch (error) {
+            this.logger.error(`AI Turn Error in room ${roomId}: ${error}`)
         }
     }
 

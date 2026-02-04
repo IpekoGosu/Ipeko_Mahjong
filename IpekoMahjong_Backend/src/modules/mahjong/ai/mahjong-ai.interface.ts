@@ -42,7 +42,7 @@ export interface MahjongAI {
     /**
      * Decides which tile to discard given the current game observation.
      */
-    decideDiscard(observation: GameObservation): string
+    decideDiscard(observation: GameObservation): Promise<string>
 
     /**
      * Decides whether to perform an action (Chi, Pon, Kan, Ron) on a discarded tile.
@@ -52,5 +52,5 @@ export interface MahjongAI {
         observation: GameObservation,
         discardedTile: string,
         possibleActions: PossibleActions,
-    ): 'chi' | 'pon' | 'kan' | 'ron' | 'skip'
+    ): Promise<'chi' | 'pon' | 'kan' | 'ron' | 'skip'>
 }

@@ -39,6 +39,8 @@ export interface NewTileDrawnPayload {
     riichiDiscards?: TileString[]
     canTsumo?: boolean
     isFuriten?: boolean
+    ankanList?: TileString[]
+    kakanList?: TileString[]
 }
 
 // Event: 'update-discard'
@@ -116,5 +118,7 @@ export interface GameState {
     gameOverData: GameOverPayload | null
     riichiDiscards: string[]
     canTsumo: boolean
+    ankanList: string[]
+    kakanList: string[]
     logs: string[]
 }

@@ -39,6 +39,8 @@ function App() {
         gameOverData: null,
         riichiDiscards: [],
         canTsumo: false,
+        ankanList: [],
+        kakanList: [],
         logs: [],
     })
 
@@ -135,6 +137,8 @@ function App() {
                     actionRequest: null,
                     canTsumo: false,
                     riichiDiscards: [],
+                    ankanList: [],
+                    kakanList: [],
                 }
             })
             setRiichiIntent(false)
@@ -159,6 +163,8 @@ function App() {
                 drawnTile: payload.tile,
                 riichiDiscards: payload.riichiDiscards || [],
                 canTsumo: !!payload.canTsumo,
+                ankanList: payload.ankanList || [],
+                kakanList: payload.kakanList || [],
                 actionRequest: null,
                 players: prev.players.map((p) =>
                     p.id === prev.myPlayerId
@@ -370,6 +376,15 @@ function App() {
             tile: targetTile,
         })
         setState((prev) => ({ ...prev, actionRequest: null }))
+    }
+
+    const handleSelfKan = (type: 'ankan' | 'kakan', tile: string) => {
+        if (!state.roomId) return
+        socketRef.current?.emit('select-action', {
+            roomId: state.roomId,
+            type,
+            tile,
+        })
     }
 
     const myPlayer = state.players.find((p) => p.id === state.myPlayerId)
@@ -877,6 +892,28 @@ function App() {
                                     {riichiIntent ? 'Select Tile' : 'Riichi'}
                                 </button>
                             )}
+
+                        {state.ankanList.map((tile, i) => (
+                            <button
+                                key={`ankan-${i}`}
+                                onClick={() => handleSelfKan('ankan', tile)}
+                                disabled={!myPlayer?.isMyTurn}
+                                className="px-6 py-1.5 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-700 rounded text-sm font-bold uppercase transition-colors flex items-center gap-2"
+                            >
+                                Ankan <MahjongTile tile={tile} className="w-4 h-6 inline-block" />
+                            </button>
+                        ))}
+
+                        {state.kakanList.map((tile, i) => (
+                            <button
+                                key={`kakan-${i}`}
+                                onClick={() => handleSelfKan('kakan', tile)}
+                                disabled={!myPlayer?.isMyTurn}
+                                className="px-6 py-1.5 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-700 rounded text-sm font-bold uppercase transition-colors flex items-center gap-2"
+                            >
+                                Kakan <MahjongTile tile={tile} className="w-4 h-6 inline-block" />
+                            </button>
+                        ))}
 
                         {state.canTsumo && (
                             <button

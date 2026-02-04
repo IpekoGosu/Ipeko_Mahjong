@@ -364,7 +364,7 @@ export class MahjongGame {
     performAction(
         roomId: string,
         playerId: string,
-        actionType: 'chi' | 'pon' | 'kan' | 'ron',
+        actionType: 'chi' | 'pon' | 'kan' | 'ron' | 'ankan' | 'kakan',
         tileString: string,
         consumedTiles: string[] = [], // Hand tiles used for the call
     ): GameUpdate {
@@ -414,71 +414,164 @@ export class MahjongGame {
         this.anyCallDeclared = true
 
         // 1. Prepare tiles to remove from hand
-        let tilesToMove = [...consumedTiles]
+        let tilesToMove: string[] = []
+        let meldTiles: Tile[] = []
+        let stolenFromId: string | undefined = undefined
 
-        // Auto-detect if consumedTiles is empty for Chi/Pon/Kan (Stolen from discard)
-        if (
-            tilesToMove.length === 0 &&
-            (actionType === 'chi' ||
-                actionType === 'pon' ||
-                actionType === 'kan')
-        ) {
+        if (actionType === 'ankan') {
+            // Ankan: Remove 4 tiles from hand. Logic assumes tileString is one of them.
+            // Usually consumedTiles should be sent or we infer.
+            // Inference: All 4 match tileString.
             const rank =
                 parseInt(tileString[0]) === 0 ? 5 : parseInt(tileString[0])
             const suit = tileString[1]
-            const isSelfAction = !this.activeDiscard
+            const matches = player
+                .getHand()
+                .filter((t) => t.getRank() === rank && t.getSuit() === suit)
 
-            if (actionType === 'pon') {
-                const matches = player
-                    .getHand()
-                    .filter((t) => t.getRank() === rank && t.getSuit() === suit)
-                if (matches.length >= 2)
-                    tilesToMove = matches.slice(0, 2).map((t) => t.toString())
-            } else if (actionType === 'kan') {
-                const matches = player
-                    .getHand()
-                    .filter((t) => t.getRank() === rank && t.getSuit() === suit)
-                const needed = isSelfAction ? 4 : 3
-                if (matches.length >= needed)
-                    tilesToMove = matches
-                        .slice(0, needed)
-                        .map((t) => t.toString())
-            } else if (actionType === 'chi') {
-                // Chi requires specific sequences. This is complex to auto-detect without knowing which option was picked.
-                // However, Chi from AI is not yet implemented, and human FE always sends consumedTiles.
-                // For now, if empty, we might have an issue.
+            if (matches.length < 4) {
+                return {
+                    roomId,
+                    isGameOver: false,
+                    events: [
+                        {
+                            eventName: 'error',
+                            payload: { message: 'Not enough tiles for Ankan' },
+                            to: 'player',
+                            playerId,
+                        },
+                    ],
+                }
             }
-        }
+            tilesToMove = matches.slice(0, 4).map((t) => t.toString())
 
-        const removedTiles = player.removeTiles(tilesToMove)
-        const meldTiles = [...removedTiles]
+            const removedTiles = player.removeTiles(tilesToMove)
+            meldTiles = [...removedTiles]
 
-        // 2. Handle Tile Acquisition (Daiminkan/Chi/Pon vs Ankan/Shouminkan)
-        const stolenFromId = this.activeDiscard?.playerId
-        if (
-            this.activeDiscard &&
-            this.activeDiscard.tile.toString() === tileString
-        ) {
-            // Stealing a discard (Daiminkan, Chi, Pon)
-            const discarder = this.getPlayer(this.activeDiscard.playerId)!
-            const takenTile = discarder.removeDiscard(tileString)
-            if (takenTile) {
-                meldTiles.push(takenTile)
-            } else {
-                meldTiles.push(this.activeDiscard.tile) // Should not happen
+            player.addMeld({
+                type: 'kan',
+                tiles: meldTiles,
+                opened: false, // Closed Kan
+            })
+        } else if (actionType === 'kakan') {
+            // Kakan: Remove 1 tile from hand. Add to existing Pon.
+            const rank =
+                parseInt(tileString[0]) === 0 ? 5 : parseInt(tileString[0])
+            const suit = tileString[1]
+            const matches = player
+                .getHand()
+                .filter((t) => t.getRank() === rank && t.getSuit() === suit)
+
+            if (matches.length < 1) {
+                return {
+                    roomId,
+                    isGameOver: false,
+                    events: [
+                        {
+                            eventName: 'error',
+                            payload: { message: 'Tile for Kakan not found' },
+                            to: 'player',
+                            playerId,
+                        },
+                    ],
+                }
             }
-            // Reset active discard since it's consumed
-            this.activeDiscard = null
-            // Update turn to this player
-            this.currentTurnIndex = this.players.indexOf(player)
-        }
+            tilesToMove = [matches[0].toString()]
 
-        const meld: Meld = {
-            type: actionType as MeldType,
-            tiles: meldTiles,
-            opened: !!stolenFromId,
+            const removedTiles = player.removeTiles(tilesToMove)
+            const addedTile = removedTiles[0]
+
+            const updatedMeld = player.upgradePonToKan(tileString, addedTile)
+            if (!updatedMeld) {
+                return {
+                    roomId,
+                    isGameOver: false,
+                    events: [
+                        {
+                            eventName: 'error',
+                            payload: { message: 'No matching Pon for Kakan' },
+                            to: 'player',
+                            playerId,
+                        },
+                    ],
+                }
+            }
+            meldTiles = updatedMeld.tiles // Complete set for display
+            stolenFromId = undefined // Kakan is self-action on own meld (effectively)
+        } else {
+            // Standard Chi/Pon/Kan (Daiminkan)
+            tilesToMove = [...consumedTiles]
+
+            // Auto-detect if consumedTiles is empty for Chi/Pon/Kan (Stolen from discard)
+            if (
+                tilesToMove.length === 0 &&
+                (actionType === 'chi' ||
+                    actionType === 'pon' ||
+                    actionType === 'kan')
+            ) {
+                const rank =
+                    parseInt(tileString[0]) === 0 ? 5 : parseInt(tileString[0])
+                const suit = tileString[1]
+                const isSelfAction = !this.activeDiscard
+
+                if (actionType === 'pon') {
+                    const matches = player
+                        .getHand()
+                        .filter(
+                            (t) => t.getRank() === rank && t.getSuit() === suit,
+                        )
+                    if (matches.length >= 2)
+                        tilesToMove = matches
+                            .slice(0, 2)
+                            .map((t) => t.toString())
+                } else if (actionType === 'kan') {
+                    const matches = player
+                        .getHand()
+                        .filter(
+                            (t) => t.getRank() === rank && t.getSuit() === suit,
+                        )
+                    const needed = isSelfAction ? 4 : 3
+                    if (matches.length >= needed)
+                        tilesToMove = matches
+                            .slice(0, needed)
+                            .map((t) => t.toString())
+                } else if (actionType === 'chi') {
+                    // Chi requires specific sequences. This is complex to auto-detect without knowing which option was picked.
+                    // However, Chi from AI is not yet implemented, and human FE always sends consumedTiles.
+                    // For now, if empty, we might have an issue.
+                }
+            }
+
+            const removedTiles = player.removeTiles(tilesToMove)
+            meldTiles = [...removedTiles]
+
+            // 2. Handle Tile Acquisition (Daiminkan/Chi/Pon)
+            stolenFromId = this.activeDiscard?.playerId
+            if (
+                this.activeDiscard &&
+                this.activeDiscard.tile.toString() === tileString
+            ) {
+                // Stealing a discard (Daiminkan, Chi, Pon)
+                const discarder = this.getPlayer(this.activeDiscard.playerId)!
+                const takenTile = discarder.removeDiscard(tileString)
+                if (takenTile) {
+                    meldTiles.push(takenTile)
+                } else {
+                    meldTiles.push(this.activeDiscard.tile) // Should not happen
+                }
+                // Reset active discard since it's consumed
+                this.activeDiscard = null
+                // Update turn to this player
+                this.currentTurnIndex = this.players.indexOf(player)
+            }
+
+            const meld: Meld = {
+                type: actionType as MeldType,
+                tiles: meldTiles,
+                opened: !!stolenFromId,
+            }
+            player.addMeld(meld)
         }
-        player.addMeld(meld)
 
         // Update Furiten status
         player.isFuriten = RuleManager.calculateFuriten(player)
@@ -509,18 +602,29 @@ export class MahjongGame {
         ]
 
         // 3. Handle Kan Specifics (Rinshan Draw)
-        if (actionType === 'kan') {
+        if (
+            actionType === 'kan' ||
+            actionType === 'ankan' ||
+            actionType === 'kakan'
+        ) {
             this.rinshanFlag = true
             this.wall.revealDora() // Reveal new Dora indicator
             const replacementTile = this.wall.drawReplacement()
             if (replacementTile) {
                 player.draw(replacementTile)
+
+                // Recalculate Ankan/Kakan options for the new state
+                const ankanList = RuleManager.getAnkanOptions(player)
+                const kakanList = RuleManager.getKakanOptions(player)
+
                 events.push({
                     eventName: 'new-tile-drawn',
                     payload: {
                         tile: replacementTile.toString(),
                         riichiDiscards: RuleManager.getRiichiDiscards(player),
                         canTsumo: this.checkCanTsumo(player.getId()),
+                        ankanList,
+                        kakanList,
                     },
                     to: 'player',
                     playerId: player.getId(),
@@ -593,76 +697,46 @@ export class MahjongGame {
         currentPlayer.draw(tile)
         currentPlayer.isFuriten = RuleManager.calculateFuriten(currentPlayer)
 
-        // AI 턴 처리
-        if (currentPlayer.isAi) {
-            if (currentPlayer.lastDrawnTile) {
-                let tileToDiscard: string
-                if (currentPlayer.isRiichi) {
-                    tileToDiscard = currentPlayer.lastDrawnTile.toString()
-                } else if (currentPlayer.ai) {
-                    const observation =
-                        this.createGameObservation(currentPlayer)
-                    tileToDiscard = currentPlayer.ai.decideDiscard(observation)
-                } else {
-                    // Fallback to static if no instance (should not happen)
-                    tileToDiscard = SimpleAI.decideDiscard(
-                        currentPlayer.getHand().map((t) => t.toString()),
-                    )
-                }
-                const discardResult = this.discardTile(
-                    roomId,
-                    currentPlayer.getId(),
-                    tileToDiscard,
-                )
-                return {
-                    ...discardResult,
-                    events: [
-                        {
-                            eventName: 'turn-changed',
-                            payload: {
-                                playerId: currentPlayer.getId(),
-                                wallCount: this.wall.getRemainingTiles(),
-                                deadWallCount: this.wall.getRemainingDeadWall(),
-                                dora: this.getDora().map((t) => t.toString()),
-                                isFuriten: currentPlayer.isFuriten,
-                            },
-                            to: 'all',
-                        },
-                        ...discardResult.events,
-                    ],
-                }
-            }
+        const ankanList = RuleManager.getAnkanOptions(currentPlayer)
+        const kakanList = RuleManager.getKakanOptions(currentPlayer)
+
+        // 모든 플레이어에게 턴 변경 알림
+        const events: GameUpdate['events'] = [
+            {
+                eventName: 'turn-changed',
+                payload: {
+                    playerId: currentPlayer.getId(),
+                    wallCount: this.wall.getRemainingTiles(),
+                    deadWallCount: this.wall.getRemainingDeadWall(),
+                    dora: this.getDora().map((t) => t.toString()),
+                    isFuriten: currentPlayer.isFuriten,
+                },
+                to: 'all',
+            },
+        ]
+
+        // 사람 플레이어에게만 뽑은 타일 정보 전송
+        if (!currentPlayer.isAi) {
+            events.push({
+                eventName: 'new-tile-drawn',
+                payload: {
+                    tile: tile.toString(),
+                    riichiDiscards:
+                        RuleManager.getRiichiDiscards(currentPlayer),
+                    canTsumo: this.checkCanTsumo(currentPlayer.getId()),
+                    isFuriten: currentPlayer.isFuriten,
+                    ankanList,
+                    kakanList,
+                },
+                to: 'player',
+                playerId: currentPlayer.getId(),
+            })
         }
 
-        // 사람 플레이어 턴
         return {
             roomId,
             isGameOver: false,
-            events: [
-                {
-                    eventName: 'turn-changed',
-                    payload: {
-                        playerId: currentPlayer.getId(),
-                        wallCount: this.wall.getRemainingTiles(),
-                        deadWallCount: this.wall.getRemainingDeadWall(),
-                        dora: this.getDora().map((t) => t.toString()),
-                        isFuriten: currentPlayer.isFuriten,
-                    },
-                    to: 'all',
-                },
-                {
-                    eventName: 'new-tile-drawn',
-                    payload: {
-                        tile: tile.toString(),
-                        riichiDiscards:
-                            RuleManager.getRiichiDiscards(currentPlayer),
-                        canTsumo: this.checkCanTsumo(currentPlayer.getId()),
-                        isFuriten: currentPlayer.isFuriten,
-                    },
-                    to: 'player',
-                    playerId: currentPlayer.getId(),
-                },
-            ],
+            events,
         }
     }
 

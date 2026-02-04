@@ -89,6 +89,57 @@ export class RuleManager {
         return validDiscards
     }
 
+    static getAnkanOptions(player: Player): string[] {
+        if (player.isRiichi) return [] // Cannot Ankan in Riichi (unless special rule, but usually simplified to no for now or specific check)
+        // Actually, you CAN Ankan in Riichi if it doesn't change wait.
+        // For simplicity in Phase 3, let's disable Ankan in Riichi or implement full check.
+        // Let's allow it if not Riichi. If Riichi, we need complex check.
+        // Strict rule: Can Ankan in Riichi if:
+        // 1. Tile drawn is the one to be Ankan'd.
+        // 2. Hand structure doesn't change (wait doesn't change).
+        // For now, let's block Ankan in Riichi to be safe, or allow it blindly?
+        // Prompt says "Ankan does not count as disrupting menzen state", doesn't explicitly mention Riichi.
+        // Let's stick to non-Riichi for now, or check generic valid moves.
+        if (player.isRiichi) return []
+
+        const hand = player.getHand()
+        const counts: Record<string, number> = {}
+        hand.forEach((t) => {
+            const s = t.toString()
+            counts[s] = (counts[s] || 0) + 1
+        })
+
+        return Object.keys(counts).filter((tile) => counts[tile] === 4)
+    }
+
+    static getKakanOptions(player: Player): string[] {
+        if (player.isRiichi) return [] // Cannot Kakan in Riichi
+
+        const hand = player.getHand()
+        const melds = player.getMelds()
+        const ponMelds = melds.filter((m) => m.type === 'pon')
+
+        if (ponMelds.length === 0) return []
+
+        const options: string[] = []
+        ponMelds.forEach((pon) => {
+            // Pon tiles are all same, take first
+            const ponTile = pon.tiles[0]
+            const rank = ponTile.getRank()
+            const suit = ponTile.getSuit()
+
+            // Check if we have the 4th tile in hand
+            const match = hand.find(
+                (t) => t.getRank() === rank && t.getSuit() === suit,
+            )
+            if (match) {
+                options.push(match.toString())
+            }
+        })
+
+        return options
+    }
+
     static calculateFuriten(player: Player): boolean {
         const hand = player.getHand().map((t) => t.toString())
         const handStr = this.convertTilesToRiichiString(hand)
