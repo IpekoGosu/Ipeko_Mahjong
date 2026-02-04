@@ -3,6 +3,7 @@ import { Player } from './player.class'
 import { Tile } from './tile.class'
 import { Meld } from '../interfaces/mahjong.types'
 import { SimpleAI } from '../ai/simple.ai'
+import { MahjongAI } from '../ai/mahjong-ai.interface'
 import { RuleManager, WinContext } from './rule.manager'
 import Riichi from 'riichi'
 
@@ -35,14 +36,19 @@ export class MahjongGame {
     private turnCounter: number = 0
     private anyCallDeclared: boolean = false
     private rinshanFlag: boolean = false
+    private pendingActions: { [playerId: string]: any } = {}
 
     constructor(playerInfos: { id: string; isAi: boolean }[]) {
         this.wall = new Wall()
         this.wall.shuffle() // Shuffle the wall upon creation
 
-        this.players = playerInfos.map(
-            (info, index) => new Player(info.id, index === 0, info.isAi),
-        )
+        this.players = playerInfos.map((info, index) => {
+            const player = new Player(info.id, index === 0, info.isAi)
+            if (info.isAi) {
+                player.ai = new SimpleAI()
+            }
+            return player
+        })
         this.dealInitialHands()
         this.currentTurnIndex = 0 // Oya starts
     }
@@ -154,6 +160,9 @@ export class MahjongGame {
             }
         }
 
+        // Update Furiten status
+        player.isFuriten = RuleManager.calculateFuriten(player)
+
         // Handle Ippatsu Expiration
         if (player.isRiichi && player.ippatsuEligible) {
             // If this is NOT the declaration turn, Ippatsu expires.
@@ -171,7 +180,7 @@ export class MahjongGame {
         const events: GameUpdate['events'] = [
             {
                 eventName: 'update-discard',
-                payload: { playerId, tile: tileString },
+                payload: { playerId, tile: tileString, isFuriten: player.isFuriten },
                 to: 'all',
             },
         ]
@@ -288,7 +297,7 @@ export class MahjongGame {
                 }
 
                 const ronScore = RuleManager.calculateScore(player, context)
-                if (ronScore) {
+                if (ronScore && !player.isFuriten) {
                     possibleActions.ron = true
                     hasAction = true
                 }
@@ -339,6 +348,7 @@ export class MahjongGame {
             }
         })
 
+        this.pendingActions = actions
         return actions
     }
 
@@ -352,6 +362,9 @@ export class MahjongGame {
     ): GameUpdate {
         const player = this.getPlayer(playerId)
         if (!player) throw new Error('Player not found')
+
+        // Action taken, clear pending actions
+        this.pendingActions = {}
 
         if (actionType === 'ron') {
             const result = this.verifyRon(player, tileString)
@@ -459,6 +472,9 @@ export class MahjongGame {
         }
         player.addMeld(meld)
 
+        // Update Furiten status
+        player.isFuriten = RuleManager.calculateFuriten(player)
+
         const events: GameUpdate['events'] = [
             {
                 eventName: 'update-meld',
@@ -467,6 +483,7 @@ export class MahjongGame {
                     type: actionType,
                     tiles: meldTiles.map((t) => t.toString()),
                     stolenFrom: stolenFromId,
+                    isFuriten: player.isFuriten,
                 },
                 to: 'all',
             },
@@ -477,6 +494,7 @@ export class MahjongGame {
                     wallCount: this.wall.getRemainingTiles(),
                     deadWallCount: this.wall.getRemainingDeadWall(),
                     dora: this.getDora().map((t) => t.toString()),
+                    isFuriten: player.isFuriten,
                 },
                 to: 'all',
             },
@@ -509,6 +527,25 @@ export class MahjongGame {
             isGameOver: false,
             events,
         }
+    }
+
+    /**
+     * 플레이어가 가능한 행동을 포기(Skip)합니다.
+     * 모든 플레이어가 포기하면 다음 턴으로 진행할 수 있는 상태인지 반환합니다.
+     */
+    async skipAction(
+        roomId: string,
+        playerId: string,
+    ): Promise<{ shouldProceed: boolean; update?: GameUpdate }> {
+        delete this.pendingActions[playerId]
+
+        if (Object.keys(this.pendingActions).length === 0) {
+            // No more actions pending, proceed to next turn
+            const update = await this.proceedToNextTurn(roomId)
+            return { shouldProceed: true, update }
+        }
+
+        return { shouldProceed: false }
     }
 
     // #endregion
@@ -548,6 +585,7 @@ export class MahjongGame {
         }
 
         currentPlayer.draw(tile)
+        currentPlayer.isFuriten = RuleManager.calculateFuriten(currentPlayer)
 
         // AI 턴 처리
         if (currentPlayer.isAi) {
@@ -555,10 +593,14 @@ export class MahjongGame {
                 let tileToDiscard: string
                 if (currentPlayer.isRiichi) {
                     tileToDiscard = currentPlayer.lastDrawnTile.toString()
+                } else if (currentPlayer.ai) {
+                    const observation = this.createGameObservation(currentPlayer)
+                    tileToDiscard = currentPlayer.ai.decideDiscard(observation)
                 } else {
+                    // Fallback to static if no instance (should not happen)
                     tileToDiscard = SimpleAI.decideDiscard(
                         currentPlayer.getHand().map((t) => t.toString()),
-                    ) // 쯔모기리
+                    )
                 }
                 const discardResult = await this.discardTile(
                     roomId,
@@ -575,6 +617,7 @@ export class MahjongGame {
                                 wallCount: this.wall.getRemainingTiles(),
                                 deadWallCount: this.wall.getRemainingDeadWall(),
                                 dora: this.getDora().map((t) => t.toString()),
+                                isFuriten: currentPlayer.isFuriten,
                             },
                             to: 'all',
                         },
@@ -596,6 +639,7 @@ export class MahjongGame {
                         wallCount: this.wall.getRemainingTiles(),
                         deadWallCount: this.wall.getRemainingDeadWall(),
                         dora: this.getDora().map((t) => t.toString()),
+                        isFuriten: currentPlayer.isFuriten,
                     },
                     to: 'all',
                 },
@@ -606,11 +650,44 @@ export class MahjongGame {
                         riichiDiscards:
                             RuleManager.getRiichiDiscards(currentPlayer),
                         canTsumo: this.checkCanTsumo(currentPlayer.getId()),
+                        isFuriten: currentPlayer.isFuriten,
                     },
                     to: 'player',
                     playerId: currentPlayer.getId(),
                 },
             ],
+        }
+    }
+
+    /**
+     * AI를 위한 게임 관측 정보를 생성합니다.
+     */
+    public createGameObservation(player: Player): any {
+        const myIndex = this.players.indexOf(player)
+        return {
+            myHand: player.getHand().map((t) => t.toString()),
+            myLastDraw: player.lastDrawnTile?.toString() || null,
+            myIndex: myIndex,
+            players: this.players.map((p, idx) => ({
+                id: p.getId(),
+                handCount: p.getHand().length,
+                discards: p.getDiscards().map((t) => t.toString()),
+                melds: p.getMelds().map((m) => ({
+                    type: m.type,
+                    tiles: m.tiles.map((t) => t.toString()),
+                    opened: m.opened,
+                })),
+                isRiichi: p.isRiichi,
+                isFuriten: p.isFuriten,
+                isIppatsu: p.ippatsuEligible,
+                wind: idx + 1, // 1: East, 2: South, 3: West, 4: North
+                points: p.points,
+            })),
+            doraIndicators: this.getDora().map((t) => t.toString()),
+            wallCount: this.wall.getRemainingTiles(),
+            deadWallCount: this.wall.getRemainingDeadWall(),
+            bakaze: 1, // Assuming East Round for now
+            turnCounter: this.turnCounter,
         }
     }
 
@@ -650,6 +727,10 @@ export class MahjongGame {
         player: Player,
         winningTile: string,
     ): { isAgari: boolean; score: any } {
+        if (player.isFuriten) {
+            return { isAgari: false, score: null }
+        }
+
         const context: WinContext = {
             bakaze: '1z',
             dora: this.getDora().map((t) => t.toString()),

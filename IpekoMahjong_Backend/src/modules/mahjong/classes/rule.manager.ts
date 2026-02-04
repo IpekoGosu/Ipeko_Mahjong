@@ -76,6 +76,23 @@ export class RuleManager {
         return validDiscards
     }
 
+    static calculateFuriten(player: Player): boolean {
+        const hand = player.getHand().map((t) => t.toString())
+        const handStr = this.convertTilesToRiichiString(hand)
+        const result = new Riichi(handStr).calc()
+
+        // hairi.now 0 means Tenpai
+        if (result.hairi?.now === 0) {
+            const waits = Object.keys(result.hairi.wait)
+            const discards = player.getDiscards().map((t) => t.toString())
+
+            // Check if any discard is in waits
+            return discards.some((d) => waits.includes(d))
+        }
+
+        return false
+    }
+
     private static convertTilesToRiichiString(tiles: string[]): string {
         const groups: Record<string, string[]> = { m: [], p: [], s: [], z: [] }
         tiles.forEach((t) => {

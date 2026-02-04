@@ -118,6 +118,7 @@ function App() {
           return {
             ...p,
             isMyTurn: isTarget,
+            isFuriten: isTarget ? payload.isFuriten : p.isFuriten,
             // If it's an AI's turn, we visually "add" a tile to their hand
             handCount: isTarget && p.id !== prev.myPlayerId ? p.handCount + 1 : p.handCount
           };
@@ -151,7 +152,8 @@ function App() {
         drawnTile: payload.tile,
         riichiDiscards: payload.riichiDiscards || [],
         canTsumo: !!payload.canTsumo,
-        actionRequest: null
+        actionRequest: null,
+        players: prev.players.map(p => p.id === prev.myPlayerId ? { ...p, isFuriten: payload.isFuriten } : p)
       }));
     });
 
@@ -169,7 +171,8 @@ function App() {
             return {
               ...p,
               discards: [...p.discards, payload.tile],
-              handCount: Math.max(0, currentCount - 1)
+              handCount: Math.max(0, currentCount - 1),
+              isFuriten: payload.isFuriten
             };
           }
           return p;
@@ -221,7 +224,8 @@ function App() {
             return {
               ...p,
               melds: [...p.melds, { tiles: payload.tiles, stolenFrom: payload.stolenFrom }],
-              handCount: Math.max(0, p.handCount - tilesTakenFromHand)
+              handCount: Math.max(0, p.handCount - tilesTakenFromHand),
+              isFuriten: payload.isFuriten
             };
           }
           
@@ -401,6 +405,7 @@ function App() {
               {oppositePlayer?.id === state.dealerId && <span className="bg-red-600 text-white px-1 rounded font-bold">親</span>}
               Opposite {oppositePlayer?.isMyTurn && <span className="text-blue-400 animate-pulse ml-1">●</span>}
               {oppositePlayer?.isRiichi && <span className="bg-orange-600 text-white px-1 rounded text-[8px] font-black animate-bounce ml-1 shadow-sm">RIICHI</span>}
+              {oppositePlayer?.isFuriten && <span className="bg-purple-600 text-white px-1 rounded text-[8px] font-black ml-1 shadow-sm">FURITEN</span>}
             </div>
             
             {/* Opposite Melds */}
@@ -448,6 +453,7 @@ function App() {
                   <span>Left</span>
                   {leftPlayer?.isMyTurn && <span className="text-blue-400 animate-pulse mt-1">●</span>}
                   {leftPlayer?.isRiichi && <span className="bg-orange-600 text-white px-1 rounded text-[8px] font-black animate-bounce mt-1 shadow-sm">RIICHI</span>}
+                  {leftPlayer?.isFuriten && <span className="bg-purple-600 text-white px-1 rounded text-[8px] font-black mt-1 shadow-sm">FURITEN</span>}
                 </div>
                 
                 {/* Left Melds */}
@@ -514,6 +520,7 @@ function App() {
                   <span>Right</span>
                   {rightPlayer?.isMyTurn && <span className="text-blue-400 animate-pulse mt-1">●</span>}
                   {rightPlayer?.isRiichi && <span className="bg-orange-600 text-white px-1 rounded text-[8px] font-black animate-bounce mt-1 shadow-sm">RIICHI</span>}
+                  {rightPlayer?.isFuriten && <span className="bg-purple-600 text-white px-1 rounded text-[8px] font-black mt-1 shadow-sm">FURITEN</span>}
                 </div>
 
                 {/* Right Melds */}
@@ -608,6 +615,7 @@ function App() {
                 Your Hand {myPlayer?.isMyTurn && <span className="animate-pulse">●</span>}
             </span>
             {myPlayer?.isRiichi && <span className="bg-orange-600 text-white px-2 py-0.5 rounded text-[10px] font-black animate-bounce shadow-lg ring-1 ring-white/20">RIICHI</span>}
+            {myPlayer?.isFuriten && <span className="bg-purple-600 text-white px-2 py-0.5 rounded text-[10px] font-black shadow-lg ring-1 ring-white/20">FURITEN</span>}
           </div>
           <div className="flex items-end gap-0.5 mb-2">
             {state.myHand.map((t, i) => {

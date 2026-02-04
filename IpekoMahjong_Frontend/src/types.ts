@@ -25,6 +25,7 @@ export interface TurnChangedPayload {
   wallCount: number;
   deadWallCount: number;
   dora?: TileString[]; // Updated dora indicators (e.g. after Kan)
+  isFuriten?: boolean;
 }
 
 // Event: 'riichi-declared'
@@ -37,12 +38,14 @@ export interface NewTileDrawnPayload {
   tile: TileString;
   riichiDiscards?: TileString[];
   canTsumo?: boolean;
+  isFuriten?: boolean;
 }
 
 // Event: 'update-discard'
 export interface UpdateDiscardPayload {
   playerId: string;
   tile: TileString;
+  isFuriten?: boolean;
 }
 
 // Event: 'ask-action'
@@ -61,6 +64,7 @@ export interface UpdateMeldPayload {
   type: "chi" | "pon" | "kan" | "ron";
   tiles: TileString[]; // The tiles involved in the meld (e.g., ['1m', '2m', '3m'])
   stolenFrom?: string; // Player ID whose discard was taken
+  isFuriten?: boolean;
 }
 
 // Event: 'game-over'
@@ -94,6 +98,7 @@ export interface PlayerState {
   melds: { tiles: string[], stolenFrom?: string }[]; // List of melds with metadata
   isMyTurn: boolean;
   isRiichi?: boolean;
+  isFuriten?: boolean;
 }
 
 export interface GameState {

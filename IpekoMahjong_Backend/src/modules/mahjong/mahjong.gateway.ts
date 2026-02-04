@@ -85,16 +85,7 @@ export class MahjongGateway {
         const gameUpdate = await room.mahjongGame.startGame(room.roomId)
         // Use a small delay to ensure the client has processed 'game-started'
         this.processGameUpdate(gameUpdate)
-
-        // AI가 시작 플레이어여서 바로 타패한 경우, 다음 턴을 스케줄링합니다.
-        const discardEvent = gameUpdate.events.find(
-            (e) => e.eventName === 'update-discard',
-        )
-        if (discardEvent && !gameUpdate.isGameOver) {
-            const discarderId = discardEvent.payload.playerId
-            const tileString = discardEvent.payload.tile
-            this.checkAndNotifyActions(room.roomId, discarderId, tileString)
-        }
+        this.handlePostUpdateActions(room.roomId, gameUpdate)
     }
 
     @SubscribeMessage('discard-tile')
@@ -120,7 +111,7 @@ export class MahjongGateway {
                 (e) => e.eventName === 'error',
             )
             if (!gameUpdate.isGameOver && !hasError) {
-                this.checkAndNotifyActions(data.roomId, client.id, data.tile)
+                this.handlePostUpdateActions(data.roomId, gameUpdate)
             }
         } catch (error) {
             this.logger.error(
@@ -159,7 +150,7 @@ export class MahjongGateway {
     }
 
     @SubscribeMessage('select-action')
-    handleSelectAction(
+    async handleSelectAction(
         @ConnectedSocket() client: Socket,
         @MessageBody()
         data: {
@@ -168,13 +159,24 @@ export class MahjongGateway {
             tile: string
             consumedTiles?: string[]
         },
-    ): void {
+    ): Promise<void> {
         try {
             const room = this.gameRoomService.getRoom(data.roomId)
             if (!room) return
 
-            // 스킵인 경우
             if (data.type === 'skip') {
+                const result = await room.mahjongGame.skipAction(
+                    data.roomId,
+                    client.id,
+                )
+                if (result.shouldProceed && result.update) {
+                    if (room.timer) {
+                        clearTimeout(room.timer)
+                        room.timer = undefined
+                    }
+                    this.processGameUpdate(result.update)
+                    this.handlePostUpdateActions(data.roomId, result.update)
+                }
                 return
             }
 
@@ -192,6 +194,7 @@ export class MahjongGateway {
                 data.consumedTiles,
             )
             this.processGameUpdate(gameUpdate)
+            this.handlePostUpdateActions(data.roomId, gameUpdate)
         } catch (error) {
             this.logger.error(
                 `Error in handleSelectAction: ${error.message}`,
@@ -208,8 +211,23 @@ export class MahjongGateway {
     // #region Private Helper Methods
 
     /**
+     * GameUpdate 후 추가적으로 처리해야 할 로직(AI 타패 후 행동 체크 등)을 수행합니다.
+     */
+    private handlePostUpdateActions(roomId: string, update: GameUpdate): void {
+        if (update.isGameOver) return
+
+        const discardEvent = update.events.find(
+            (e) => e.eventName === 'update-discard',
+        )
+        if (discardEvent) {
+            const discarderId = discardEvent.payload.playerId
+            const tileString = discardEvent.payload.tile
+            this.checkAndNotifyActions(roomId, discarderId, tileString)
+        }
+    }
+
+    /**
      * 타패 후 다른 플레이어의 행동 가능 여부를 확인하고, 가능하면 이벤트를 보냅니다.
-     * 행동이 없으면 자동으로 다음 턴을 스케줄링합니다.
      */
     private checkAndNotifyActions(
         roomId: string,
@@ -228,10 +246,36 @@ export class MahjongGateway {
         if (hasActions) {
             console.log('Possible actions:', actions)
             // 행동이 가능한 플레이어에게 선택지를 보냅니다.
-            Object.entries(actions).forEach(([playerId, actionData]) => {
-                this.server
-                    .to(playerId)
-                    .emit('ask-action', { ...actionData, tile: tileString })
+            Object.entries(actions).forEach(async ([playerId, actionData]) => {
+                const player = room.mahjongGame.getPlayer(playerId)
+                if (player?.isAi && player.ai) {
+                    // AI decides action
+                    const observation = (room.mahjongGame as any).createGameObservation(player)
+                    const decision = player.ai.decideAction(observation, tileString, actionData)
+                    
+                    if (decision === 'skip') {
+                        const result = await room.mahjongGame.skipAction(roomId, playerId)
+                        if (result.shouldProceed && result.update) {
+                            if (room.timer) {
+                                clearTimeout(room.timer)
+                                room.timer = undefined
+                            }
+                            this.processGameUpdate(result.update)
+                            this.handlePostUpdateActions(roomId, result.update)
+                        }
+                    } else {
+                        // AI performs action (Chi, Pon, Kan, Ron)
+                        // For now, SimpleAI only skips, so we'll implement this part when needed.
+                        // But let's add a placeholder.
+                        const gameUpdate = room.mahjongGame.performAction(roomId, playerId, decision, tileString)
+                        this.processGameUpdate(gameUpdate)
+                        this.handlePostUpdateActions(roomId, gameUpdate)
+                    }
+                } else {
+                    this.server
+                        .to(playerId)
+                        .emit('ask-action', { ...actionData, tile: tileString })
+                }
             })
             // 5초 대기 (아무도 선택하지 않으면 다음 턴)
             this.scheduleNextTurn(roomId, 5000)
@@ -288,18 +332,7 @@ export class MahjongGateway {
                 const gameUpdate =
                     await currentRoom.mahjongGame.proceedToNextTurn(roomId)
                 this.processGameUpdate(gameUpdate)
-
-                // 다음 턴이 AI여서 바로 타패한 경우, 다시 다음 턴을 스케줄링합니다.
-                const discardEvent = gameUpdate.events.find(
-                    (e) => e.eventName === 'update-discard',
-                )
-
-                if (discardEvent && !gameUpdate.isGameOver) {
-                    const discarderId = discardEvent.payload.playerId
-                    const tileString = discardEvent.payload.tile
-                    // AI 타패 후 행동 체크
-                    this.checkAndNotifyActions(roomId, discarderId, tileString)
-                }
+                this.handlePostUpdateActions(roomId, gameUpdate)
             } catch (error) {
                 console.error(
                     `Error in scheduled next turn for room ${roomId}:`,

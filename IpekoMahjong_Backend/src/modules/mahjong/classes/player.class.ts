@@ -1,10 +1,12 @@
 import { Tile } from './tile.class'
 import { Meld } from '../interfaces/mahjong.types'
+import { MahjongAI } from '../ai/mahjong-ai.interface'
 
 export class Player {
     private readonly id: string
     public readonly isOya: boolean
     readonly isAi: boolean
+    public ai?: MahjongAI
     private hand: Tile[] = []
     private discards: Tile[] = []
     private melds: Meld[] = []
@@ -13,6 +15,8 @@ export class Player {
     public isDoubleRiichi: boolean = false
     public ippatsuEligible: boolean = false
     public riichiDeclarationTurn: number | null = null
+    public isFuriten: boolean = false
+    public points: number = 25000
 
     constructor(id: string, isOya: boolean = false, isAi: boolean = false) {
         this.id = id

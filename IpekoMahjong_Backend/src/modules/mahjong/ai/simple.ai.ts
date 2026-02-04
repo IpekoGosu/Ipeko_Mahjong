@@ -1,21 +1,27 @@
 import Riichi from 'riichi'
+import { GameObservation, MahjongAI } from './mahjong-ai.interface'
 
-export class SimpleAI {
+export class SimpleAI implements MahjongAI {
     /**
      * Decides which tile to discard to minimize Shanten.
-     * @param handTiles Array of tile strings (e.g. ["1m", "5z", ...])
      */
-    static decideDiscard(handTiles: string[]): string {
+    decideDiscard(obs: GameObservation): string {
+        const handTiles = [...obs.myHand]
+        if (obs.myLastDraw) {
+            // If we don't already have the last draw in the hand (it usually is added to hand in our engine)
+            // But let's check if it's there. The engine's draw() sorts the hand.
+            // In MahjongGame.drawTileForCurrentPlayer, draw(tile) is called before decideDiscard.
+        }
+
         if (handTiles.length === 0) return ''
 
-        let bestDiscard = handTiles[handTiles.length - 1] // Default to last drawn
+        let bestDiscard = handTiles[handTiles.length - 1]
         let minShanten = 100
 
         // Try discarding each unique tile
         const uniqueTiles = Array.from(new Set(handTiles))
 
         for (const tile of uniqueTiles) {
-            // Create a 13-tile hand string by removing one instance of this tile
             const remainingTiles = [...handTiles]
             const idx = remainingTiles.indexOf(tile)
             if (idx > -1) remainingTiles.splice(idx, 1)
@@ -23,11 +29,8 @@ export class SimpleAI {
             const handStr = this.convertTilesToString(remainingTiles)
             const result = new Riichi(handStr).calc()
 
-            // syanten is the standard property for shanten in this library
             const shanten = (result as any).syanten
 
-            // Prioritize discard that gives lower shanten.
-            // If tie, we stick with current (or could add logic to keep terminals/dora)
             if (shanten < minShanten) {
                 minShanten = shanten
                 bestDiscard = tile
@@ -37,7 +40,33 @@ export class SimpleAI {
         return bestDiscard
     }
 
-    private static convertTilesToString(tiles: string[]): string {
+    /**
+     * Simple AI always skips actions for now.
+     */
+    decideAction(obs: GameObservation, discardedTile: string, possibleActions: any): 'chi' | 'pon' | 'kan' | 'ron' | 'skip' {
+        return 'skip'
+    }
+
+    /**
+     * Static helper for quick access if needed, though instance usage is preferred with the interface.
+     */
+    static decideDiscard(handTiles: string[]): string {
+        // Temporary wrapper for existing calls if any
+        const ai = new SimpleAI()
+        return ai.decideDiscard({
+            myHand: handTiles,
+            myLastDraw: null,
+            players: [],
+            myIndex: 0,
+            doraIndicators: [],
+            wallCount: 0,
+            deadWallCount: 0,
+            bakaze: 1,
+            turnCounter: 0
+        })
+    }
+
+    private convertTilesToString(tiles: string[]): string {
         // Convert ["1m", "2m", "1p"] to "12m1p"
         const groups: Record<string, number[]> = { m: [], p: [], s: [], z: [] }
         tiles.forEach((t) => {
