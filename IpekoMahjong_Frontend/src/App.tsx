@@ -458,7 +458,7 @@ function App() {
                                     親
                                 </span>
                             )}
-                            Opposite{' '}
+                            TOIMEN{' '}
                             {oppositePlayer?.isMyTurn && (
                                 <span className="text-blue-400 animate-pulse ml-1">
                                     ●
@@ -538,7 +538,7 @@ function App() {
                                         親
                                     </span>
                                 )}
-                                <span>Left</span>
+                                <span>KAMICHA</span>
                                 {leftPlayer?.isMyTurn && (
                                     <span className="text-blue-400 animate-pulse mt-1">
                                         ●
@@ -649,7 +649,7 @@ function App() {
                                         親
                                     </span>
                                 )}
-                                <span>Right</span>
+                                <span>SHIMOCHA</span>
                                 {rightPlayer?.isMyTurn && (
                                     <span className="text-blue-400 animate-pulse mt-1">
                                         ●

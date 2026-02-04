@@ -18,7 +18,7 @@ import { RuleManager, WinContext } from './rule.manager'
 export interface GameUpdate {
     roomId: string
     isGameOver: boolean
-    reason?: 'tsumo' | 'ryuukyoku' | 'player-disconnected'
+    reason?: 'tsumo' | 'ryuukyoku' | 'player-disconnected' | 'ron'
     events: {
         eventName: string
         payload: Record<string, unknown>
@@ -380,7 +380,7 @@ export class MahjongGame {
                 return {
                     roomId,
                     isGameOver: true,
-                    reason: 'tsumo', // We can use a more general 'win' or 'ron' later
+                    reason: 'ron',
                     events: [
                         {
                             eventName: 'game-over',
