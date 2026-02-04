@@ -852,27 +852,52 @@ export class MahjongGame {
     }
 
     private checkChi(player: Player, tileString: string): string[][] {
-        const rank = parseInt(tileString.slice(0, -1))
+        let rank = parseInt(tileString.slice(0, -1))
         const suit = tileString.slice(-1)
         if (suit === 'z') return []
+
+        // If discarded tile is Red Five (0), treat it as 5 for sequence checking
+        if (rank === 0) rank = 5
 
         const hand = player.getHand()
         const options: string[][] = []
 
-        const has = (r: number) =>
-            hand.some((t) => t.getSuit() === suit && t.getRank() === r)
+        // Helper to find all tiles in hand matching a specific rank and suit
+        const findTiles = (r: number): string[] => {
+            return hand
+                .filter((t) => t.getSuit() === suit && t.getRank() === r)
+                .map((t) => t.toString())
+        }
 
         // Check -2, -1 (e.g. 3,4 for 5)
-        if (has(rank - 2) && has(rank - 1)) {
-            options.push([`${rank - 2}${suit}`, `${rank - 1}${suit}`])
+        const minus2 = findTiles(rank - 2)
+        const minus1 = findTiles(rank - 1)
+        if (minus2.length > 0 && minus1.length > 0) {
+            for (const t2 of minus2) {
+                for (const t1 of minus1) {
+                    options.push([t2, t1])
+                }
+            }
         }
+
         // Check -1, +1 (e.g. 4,6 for 5)
-        if (has(rank - 1) && has(rank + 1)) {
-            options.push([`${rank - 1}${suit}`, `${rank + 1}${suit}`])
+        const plus1 = findTiles(rank + 1)
+        if (minus1.length > 0 && plus1.length > 0) {
+            for (const t1 of minus1) {
+                for (const t2 of plus1) {
+                    options.push([t1, t2])
+                }
+            }
         }
+
         // Check +1, +2 (e.g. 6,7 for 5)
-        if (has(rank + 1) && has(rank + 2)) {
-            options.push([`${rank + 1}${suit}`, `${rank + 2}${suit}`])
+        const plus2 = findTiles(rank + 2)
+        if (plus1.length > 0 && plus2.length > 0) {
+            for (const t1 of plus1) {
+                for (const t2 of plus2) {
+                    options.push([t1, t2])
+                }
+            }
         }
 
         return options
