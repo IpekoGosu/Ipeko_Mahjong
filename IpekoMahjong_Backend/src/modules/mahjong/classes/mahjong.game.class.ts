@@ -206,12 +206,22 @@ export class MahjongGame {
                     ],
                 }
             }
-            player.isRiichi = true
-            player.ippatsuEligible = true
-            player.riichiDeclarationTurn = this.turnCounter
 
-            if (!this.anyCallDeclared && player.getDiscards().length === 0) {
-                player.isDoubleRiichi = true
+            if (player.points < 1000) {
+                return {
+                    roomId,
+                    isGameOver: false,
+                    events: [
+                        {
+                            eventName: 'error',
+                            payload: {
+                                message: 'Not enough points for Riichi',
+                            },
+                            to: 'player',
+                            playerId,
+                        },
+                    ],
+                }
             }
         }
 
@@ -256,6 +266,18 @@ export class MahjongGame {
             }
         }
 
+        if (isRiichi) {
+            player.isRiichi = true
+            player.ippatsuEligible = true
+            player.riichiDeclarationTurn = this.turnCounter
+            player.points -= 1000
+            this.kyotaku += 1
+
+            if (!this.anyCallDeclared && player.getDiscards().length === 1) {
+                player.isDoubleRiichi = true
+            }
+        }
+
         // Update Furiten status
         player.isFuriten = RuleManager.calculateFuriten(player)
 
@@ -296,7 +318,11 @@ export class MahjongGame {
         if (isRiichi) {
             events.push({
                 eventName: 'riichi-declared',
-                payload: { playerId },
+                payload: {
+                    playerId,
+                    score: player.points,
+                    kyotaku: this.kyotaku,
+                },
                 to: 'all',
             })
         }

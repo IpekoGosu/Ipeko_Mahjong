@@ -148,7 +148,9 @@ const MahjongTile: React.FC<MahjongTileProps> = ({
                     )} />
                 )}
                 {isEmoji ? (
-                    <span className={cn('leading-none select-none text-black flex items-center justify-center', emojiSizes[size])}>
+                    <span className={cn('leading-none select-none text-black flex justify-center', emojiSizes[size],
+                        tile !== '7z' && '-mt-3'
+                    )}>
                         {text}
                     </span>
                 ) : isZ ? (

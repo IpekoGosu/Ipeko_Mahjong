@@ -6,12 +6,14 @@ interface ActionButtonsProps {
     request: AskActionPayload
     onTakeAction: (type: string, tiles?: string[]) => void
     onIgnoreAction: () => void
+    tileMode: 'text' | 'emoji'
 }
 
 const ActionButtons: React.FC<ActionButtonsProps> = ({
     request,
     onTakeAction,
     onIgnoreAction,
+    tileMode,
 }) => {
     return (
         <div className="fixed bottom-20 left-1/2 transform -translate-x-1/2 flex flex-col gap-1 z-50 items-center">
@@ -68,6 +70,7 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
                                         key={i}
                                         tile={t}
                                         size="xs"
+                                        mode={tileMode}
                                         className="shadow-sm border-gray-300 pointer-events-none"
                                     />
                                 ))}
