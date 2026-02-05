@@ -10,6 +10,7 @@ interface MahjongTileProps {
     tile: string
     onClick?: () => void
     isDrawn?: boolean
+    isDora?: boolean
     className?: string
 }
 
@@ -17,6 +18,7 @@ const MahjongTile: React.FC<MahjongTileProps> = ({
     tile,
     onClick,
     isDrawn,
+    isDora,
     className,
 }) => {
     const getTileDisplay = (t: string) => {
@@ -84,6 +86,7 @@ const MahjongTile: React.FC<MahjongTileProps> = ({
             className={cn(
                 'relative w-10 h-14 bg-[#f8f5e6] border border-gray-400 rounded-sm flex flex-col items-center justify-center cursor-pointer hover:bg-gray-100 transition-colors shadow-sm',
                 isDrawn && 'ml-2',
+                isDora && 'bg-[#fff9c4] ring-1 ring-yellow-400/60 border-yellow-500/50 shadow-[0_0_5px_rgba(250,204,21,0.3)]',
                 className,
             )}
         >

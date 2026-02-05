@@ -124,11 +124,15 @@ export class MahjongGame {
         const drawUpdate = this.drawTileForCurrentPlayer(roomId)
 
         // 6. Generate round-started events
+        const doraIndicators = this.getDora().map((t) => t.toString())
+        const actualDora = RuleManager.getActualDoraList(doraIndicators)
+
         const startEvents: GameUpdate['events'] = this.players.map((p) => ({
             eventName: 'round-started',
             payload: {
                 hand: p.getHand().map((t) => t.toString()),
-                dora: this.getDora().map((t) => t.toString()),
+                dora: doraIndicators,
+                actualDora: actualDora,
                 wallCount: this.wall.getRemainingTiles(),
                 bakaze: this.bakaze,
                 kyoku: this.kyokuNum,
@@ -138,6 +142,7 @@ export class MahjongGame {
                 scores: this.players.map((pl) => ({
                     id: pl.getId(),
                     points: pl.points,
+                    jikaze: this.getSeatWind(pl),
                 })),
             },
             to: 'player',
@@ -272,6 +277,7 @@ export class MahjongGame {
                     playerId,
                     tile: tileString,
                     isFuriten: player.isFuriten,
+                    waits: RuleManager.getWaits(player),
                 },
                 to: 'all',
             },
@@ -642,6 +648,9 @@ export class MahjongGame {
         // Update Furiten status
         player.isFuriten = RuleManager.calculateFuriten(player)
 
+        const doraIndicators = this.getDora().map((t) => t.toString())
+        const actualDora = RuleManager.getActualDoraList(doraIndicators)
+
         const events: GameUpdate['events'] = [
             {
                 eventName: 'update-meld',
@@ -651,6 +660,7 @@ export class MahjongGame {
                     tiles: meldTiles.map((t) => t.toString()),
                     stolenFrom: stolenFromId,
                     isFuriten: player.isFuriten,
+                    waits: RuleManager.getWaits(player),
                 },
                 to: 'all',
             },
@@ -660,7 +670,8 @@ export class MahjongGame {
                     playerId,
                     wallCount: this.wall.getRemainingTiles(),
                     deadWallCount: this.wall.getRemainingDeadWall(),
-                    dora: this.getDora().map((t) => t.toString()),
+                    dora: doraIndicators,
+                    actualDora: actualDora,
                     isFuriten: player.isFuriten,
                 },
                 to: 'all',
@@ -683,14 +694,23 @@ export class MahjongGame {
                 const ankanList = RuleManager.getAnkanOptions(player)
                 const kakanList = RuleManager.getKakanOptions(player)
 
+                const newDoraIndicators = this.getDora().map((t) =>
+                    t.toString(),
+                )
+                const newActualDora =
+                    RuleManager.getActualDoraList(newDoraIndicators)
+
                 events.push({
                     eventName: 'new-tile-drawn',
                     payload: {
                         tile: replacementTile.toString(),
                         riichiDiscards: RuleManager.getRiichiDiscards(player),
                         canTsumo: this.checkCanTsumo(player.getId()),
+                        waits: RuleManager.getWaits(player),
                         ankanList,
                         kakanList,
+                        dora: newDoraIndicators,
+                        actualDora: newActualDora,
                     },
                     to: 'player',
                     playerId: player.getId(),
@@ -992,6 +1012,9 @@ export class MahjongGame {
         const ankanList = RuleManager.getAnkanOptions(currentPlayer)
         const kakanList = RuleManager.getKakanOptions(currentPlayer)
 
+        const doraIndicators = this.getDora().map((t) => t.toString())
+        const actualDora = RuleManager.getActualDoraList(doraIndicators)
+
         // 모든 플레이어에게 턴 변경 알림
         const events: GameUpdate['events'] = [
             {
@@ -1000,7 +1023,8 @@ export class MahjongGame {
                     playerId: currentPlayer.getId(),
                     wallCount: this.wall.getRemainingTiles(),
                     deadWallCount: this.wall.getRemainingDeadWall(),
-                    dora: this.getDora().map((t) => t.toString()),
+                    dora: doraIndicators,
+                    actualDora: actualDora,
                     isFuriten: currentPlayer.isFuriten,
                 },
                 to: 'all',
@@ -1017,6 +1041,7 @@ export class MahjongGame {
                         RuleManager.getRiichiDiscards(currentPlayer),
                     canTsumo: this.checkCanTsumo(currentPlayer.getId()),
                     isFuriten: currentPlayer.isFuriten,
+                    waits: RuleManager.getWaits(currentPlayer),
                     ankanList,
                     kakanList,
                 },
@@ -1203,6 +1228,14 @@ export class MahjongGame {
         }
 
         return uniqueOptions
+    }
+
+    public getSeatWind(player: Player): string {
+        const playerIndex = this.players.indexOf(player)
+        // Winds relative to Oya
+        // East=1z, South=2z, West=3z, North=4z
+        const relativePos = (playerIndex - this.oyaIndex + 4) % 4
+        return `${relativePos + 1}z`
     }
 
     // #endregion

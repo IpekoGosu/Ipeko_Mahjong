@@ -71,6 +71,9 @@ export class MahjongGateway {
         // Send initial state to the human player
         const human = room.mahjongGame.getPlayer(client.id)
         if (human) {
+            const doraIndicators = room.mahjongGame
+                .getDora()
+                .map((t) => t.toString())
             client.emit('game-started', {
                 roomId: room.roomId,
                 yourPlayerId: client.id,
@@ -78,11 +81,14 @@ export class MahjongGateway {
                     .getPlayers()
                     .find((p) => p.isOya)
                     ?.getId(),
-                players: room.mahjongGame
-                    .getPlayers()
-                    .map((p) => ({ id: p.getId(), isAi: p.isAi })),
+                players: room.mahjongGame.getPlayers().map((p) => ({
+                    id: p.getId(),
+                    isAi: p.isAi,
+                    jikaze: room.mahjongGame.getSeatWind(p),
+                })),
                 hand: human.getHand().map((t) => t.toString()),
-                dora: room.mahjongGame.getDora().map((t) => t.toString()),
+                dora: doraIndicators,
+                actualDora: RuleManager.getActualDoraList(doraIndicators),
                 wallCount: room.mahjongGame.getWallCount(),
                 deadWallCount: room.mahjongGame.getDeadWallCount(),
                 riichiDiscards: RuleManager.getRiichiDiscards(human),

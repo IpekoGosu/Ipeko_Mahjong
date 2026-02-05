@@ -33,6 +33,7 @@ function App() {
         myHand: [],
         drawnTile: null,
         dora: [],
+        actualDora: [],
         players: [],
         wallCount: 0,
         deadWallCount: 0,
@@ -42,6 +43,7 @@ function App() {
         roundEndedData: null,
         riichiDiscards: [],
         canTsumo: false,
+        waits: [],
         ankanList: [],
         kakanList: [],
         logs: [],
@@ -103,6 +105,7 @@ function App() {
                 roomId: payload.roomId,
                 myPlayerId: payload.yourPlayerId,
                 dora: payload.dora,
+                actualDora: payload.actualDora || [],
                 wallCount: payload.wallCount,
                 deadWallCount: payload.deadWallCount,
                 dealerId: payload.oyaId,
@@ -116,7 +119,8 @@ function App() {
                     melds: [],
                     isMyTurn: false,
                     isRiichi: false,
-                    points: 25000 // Initial default
+                    points: 25000, // Initial default
+                    jikaze: p.jikaze
                 })),
             }))
         })
@@ -127,6 +131,7 @@ function App() {
                  ...prev,
                  myHand: sortTiles(payload.hand),
                  dora: payload.dora,
+                 actualDora: payload.actualDora || [],
                  wallCount: payload.wallCount,
                  bakaze: payload.bakaze,
                  kyoku: payload.kyoku,
@@ -135,6 +140,7 @@ function App() {
                  dealerId: payload.oyaId,
                  roundEndedData: null,
                  gameOverData: null,
+                 waits: [],
                  players: prev.players.map(p => {
                      const scoreInfo = payload.scores.find(s => s.id === p.id)
                      return {
@@ -144,7 +150,8 @@ function App() {
                          melds: [],
                          isRiichi: false,
                          isFuriten: false,
-                         points: scoreInfo ? scoreInfo.points : p.points
+                         points: scoreInfo ? scoreInfo.points : p.points,
+                         jikaze: scoreInfo ? scoreInfo.jikaze : p.jikaze
                      }
                  })
              }))
@@ -186,6 +193,7 @@ function App() {
                     wallCount: payload.wallCount,
                     deadWallCount: payload.deadWallCount,
                     dora: payload.dora || prev.dora,
+                    actualDora: payload.actualDora || prev.actualDora,
                     actionRequest: null,
                     canTsumo: false,
                     riichiDiscards: [],
@@ -215,8 +223,11 @@ function App() {
                 drawnTile: payload.tile,
                 riichiDiscards: payload.riichiDiscards || [],
                 canTsumo: !!payload.canTsumo,
+                waits: payload.waits || [],
                 ankanList: payload.ankanList || [],
                 kakanList: payload.kakanList || [],
+                dora: payload.dora || prev.dora,
+                actualDora: payload.actualDora || prev.actualDora,
                 actionRequest: null,
                 players: prev.players.map((p) =>
                     p.id === prev.myPlayerId
@@ -274,6 +285,7 @@ function App() {
                     actionRequest: null,
                     myHand: newHand,
                     drawnTile: newDrawnTile,
+                    waits: payload.waits || prev.waits,
                 }
             })
         })
@@ -352,6 +364,7 @@ function App() {
                     myHand: newHand,
                     drawnTile: null,
                     actionRequest: null,
+                    waits: payload.waits || prev.waits,
                 }
             })
         })
@@ -474,14 +487,21 @@ function App() {
         return -1
     }
 
-    const getWindName = (bakaze: string) => {
-        switch (bakaze) {
-            case '1z': return 'East'
-            case '2z': return 'South'
-            case '3z': return 'West'
-            case '4z': return 'North'
+    const getWindName = (wind: string) => {
+        switch (wind) {
+            case '1z': return 'East (東)'
+            case '2z': return 'South (南)'
+            case '3z': return 'West (西)'
+            case '4z': return 'North (北)'
             default: return 'East'
         }
+    }
+
+    const isDora = (tile: string) => {
+        // Red 5 is always dora in most rules (though usually designated by indicator too)
+        // If rank is 0, it's aka dora.
+        if (tile[0] === '0') return true
+        return state.actualDora.includes(tile)
     }
 
     if (!state.roomId) {
@@ -560,6 +580,7 @@ function App() {
                                             <MahjongTile
                                                 key={j}
                                                 tile={t}
+                                                isDora={isDora(t)}
                                                 className={cn(
                                                     'w-4 h-6 shadow-none transition-transform',
                                                     j === rotatedIdx
@@ -584,6 +605,7 @@ function App() {
                                 <MahjongTile
                                     key={i}
                                     tile={t}
+                                    isDora={isDora(t)}
                                     className="w-5 h-7 shadow-none border-gray-700"
                                 />
                             ))}
@@ -641,6 +663,7 @@ function App() {
                                                 <MahjongTile
                                                     key={j}
                                                     tile={t}
+                                                    isDora={isDora(t)}
                                                     className={cn(
                                                         'w-4 h-6 shadow-none',
                                                         j === rotatedIdx
@@ -666,6 +689,7 @@ function App() {
                                 <MahjongTile
                                     key={i}
                                     tile={t}
+                                    isDora={isDora(t)}
                                     className="w-5 h-7 shadow-none border-gray-700"
                                 />
                             ))}
@@ -760,6 +784,7 @@ function App() {
                                                 <MahjongTile
                                                     key={j}
                                                     tile={t}
+                                                    isDora={isDora(t)}
                                                     className={cn(
                                                         'w-4 h-6 shadow-none',
                                                         j === rotatedIdx
@@ -785,6 +810,7 @@ function App() {
                                 <MahjongTile
                                     key={i}
                                     tile={t}
+                                    isDora={isDora(t)}
                                     className="w-5 h-7 shadow-none border-gray-700"
                                 />
                             ))}
@@ -803,6 +829,7 @@ function App() {
                                 <MahjongTile
                                     key={i}
                                     tile={t}
+                                    isDora={isDora(t)}
                                     className="w-5 h-7 shadow-none border-gray-700"
                                 />
                             ))}
@@ -845,6 +872,7 @@ function App() {
                                         <MahjongTile
                                             key={j}
                                             tile={t}
+                                            isDora={isDora(t)}
                                             className={cn(
                                                 'w-8 h-11',
                                                 j === rotatedIdx
@@ -866,6 +894,9 @@ function App() {
                                 親
                             </span>
                         )}
+                        <span className="text-yellow-500 font-bold bg-gray-800 px-1 rounded text-[10px]">
+                            {myPlayer?.jikaze ? getWindName(myPlayer.jikaze) : ''}
+                        </span>
                         <span
                             className={cn(
                                 'transition-colors uppercase tracking-widest',
@@ -890,6 +921,19 @@ function App() {
                             </span>
                         )}
                     </div>
+                    
+                    {/* Waits Display */}
+                    {state.waits.length > 0 && (
+                        <div className="flex items-center gap-2 mb-1 bg-gray-800/40 px-2 py-0.5 rounded border border-gray-700/50">
+                            <span className="text-[10px] font-black text-gray-500 uppercase tracking-tighter">Wait</span>
+                            <div className="flex gap-1">
+                                {state.waits.map((t, i) => (
+                                    <MahjongTile key={i} tile={t} className="w-4 h-6 opacity-80" isDora={isDora(t)} />
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
                     <div className="flex items-end gap-0.5 mb-2">
                         {state.myHand.map((t, i) => {
                             const isValidRiichiTile =
@@ -904,6 +948,7 @@ function App() {
                                 <MahjongTile
                                     key={i}
                                     tile={t}
+                                    isDora={isDora(t)}
                                     className={cn(
                                         'w-10 h-14',
                                         riichiIntent && isValidRiichiTile
@@ -920,6 +965,7 @@ function App() {
                             <MahjongTile
                                 tile={state.drawnTile}
                                 isDrawn
+                                isDora={isDora(state.drawnTile)}
                                 className={cn(
                                     'w-10 h-14 ml-2',
                                     riichiIntent &&
