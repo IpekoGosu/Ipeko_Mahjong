@@ -77,6 +77,8 @@ export interface TurnChangedPayload {
 // Event: 'riichi-declared'
 export interface RiichiDeclaredPayload {
     playerId: string
+    score?: number
+    kyotaku?: number
 }
 
 // Event: 'new-tile-drawn' (Only received if it's YOUR turn)

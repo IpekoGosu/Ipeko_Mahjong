@@ -17,6 +17,7 @@ import {
     ErrorPayload,
     AskActionPayload,
     UpdateMeldPayload,
+    RiichiDeclaredPayload,
 } from './types'
 
 function cn(...inputs: ClassValue[]) {
@@ -26,7 +27,7 @@ function cn(...inputs: ClassValue[]) {
 const SOCKET_URL = 'http://localhost:3000'
 
 function App() {
-    const [tileMode, setTileMode] = useState<'text' | 'emoji'>('text')
+    const [tileMode, setTileMode] = useState<'text' | 'emoji'>('emoji')
     const [state, setState] = useState<GameState>({
         isConnected: false,
         roomId: null,
@@ -210,15 +211,21 @@ function App() {
             setRiichiIntent(false)
         })
 
-        socket.on('riichi-declared', (payload: { playerId: string }) => {
+        socket.on('riichi-declared', (payload: RiichiDeclaredPayload) => {
             addLog(
                 `Player ${payload.playerId === myPlayerIdRef.current ? 'You' : payload.playerId} declared RIICHI!`,
             )
             setState((prev) => ({
                 ...prev,
+                kyotaku: payload.kyotaku || prev.kyotaku,
                 players: prev.players.map((p) =>
                     p.id === payload.playerId 
-                        ? { ...p, isRiichi: true, riichiIndex: p.discards.length - 1 } 
+                        ? { 
+                            ...p, 
+                            isRiichi: true, 
+                            riichiIndex: p.discards.length - 1,
+                            points: payload.score || p.points
+                          } 
                         : p,
                 ),
             }))
@@ -622,7 +629,7 @@ function App() {
                             </div>
 
                             {/* Left: Left Player */}
-                            <div className="absolute left-1 top-0 bottom-0 flex flex-col justify-center items-center -rotate-90">
+                            <div className="absolute -left-2 top-0 bottom-0 flex flex-col justify-center items-center rotate-90">
                                 <div className="flex items-center gap-1.5">
                                     {leftPlayer?.id === state.dealerId && <span className="bg-red-600 text-white px-1.5 py-0.5 rounded text-[10px] font-bold">親</span>}
                                     <span className="text-[10px] text-gray-400 font-bold uppercase tracking-tighter">
@@ -638,7 +645,7 @@ function App() {
                             </div>
 
                             {/* Right: Right Player */}
-                            <div className="absolute right-1 top-0 bottom-0 flex flex-col justify-center items-center rotate-90">
+                            <div className="absolute -right-3 top-0 bottom-0 flex flex-col justify-center items-center -rotate-90">
                                 <div className="flex items-center gap-1.5">
                                     {rightPlayer?.id === state.dealerId && <span className="bg-red-600 text-white px-1.5 py-0.5 rounded text-[10px] font-bold">親</span>}
                                     <span className="text-[10px] text-gray-400 font-bold uppercase tracking-tighter">
@@ -701,12 +708,12 @@ function App() {
                         </div>
 
                         {/* Left Pond */}
-                        <div className="absolute top-1/2 left-9 -translate-x-[120px] -translate-x-1/2">
+                        <div className="absolute top-1/2 left-9 -translate-x-[120px]">
                              {renderPond(leftPlayer, 90, 'top center')}
                         </div>
 
                         {/* Right Pond */}
-                        <div className="absolute top-1/2 left-9 translate-x-[120px] -translate-x-1/2">
+                        <div className="absolute top-1/2 left-9 translate-x-[120px]">
                              {renderPond(rightPlayer, 270, 'top center')}
                         </div>
                     </div>
@@ -731,8 +738,10 @@ function App() {
                                 </div>
                             </div>
                         </div>
+                    </div>
 
-                        {/* Tile Mode Toggle */}
+                    {/* Tile Mode Toggle (Top Right) */}
+                    <div className="absolute top-4 right-4">
                         <div className="bg-gray-800/80 p-3 rounded-2xl border-2 border-gray-700 shadow-lg backdrop-blur-sm flex flex-col gap-2">
                             <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest opacity-60 text-center">Mode</div>
                             <div className="flex bg-gray-900/50 p-1 rounded-xl">
@@ -831,19 +840,19 @@ function App() {
                                 FURITEN
                             </span>
                         )}
+                        {/* Waits Display */}
+                        {state.waits.length > 0 && (
+                            <div className="flex items-center gap-4 bg-gray-800/60 px-4 py-2 rounded-2xl border-2 border-gray-700/50 shadow-lg backdrop-blur-md">
+                                <span className="text-xs font-black text-gray-400 uppercase tracking-widest border-r border-gray-700 pr-4">Wait</span>
+                                <div className="flex gap-2">
+                                    {state.waits.map((t, i) => (
+                                        <MahjongTile key={i} tile={t} size="sm" isDora={isDora(t)} mode={tileMode} className="opacity-90 hover:opacity-100" />
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                     </div>
                     
-                    {/* Waits Display */}
-                    {state.waits.length > 0 && (
-                        <div className="flex items-center gap-4 mb-4 bg-gray-800/60 px-4 py-2 rounded-2xl border-2 border-gray-700/50 shadow-lg backdrop-blur-md">
-                            <span className="text-xs font-black text-gray-400 uppercase tracking-widest border-r border-gray-700 pr-4">Wait</span>
-                            <div className="flex gap-2">
-                                {state.waits.map((t, i) => (
-                                    <MahjongTile key={i} tile={t} size="sm" isDora={isDora(t)} mode={tileMode} className="opacity-90 hover:opacity-100" />
-                                ))}
-                            </div>
-                        </div>
-                    )}
 
                     <div className="flex items-end gap-1 mb-6">
                         {state.myHand.map((t, i) => {
@@ -915,6 +924,7 @@ function App() {
                                 request={state.actionRequest}
                                 onTakeAction={handleTakeAction}
                                 onIgnoreAction={handleIgnoreAction}
+                                tileMode={tileMode}
                             />
                         )}
 
@@ -972,7 +982,7 @@ function App() {
             </div>
 
             {/* Log Console */}
-            <div className="mt-4 bg-black/60 p-3 h-32 overflow-y-auto text-[11px] font-mono rounded-2xl border-2 border-gray-800 shadow-inner backdrop-blur-sm">
+            {/* <div className="mt-4 bg-black/60 p-3 h-32 overflow-y-auto text-[11px] font-mono rounded-2xl border-2 border-gray-800 shadow-inner backdrop-blur-sm">
                 {state.logs.map((log, i) => (
                     <div
                         key={i}
@@ -982,7 +992,7 @@ function App() {
                         <span className="text-gray-400">{log}</span>
                     </div>
                 ))}
-            </div>
+            </div> */}
 
             {/* Round Ended Modal */}
             {state.roundEndedData && (
