@@ -186,7 +186,11 @@ export class MahjongGateway {
             // Wait, handlePostUpdateActions is needed to trigger AI.
             // processGameUpdate just emits events.
 
-            this.handlePostUpdateActions(data.roomId, gameUpdate).catch(err => this.logger.error(`Error in post-action for next-round: ${err}`))
+            this.handlePostUpdateActions(data.roomId, gameUpdate).catch((err) =>
+                this.logger.error(
+                    `Error in post-action for next-round: ${err}`,
+                ),
+            )
         } catch (error) {
             this.logger.error(`Error in handleNextRound: ${error}`)
         }
