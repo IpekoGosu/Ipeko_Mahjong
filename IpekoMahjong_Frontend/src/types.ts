@@ -37,6 +37,20 @@ export interface RoundStartedPayload {
 export interface RoundEndedPayload {
     reason: 'ron' | 'tsumo' | 'ryuukyoku'
     scores: { id: string; points: number }[]
+    scoreDeltas?: Record<string, number>
+    winScore?: {
+        han: number
+        fu: number
+        ten: number
+        yakuman: number
+        yaku: Record<string, string>
+        oya: number[]
+        ko: number[]
+        name: string
+        text: string
+    }
+    winnerId?: string
+    loserId?: string
     nextState: {
         bakaze: string
         kyoku: number

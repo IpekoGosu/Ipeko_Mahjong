@@ -1027,16 +1027,74 @@ function App() {
                         <h2 className="text-2xl font-bold mb-4 text-center text-white">Round Ended</h2>
                         <div className="text-center mb-6">
                             <div className="text-xl font-bold text-yellow-400 mb-2 uppercase">{state.roundEndedData.reason}</div>
+
+                            {/* Win Details */}
+                            {state.roundEndedData.winScore && (
+                                <div className="bg-gray-700/50 p-3 rounded mb-4 text-left border border-gray-600">
+                                    <div className="flex justify-between items-end border-b border-gray-600 pb-2 mb-2">
+                                        <div>
+                                            <div className="font-bold text-white text-lg leading-tight">
+                                                {state.roundEndedData.winScore.name || 'Win'}
+                                            </div>
+                                            {state.roundEndedData.winnerId && (
+                                                <div className="text-[10px] text-gray-400">
+                                                    Winner: {state.roundEndedData.winnerId === state.myPlayerId ? 'You' : state.roundEndedData.winnerId}
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div className="text-right">
+                                            <div className="text-xl font-black text-yellow-400 leading-none">
+                                                {state.roundEndedData.winScore.ten}
+                                            </div>
+                                            <span className="text-[10px] text-gray-400">points</span>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex gap-4 text-xs text-gray-300 mb-2 font-mono">
+                                        <div>
+                                            <span className="font-bold text-white text-sm">{state.roundEndedData.winScore.han}</span> Han
+                                        </div>
+                                        <div>
+                                            <span className="font-bold text-white text-sm">{state.roundEndedData.winScore.fu}</span> Fu
+                                        </div>
+                                        {state.roundEndedData.winScore.yakuman > 0 && (
+                                            <div className="text-red-500 font-black animate-pulse">
+                                                YAKUMAN {state.roundEndedData.winScore.yakuman > 1 ? `x${state.roundEndedData.winScore.yakuman}` : ''}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {state.roundEndedData.winScore.yaku && (
+                                        <div className="space-y-1 bg-gray-800/50 p-2 rounded">
+                                            {Object.entries(state.roundEndedData.winScore.yaku).map(([name, val]) => (
+                                                <div key={name} className="flex justify-between text-xs text-gray-200">
+                                                    <span>{name}</span>
+                                                    <span className="font-mono text-yellow-600">{val}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                             
                             <div className="space-y-2">
                                 {state.roundEndedData.scores.map(score => {
                                     const isMe = score.id === state.myPlayerId
+                                    const delta = state.roundEndedData?.scoreDeltas?.[score.id]
+                                    
                                     return (
                                         <div key={score.id} className={cn("flex justify-between items-center p-2 rounded", isMe ? "bg-blue-900/30 border border-blue-500/30" : "bg-gray-700/30")}>
-                                            <span className={cn("font-bold", isMe ? "text-blue-300" : "text-gray-400")}>
+                                            <span className={cn("font-bold text-sm", isMe ? "text-blue-300" : "text-gray-400")}>
                                                 {isMe ? "You" : `Player ${score.id.slice(0,4)}`}
                                             </span>
-                                            <span className="font-mono text-white">{score.points}</span>
+                                            <div className="text-right flex flex-col items-end">
+                                                <span className="font-mono text-white font-bold">{score.points}</span>
+                                                {delta !== undefined && delta !== 0 && (
+                                                    <span className={cn("text-[10px] font-mono", delta > 0 ? "text-green-400" : "text-red-400")}>
+                                                        {delta > 0 ? "+" : ""}{delta}
+                                                    </span>
+                                                )}
+                                            </div>
                                         </div>
                                     )
                                 })}

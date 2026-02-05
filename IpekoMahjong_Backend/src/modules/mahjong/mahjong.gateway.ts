@@ -19,7 +19,7 @@ import { SimpleAI } from './ai/simple.ai'
 })
 export class MahjongGateway {
     @WebSocketServer()
-    server: Server
+    declare server: Server
 
     constructor(
         private readonly gameRoomService: GameRoomService,

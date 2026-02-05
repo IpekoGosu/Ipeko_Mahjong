@@ -721,6 +721,9 @@ export class MahjongGame {
             score?: ScoreCalculation
         },
     ): GameUpdate {
+        const startScores: Record<string, number> = {}
+        this.players.forEach((p) => (startScores[p.getId()] = p.points))
+
         const events: GameUpdate['events'] = []
         let nextOyaIndex = this.oyaIndex
         let nextKyokuNum = this.kyokuNum
@@ -890,6 +893,12 @@ export class MahjongGame {
         this.kyokuNum = nextKyokuNum
         this.bakaze = nextBakaze
 
+        // Calculate Deltas
+        const scoreDeltas: Record<string, number> = {}
+        this.players.forEach((p) => {
+            scoreDeltas[p.getId()] = p.points - startScores[p.getId()]
+        })
+
         // 3. Return Update
         events.push({
             eventName: 'round-ended',
@@ -899,6 +908,10 @@ export class MahjongGame {
                     id: p.getId(),
                     points: p.points,
                 })),
+                scoreDeltas,
+                winScore: result.score,
+                winnerId: result.winnerId,
+                loserId: result.loserId,
                 nextState: {
                     bakaze: this.bakaze,
                     kyoku: this.kyokuNum,
@@ -1173,7 +1186,23 @@ export class MahjongGame {
             }
         }
 
-        return options
+        // Deduplicate options
+        const uniqueOptions: string[][] = []
+        const seen = new Set<string>()
+
+        for (const option of options) {
+            // Sort to ensure [3m, 4m] is same as [4m, 3m] (though current logic preserves order)
+            // Current logic: minus2, minus1 -> strictly ordered. minus1, plus1 -> strictly ordered.
+            // But checking duplicates is about the exact set of tiles.
+            // Since we push in specific order, JSON.stringify is sufficient for identical pairs.
+            const key = JSON.stringify(option)
+            if (!seen.has(key)) {
+                seen.add(key)
+                uniqueOptions.push(option)
+            }
+        }
+
+        return uniqueOptions
     }
 
     // #endregion
