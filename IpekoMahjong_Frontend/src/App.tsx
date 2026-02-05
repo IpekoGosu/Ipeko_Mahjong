@@ -111,6 +111,7 @@ function App() {
                 dealerId: payload.oyaId,
                 myHand: sortTiles(payload.hand),
                 riichiDiscards: payload.riichiDiscards || [],
+                waits: payload.waits || [],
                 players: payload.players.map((p) => ({
                     id: p.id,
                     isAi: p.isAi,
@@ -125,36 +126,40 @@ function App() {
             }))
         })
 
+        socket.on('update-waits', (payload: { waits: string[] }) => {
+            setState((prev) => ({ ...prev, waits: payload.waits }))
+        })
+
         socket.on('round-started', (payload: RoundStartedPayload) => {
-             addLog(`Round Started: ${payload.bakaze}-${payload.kyoku}`)
-             setState(prev => ({
-                 ...prev,
-                 myHand: sortTiles(payload.hand),
-                 dora: payload.dora,
-                 actualDora: payload.actualDora || [],
-                 wallCount: payload.wallCount,
-                 bakaze: payload.bakaze,
-                 kyoku: payload.kyoku,
-                 honba: payload.honba,
-                 kyotaku: payload.kyotaku,
-                 dealerId: payload.oyaId,
-                 roundEndedData: null,
-                 gameOverData: null,
-                 waits: [],
-                 players: prev.players.map(p => {
-                     const scoreInfo = payload.scores.find(s => s.id === p.id)
-                     return {
-                         ...p,
-                         handCount: 13,
-                         discards: [],
-                         melds: [],
-                         isRiichi: false,
-                         isFuriten: false,
-                         points: scoreInfo ? scoreInfo.points : p.points,
-                         jikaze: scoreInfo ? scoreInfo.jikaze : p.jikaze
-                     }
-                 })
-             }))
+            addLog(`Round Started: ${payload.bakaze}-${payload.kyoku}`)
+            setState((prev) => ({
+                ...prev,
+                myHand: sortTiles(payload.hand),
+                dora: payload.dora,
+                actualDora: payload.actualDora || [],
+                wallCount: payload.wallCount,
+                bakaze: payload.bakaze,
+                kyoku: payload.kyoku,
+                honba: payload.honba,
+                kyotaku: payload.kyotaku,
+                dealerId: payload.oyaId,
+                roundEndedData: null,
+                gameOverData: null,
+                waits: payload.waits || [],
+                players: prev.players.map((p) => {
+                    const scoreInfo = payload.scores.find((s) => s.id === p.id)
+                    return {
+                        ...p,
+                        handCount: 13,
+                        discards: [],
+                        melds: [],
+                        isRiichi: false,
+                        isFuriten: false,
+                        points: scoreInfo ? scoreInfo.points : p.points,
+                        jikaze: scoreInfo ? scoreInfo.jikaze : p.jikaze,
+                    }
+                }),
+            }))
         })
 
         socket.on('round-ended', (payload: RoundEndedPayload) => {
@@ -531,6 +536,20 @@ function App() {
             <div className="flex-grow flex items-center justify-center py-4 min-h-0">
                 <div className="aspect-[4/3] w-full max-h-full bg-gray-800/20 rounded-3xl border-4 border-gray-800 shadow-2xl relative grid grid-cols-3 grid-rows-3 gap-2 p-4 items-center justify-items-center">
                     
+                    {/* Row 1, Col 1: Kyoku Info */}
+                    <div className="col-start-1 row-start-1 self-start justify-self-start p-4">
+                        <div className="flex flex-col gap-2">
+                            <div className="text-xl font-black text-white bg-gray-800/80 px-4 py-2 rounded-xl border-2 border-gray-700 shadow-lg backdrop-blur-sm flex items-center gap-3">
+                                <span className="text-yellow-500 opacity-50 text-xs uppercase tracking-widest">Kyoku</span>
+                                {getWindName(state.bakaze)} {state.kyoku}-{state.honba}
+                            </div>
+                            <div className="text-lg text-yellow-400 font-mono flex items-center gap-2 bg-gray-800/80 px-4 py-1.5 rounded-xl border-2 border-gray-700 shadow-lg backdrop-blur-sm">
+                                <span className="text-gray-500 opacity-50 text-[10px] uppercase tracking-widest mr-1">Kyotaku</span>
+                                <div className="w-2 h-5 bg-red-500 rounded-full shadow-sm"></div> {state.kyotaku}
+                            </div>
+                        </div>
+                    </div>
+
                     {/* Row 1, Col 2: Opposite AI */}
                     <div
                         className={cn(
@@ -703,14 +722,7 @@ function App() {
 
                     {/* Row 2, Col 2: Center Info Box */}
                     <div className="col-start-2 row-start-2 w-48 h-48 bg-gray-900 border-4 border-gray-700 rounded-3xl shadow-2xl flex flex-col items-center justify-center p-3 relative ring-4 ring-black/20">
-                        <div className="absolute top-3 left-4 text-sm font-black text-white bg-gray-800 px-2 py-0.5 rounded-md">
-                            {getWindName(state.bakaze)} {state.kyoku}-{state.honba}
-                        </div>
-                        <div className="absolute top-3 right-4 text-sm text-yellow-400 font-mono flex items-center gap-1.5 bg-gray-800 px-2 py-0.5 rounded-md">
-                             <div className="w-1.5 h-4 bg-red-500 rounded-full shadow-sm"></div> {state.kyotaku}
-                        </div>
-
-                        <div className="text-xs font-black text-gray-500 mb-1 mt-4 tracking-widest uppercase opacity-50">
+                        <div className="text-xs font-black text-gray-500 mb-1 mt-2 tracking-widest uppercase opacity-50">
                             Dora Indicator
                         </div>
                         <div className="flex gap-1.5 mb-4">

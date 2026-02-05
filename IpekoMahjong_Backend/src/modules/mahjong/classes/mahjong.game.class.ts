@@ -141,6 +141,7 @@ export class MahjongGame {
                     points: pl.points,
                     jikaze: this.getSeatWind(pl),
                 })),
+                waits: RuleManager.getWaits(p),
             },
             to: 'player',
             playerId: p.getId(),
@@ -279,9 +280,16 @@ export class MahjongGame {
                     playerId,
                     tile: tileString,
                     isFuriten: player.isFuriten,
-                    waits: RuleManager.getWaits(player),
                 },
                 to: 'all',
+            },
+            {
+                eventName: 'update-waits',
+                payload: {
+                    waits: RuleManager.getWaits(player),
+                },
+                to: 'player',
+                playerId: player.getId(),
             },
         ]
 
@@ -662,9 +670,16 @@ export class MahjongGame {
                     tiles: meldTiles.map((t) => t.toString()),
                     stolenFrom: stolenFromId,
                     isFuriten: player.isFuriten,
-                    waits: RuleManager.getWaits(player),
                 },
                 to: 'all',
+            },
+            {
+                eventName: 'update-waits',
+                payload: {
+                    waits: RuleManager.getWaits(player),
+                },
+                to: 'player',
+                playerId: player.getId(),
             },
             {
                 eventName: 'turn-changed',

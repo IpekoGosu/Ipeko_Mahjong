@@ -93,6 +93,7 @@ export class MahjongGateway {
                 wallCount: room.mahjongGame.getWallCount(),
                 deadWallCount: room.mahjongGame.getDeadWallCount(),
                 riichiDiscards: RuleManager.getRiichiDiscards(human),
+                waits: RuleManager.getWaits(human),
             })
         }
 

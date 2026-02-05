@@ -20,6 +20,7 @@ export interface GameStartedPayload {
     wallCount: number
     deadWallCount: number
     riichiDiscards?: TileString[]
+    waits?: TileString[]
 }
 
 // Event: 'round-started'
@@ -34,6 +35,7 @@ export interface RoundStartedPayload {
     kyotaku: number
     oyaId: string
     scores: { id: string; points: number; jikaze?: string }[]
+    waits?: TileString[]
 }
 
 // Event: 'round-ended'
