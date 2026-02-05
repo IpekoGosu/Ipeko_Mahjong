@@ -12,6 +12,7 @@ interface MahjongTileProps {
     isDrawn?: boolean
     isDora?: boolean
     className?: string
+    size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl'
 }
 
 const MahjongTile: React.FC<MahjongTileProps> = ({
@@ -20,6 +21,7 @@ const MahjongTile: React.FC<MahjongTileProps> = ({
     isDrawn,
     isDora,
     className,
+    size = 'lg',
 }) => {
     const getTileDisplay = (t: string) => {
         let num = t[0]
@@ -72,38 +74,52 @@ const MahjongTile: React.FC<MahjongTileProps> = ({
 
     const { text, subText, color, isZ, isAka, suit } = getTileDisplay(tile)
 
-    // Heuristic: if width is small (e.g. w-4), use smaller font
-    const isXS = className?.includes('w-4')
-    const isSmall = className?.includes('w-5')
-    const isMedium =
-        className?.includes('w-7') ||
-        className?.includes('w-8') ||
-        className?.includes('w-6')
+    const sizeClasses = {
+        xs: 'w-4 h-6 text-[10px]',
+        sm: 'w-6 h-8 text-[14px]',
+        md: 'w-8 h-11 text-[20px]',
+        lg: 'w-12 h-16 text-[28px]',
+        xl: 'w-14 h-20 text-[34px]',
+    }
+
+    const zTextSizes = {
+        xs: 'text-[12px]',
+        sm: 'text-[18px]',
+        md: 'text-[24px]',
+        lg: 'text-[36px]',
+        xl: 'text-[44px]',
+    }
+
+    const numTextSizes = {
+        xs: 'text-[10px]',
+        sm: 'text-[14px]',
+        md: 'text-[18px]',
+        lg: 'text-[28px]',
+        xl: 'text-[34px]',
+    }
 
     return (
         <div
             onClick={onClick}
             className={cn(
-                'relative w-10 h-14 bg-[#f8f5e6] border border-gray-400 rounded-sm flex flex-col items-center justify-center cursor-pointer hover:bg-gray-100 transition-colors shadow-sm',
-                isDrawn && 'ml-2',
-                isDora && 'bg-[#fff9c4] ring-1 ring-yellow-400/60 border-yellow-500/50 shadow-[0_0_5px_rgba(250,204,21,0.3)]',
+                'relative bg-[#f8f5e6] border border-gray-400 rounded flex flex-col items-center justify-center cursor-pointer hover:bg-gray-100 transition-colors shadow-sm',
+                sizeClasses[size],
+                isDrawn && 'ml-3',
+                isDora && 'bg-[#fff9c4] ring-2 ring-yellow-400/70 border-yellow-500 shadow-[0_0_8px_rgba(250,204,21,0.4)]',
                 className,
             )}
         >
             {isAka && (
-                <div className="absolute top-1 right-1 w-1.5 h-1.5 bg-red-500 rounded-full shadow-sm" />
+                <div className={cn(
+                    "absolute bg-red-500 rounded-full shadow-sm",
+                    size === 'xs' ? 'top-0.5 right-0.5 w-1 h-1' : 'top-1 right-1 w-2 h-2'
+                )} />
             )}
             {isZ ? (
                 <span
                     className={cn(
                         'font-bold select-none leading-none',
-                        isXS
-                            ? 'text-[18px]'
-                            : isSmall
-                              ? 'text-[21px]'
-                              : isMedium
-                                ? 'text-[26px]'
-                                : 'text-[42px]',
+                        zTextSizes[size],
                         color,
                     )}
                 >
@@ -114,36 +130,31 @@ const MahjongTile: React.FC<MahjongTileProps> = ({
                     <span
                         className={cn(
                             'font-black select-none',
-                            isXS
-                                ? 'text-[12px]'
-                                : isSmall
-                                  ? 'text-[14px]'
-                                  : isMedium
-                                    ? 'text-[18px]'
-                                    : 'text-[28px]',
+                            numTextSizes[size],
                             color,
                         )}
                     >
                         {text}
                     </span>
-                    {isXS || isSmall ? (
-                        <span
-                            className={cn(
-                                'text-[6px] font-bold select-none opacity-70 uppercase leading-none',
-                                color,
-                            )}
-                        >
-                            {suit}
-                        </span>
-                    ) : (
+                    {size !== 'xs' && size !== 'sm' ? (
                         <span
                             className={cn(
                                 'font-bold select-none opacity-90',
-                                isMedium ? 'text-[10px]' : 'text-[14px]',
+                                size === 'md' ? 'text-[10px]' : size === 'lg' ? 'text-[14px]' : 'text-[16px]',
                                 color,
                             )}
                         >
                             {subText}
+                        </span>
+                    ) : (
+                        <span
+                            className={cn(
+                                'font-bold select-none opacity-70 uppercase leading-none',
+                                size === 'xs' ? 'text-[5px]' : 'text-[7px]',
+                                color,
+                            )}
+                        >
+                            {suit}
                         </span>
                     )}
                 </div>

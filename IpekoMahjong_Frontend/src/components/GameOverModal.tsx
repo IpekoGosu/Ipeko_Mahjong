@@ -16,9 +16,9 @@ const GameOverModal: React.FC<GameOverModalProps> = ({ data, onClose }) => {
         score && score.ten === score.oya.reduce((a, b) => a + b, 0)
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm animate-fade-in p-4">
-            <div className="bg-gray-900 border-2 border-yellow-600 rounded-xl p-6 max-w-md w-full shadow-2xl relative max-h-[95vh] overflow-y-auto">
-                <h2 className="text-2xl font-black text-center text-yellow-500 mb-4 uppercase tracking-widest border-b border-gray-700 pb-2">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md animate-fade-in p-6">
+            <div className="bg-gray-900 border-4 border-yellow-600 rounded-[32px] p-10 max-w-2xl w-full shadow-[0_0_50px_rgba(202,138,4,0.3)] relative max-h-[95vh] overflow-y-auto ring-8 ring-black/40">
+                <h2 className="text-5xl font-black text-center text-yellow-500 mb-8 uppercase tracking-[0.2em] border-b-2 border-gray-800 pb-6">
                     {data.reason === 'tsumo'
                         ? 'TSUMO!'
                         : data.reason === 'ryuukyoku'
@@ -27,13 +27,13 @@ const GameOverModal: React.FC<GameOverModalProps> = ({ data, onClose }) => {
                 </h2>
 
                 {data.winnerId && (
-                    <div className="text-center mb-3">
-                        <span className="text-gray-400 text-xs">Winner</span>
-                        <div className="text-xl font-bold text-white">
+                    <div className="text-center mb-8">
+                        <span className="text-gray-500 text-sm font-bold uppercase tracking-widest">Winner</span>
+                        <div className="text-4xl font-black text-white mt-1">
                             {data.winnerId}
                         </div>
                         {score && (
-                            <span className="text-[10px] px-2 py-0.5 rounded bg-gray-700 text-gray-300 mt-1 inline-block">
+                            <span className="text-xs px-3 py-1 rounded-full bg-gray-800 text-yellow-500 mt-3 inline-block font-black border border-yellow-500/20">
                                 {isDealerWin
                                     ? 'Dealer (Oya)'
                                     : 'Non-Dealer (Ko)'}
@@ -43,21 +43,21 @@ const GameOverModal: React.FC<GameOverModalProps> = ({ data, onClose }) => {
                 )}
 
                 {score && (
-                    <div className="space-y-3 bg-gray-800 p-3 rounded-lg border border-gray-700">
-                        <div className="flex justify-between items-end border-b border-gray-600 pb-2">
-                            <div className="text-lg font-bold text-white">
+                    <div className="space-y-6 bg-gray-800/50 p-8 rounded-3xl border-2 border-gray-700/50 shadow-inner">
+                        <div className="flex justify-between items-end border-b-2 border-gray-700 pb-6">
+                            <div className="text-3xl font-black text-white">
                                 {score.name || 'Win'}
                             </div>
                             <div className="text-right">
-                                <div className="text-2xl font-black text-yellow-400">
+                                <div className="text-5xl font-black text-yellow-400">
                                     {score.ten}{' '}
-                                    <span className="text-xs text-gray-400 font-normal">
+                                    <span className="text-lg text-gray-500 font-bold uppercase tracking-tighter">
                                         pts
                                     </span>
                                 </div>
                                 {/* Show Tsumo payments if applicable */}
                                 {data.reason === 'tsumo' && (
-                                    <div className="text-[10px] text-gray-400">
+                                    <div className="text-sm text-gray-400 font-mono mt-1 font-bold">
                                         {isDealerWin
                                             ? `All pay ${score.oya[0]}`
                                             : `Pay: ${score.ko[0]} / ${score.ko[1]}`}
@@ -66,15 +66,15 @@ const GameOverModal: React.FC<GameOverModalProps> = ({ data, onClose }) => {
                             </div>
                         </div>
 
-                        <div className="flex gap-3 text-xs text-gray-300">
-                            <div>
-                                <span className="font-bold text-white">
+                        <div className="flex gap-8 text-lg font-bold text-gray-400">
+                            <div className="bg-gray-900 px-4 py-2 rounded-xl">
+                                <span className="text-white text-2xl font-black mr-2">
                                     {score.han}
                                 </span>{' '}
                                 Han
                             </div>
-                            <div>
-                                <span className="font-bold text-white">
+                            <div className="bg-gray-900 px-4 py-2 rounded-xl">
+                                <span className="text-white text-2xl font-black mr-2">
                                     {score.fu}
                                 </span>{' '}
                                 Fu
@@ -82,17 +82,17 @@ const GameOverModal: React.FC<GameOverModalProps> = ({ data, onClose }) => {
                         </div>
 
                         {score.yaku && Object.keys(score.yaku).length > 0 && (
-                            <div className="space-y-1 mt-1">
-                                <div className="text-[10px] text-gray-500 uppercase font-bold border-b border-gray-700 pb-1 mb-1">
+                            <div className="space-y-3 mt-4">
+                                <div className="text-xs text-gray-500 uppercase font-black tracking-[0.2em] border-b border-gray-700 pb-2 mb-4">
                                     Yaku List
                                 </div>
                                 {Object.entries(score.yaku).map(
                                     ([name, value]) => (
                                         <div
                                             key={name}
-                                            className="flex justify-between text-xs text-white"
+                                            className="flex justify-between text-xl text-white font-bold"
                                         >
-                                            <span>{name}</span>
+                                            <span className="opacity-90">{name}</span>
                                             <span className="font-mono text-yellow-600">
                                                 {value}
                                             </span>
@@ -103,7 +103,7 @@ const GameOverModal: React.FC<GameOverModalProps> = ({ data, onClose }) => {
                         )}
 
                         {score.text && (
-                            <div className="mt-2 text-[10px] text-gray-500 italic border-t border-gray-700 pt-2 text-center">
+                            <div className="mt-6 text-sm text-gray-500 italic border-t border-gray-700 pt-6 text-center font-bold">
                                 {score.text}
                             </div>
                         )}
@@ -111,17 +111,17 @@ const GameOverModal: React.FC<GameOverModalProps> = ({ data, onClose }) => {
                 )}
 
                 {data.disconnectedPlayerId && (
-                    <div className="text-center text-red-400 mt-2 text-sm">
+                    <div className="text-center text-red-400 mt-6 text-xl font-black animate-pulse">
                         Player {data.disconnectedPlayerId} disconnected.
                     </div>
                 )}
 
-                <div className="mt-6 flex justify-center">
+                <div className="mt-10 flex justify-center">
                     <button
                         onClick={onClose}
-                        className="px-6 py-2 bg-yellow-600 hover:bg-yellow-500 text-black font-bold rounded shadow-lg transition-transform hover:scale-105"
+                        className="px-12 py-4 bg-yellow-600 hover:bg-yellow-500 text-black font-black text-xl rounded-2xl shadow-xl transition-all transform hover:scale-105 active:scale-95 border-b-4 border-yellow-800"
                     >
-                        Close
+                        Close Results
                     </button>
                 </div>
             </div>
