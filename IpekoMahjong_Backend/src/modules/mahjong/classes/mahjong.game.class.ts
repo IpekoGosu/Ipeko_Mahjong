@@ -66,7 +66,7 @@ export class MahjongGame {
 
     // #region Public Methods - Game Flow Control
 
-    /** 게임을 시작하고 첫 턴의 정보를 반환합니다. */
+    /** 게임을 시작하고 첫 국(Kyoku)의 정보를 반환합니다. */
     startGame(roomId: string): GameUpdate {
         console.log('Starting game')
 
@@ -90,7 +90,7 @@ export class MahjongGame {
         return this.startKyoku(roomId)
     }
 
-    /** 새로운 국(Kyoku)을 시작합니다. */
+    /** 새로운 국(Kyoku)을 시작하고 초기 상태(13장)를 반환합니다. */
     private startKyoku(roomId: string): GameUpdate {
         console.log(
             `Starting Kyoku: ${this.bakaze}-${this.kyokuNum}, Honba: ${this.honba}`,
@@ -120,10 +120,7 @@ export class MahjongGame {
         this.rinshanFlag = false
         this.pendingActions = {}
 
-        // 5. Draw first tile for Oya
-        const drawUpdate = this.drawTileForCurrentPlayer(roomId)
-
-        // 6. Generate round-started events
+        // 5. Generate round-started events (Everyone has 13 tiles)
         const doraIndicators = this.getDora().map((t) => t.toString())
         const actualDora = RuleManager.getActualDoraList(doraIndicators)
 
@@ -152,8 +149,13 @@ export class MahjongGame {
         return {
             roomId,
             isGameOver: false,
-            events: [...startEvents, ...drawUpdate.events],
+            events: startEvents,
         }
+    }
+
+    /** 첫 턴(오야의 첫 쯔모)을 시작합니다. */
+    public startFirstTurn(roomId: string): GameUpdate {
+        return this.drawTileForCurrentPlayer(roomId)
     }
 
     /** 현재 턴인 플레이어가 타일을 버립니다. */

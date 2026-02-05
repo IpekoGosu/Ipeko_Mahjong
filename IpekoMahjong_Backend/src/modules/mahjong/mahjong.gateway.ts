@@ -65,15 +65,16 @@ export class MahjongGateway {
         const room = this.gameRoomService.createRoom(client.id)
         await client.join(room.roomId)
 
-        // Start the game logic FIRST to initialize state and deal hands
+        // 1. Initialize round logic (deals 13 tiles)
         const gameUpdate = room.mahjongGame.startGame(room.roomId)
 
-        // Send initial state to the human player
+        // 2. Send initial state to the human player
         const human = room.mahjongGame.getPlayer(client.id)
         if (human) {
             const doraIndicators = room.mahjongGame
                 .getDora()
                 .map((t) => t.toString())
+
             client.emit('game-started', {
                 roomId: room.roomId,
                 yourPlayerId: client.id,
@@ -95,9 +96,13 @@ export class MahjongGateway {
             })
         }
 
-        // Use a small delay to ensure the client has processed 'game-started'
+        // 3. Emit 'round-started' (13 tiles)
         this.processGameUpdate(gameUpdate)
-        await this.handlePostUpdateActions(room.roomId, gameUpdate)
+
+        // 4. Trigger first turn (Oya draws 14th tile)
+        const drawUpdate = room.mahjongGame.startFirstTurn(room.roomId)
+        this.processGameUpdate(drawUpdate)
+        await this.handlePostUpdateActions(room.roomId, drawUpdate)
     }
 
     @SubscribeMessage('discard-tile')
@@ -182,17 +187,17 @@ export class MahjongGateway {
             const room = this.gameRoomService.getRoom(data.roomId)
             if (!room) return
 
+            // 1. Initialize next round logic (deals 13 tiles)
             const gameUpdate = room.mahjongGame.nextRound(data.roomId)
+
+            // 2. Emit 'round-started' (initial 13 tiles)
             this.processGameUpdate(gameUpdate)
-            // Check AI? AI might need to discard if it's Oya.
-            // nextRound calls startKyoku -> drawTile -> turn-changed
-            // processGameUpdate handles turn-changed -> checkAndNotifyAiTurn
-            // So AI should work.
 
-            // Wait, handlePostUpdateActions is needed to trigger AI.
-            // processGameUpdate just emits events.
+            // 3. Trigger first turn (Oya draws 14th tile)
+            const drawUpdate = room.mahjongGame.startFirstTurn(data.roomId)
+            this.processGameUpdate(drawUpdate)
 
-            this.handlePostUpdateActions(data.roomId, gameUpdate).catch((err) =>
+            this.handlePostUpdateActions(data.roomId, drawUpdate).catch((err) =>
                 this.logger.error(
                     `Error in post-action for next-round: ${err}`,
                 ),
