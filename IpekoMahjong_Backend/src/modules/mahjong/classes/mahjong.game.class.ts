@@ -1237,7 +1237,7 @@ export class MahjongGame {
             // Current logic: minus2, minus1 -> strictly ordered. minus1, plus1 -> strictly ordered.
             // But checking duplicates is about the exact set of tiles.
             // Since we push in specific order, JSON.stringify is sufficient for identical pairs.
-            const key = JSON.stringify(option)
+            const key = JSON.stringify([...option].sort())
             if (!seen.has(key)) {
                 seen.add(key)
                 uniqueOptions.push(option)
