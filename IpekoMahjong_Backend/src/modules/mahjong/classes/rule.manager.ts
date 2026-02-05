@@ -157,6 +157,47 @@ export class RuleManager {
         return false
     }
 
+    static getWaits(player: Player): string[] {
+        let handStr = player.getHandStringForRiichi()
+        const melds = player.getMelds()
+        if (melds.length > 0) {
+            melds.forEach((meld) => {
+                const suit = meld.tiles[0].getSuit()
+                const ranks = meld.tiles
+                    .map((t) => {
+                        const s = t.toString()
+                        return s[0]
+                    })
+                    .sort()
+                    .join('')
+                handStr += `+${ranks}${suit}`
+            })
+        }
+
+        try {
+            const result = new Riichi(handStr).calc() as RiichiResult
+            // hairi.now 0 means Tenpai
+            const waits: string[] = []
+            if (result.hairi?.now === 0 && result.hairi.wait) {
+                waits.push(...Object.keys(result.hairi.wait))
+            }
+            if (result.hairi7and13?.now === 0 && result.hairi7and13.wait) {
+                waits.push(...Object.keys(result.hairi7and13.wait))
+            }
+            return Array.from(new Set(waits))
+        } catch (e) {
+            console.error(
+                `Error getting waits for player ${player.getId()}:`,
+                e,
+            )
+            return []
+        }
+    }
+
+    static getActualDoraList(indicators: string[]): string[] {
+        return indicators.map((indicator) => this.getActualDora(indicator))
+    }
+
     static isTenpai(player: Player): boolean {
         // Construct hand string including melds
         let handStr = player.getHandStringForRiichi()

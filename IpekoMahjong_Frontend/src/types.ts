@@ -5,6 +5,7 @@ export type TileString = string // e.g., "1m", "5z"
 export interface PlayerInfo {
     id: string
     isAi: boolean
+    jikaze?: string
 }
 
 // Event: 'game-started'
@@ -15,28 +16,46 @@ export interface GameStartedPayload {
     players: PlayerInfo[]
     hand: TileString[] // Your starting hand (13 tiles)
     dora: TileString[] // Initial dora indicators
+    actualDora?: TileString[]
     wallCount: number
     deadWallCount: number
     riichiDiscards?: TileString[]
+    waits?: TileString[]
 }
 
 // Event: 'round-started'
 export interface RoundStartedPayload {
     hand: TileString[]
     dora: TileString[]
+    actualDora?: TileString[]
     wallCount: number
     bakaze: string
     kyoku: number
     honba: number
     kyotaku: number
     oyaId: string
-    scores: { id: string; points: number }[]
+    scores: { id: string; points: number; jikaze?: string }[]
+    waits?: TileString[]
 }
 
 // Event: 'round-ended'
 export interface RoundEndedPayload {
     reason: 'ron' | 'tsumo' | 'ryuukyoku'
     scores: { id: string; points: number }[]
+    scoreDeltas?: Record<string, number>
+    winScore?: {
+        han: number
+        fu: number
+        ten: number
+        yakuman: number
+        yaku: Record<string, string>
+        oya: number[]
+        ko: number[]
+        name: string
+        text: string
+    }
+    winnerId?: string
+    loserId?: string
     nextState: {
         bakaze: string
         kyoku: number
@@ -51,6 +70,7 @@ export interface TurnChangedPayload {
     wallCount: number
     deadWallCount: number
     dora?: TileString[] // Updated dora indicators (e.g. after Kan)
+    actualDora?: TileString[]
     isFuriten?: boolean
 }
 
@@ -65,8 +85,11 @@ export interface NewTileDrawnPayload {
     riichiDiscards?: TileString[]
     canTsumo?: boolean
     isFuriten?: boolean
+    waits?: TileString[]
     ankanList?: TileString[]
     kakanList?: TileString[]
+    dora?: TileString[]
+    actualDora?: TileString[]
 }
 
 // Event: 'update-discard'
@@ -74,6 +97,7 @@ export interface UpdateDiscardPayload {
     playerId: string
     tile: TileString
     isFuriten?: boolean
+    waits?: TileString[]
 }
 
 // Event: 'ask-action'
@@ -93,6 +117,7 @@ export interface UpdateMeldPayload {
     tiles: TileString[] // The tiles involved in the meld (e.g., ['1m', '2m', '3m'])
     stolenFrom?: string // Player ID whose discard was taken
     isFuriten?: boolean
+    waits?: TileString[]
 }
 
 // Event: 'game-over'
@@ -127,8 +152,10 @@ export interface PlayerState {
     melds: { tiles: string[]; stolenFrom?: string }[] // List of melds with metadata
     isMyTurn: boolean
     isRiichi?: boolean
+    riichiIndex?: number
     isFuriten?: boolean
     points: number
+    jikaze?: string
 }
 
 export interface GameState {
@@ -138,6 +165,7 @@ export interface GameState {
     myHand: string[] // List of tile strings.
     drawnTile: string | null // The 14th tile.
     dora: string[]
+    actualDora: string[]
     players: PlayerState[]
     wallCount: number
     deadWallCount: number
@@ -147,6 +175,7 @@ export interface GameState {
     roundEndedData: RoundEndedPayload | null
     riichiDiscards: string[]
     canTsumo: boolean
+    waits: string[]
     ankanList: string[]
     kakanList: string[]
     logs: string[]

@@ -66,7 +66,7 @@ export class MahjongGame {
 
     // #region Public Methods - Game Flow Control
 
-    /** 게임을 시작하고 첫 턴의 정보를 반환합니다. */
+    /** 게임을 시작하고 첫 국(Kyoku)의 정보를 반환합니다. */
     startGame(roomId: string): GameUpdate {
         console.log('Starting game')
 
@@ -90,7 +90,7 @@ export class MahjongGame {
         return this.startKyoku(roomId)
     }
 
-    /** 새로운 국(Kyoku)을 시작합니다. */
+    /** 새로운 국(Kyoku)을 시작하고 초기 상태(13장)를 반환합니다. */
     private startKyoku(roomId: string): GameUpdate {
         console.log(
             `Starting Kyoku: ${this.bakaze}-${this.kyokuNum}, Honba: ${this.honba}`,
@@ -120,15 +120,16 @@ export class MahjongGame {
         this.rinshanFlag = false
         this.pendingActions = {}
 
-        // 5. Draw first tile for Oya
-        const drawUpdate = this.drawTileForCurrentPlayer(roomId)
+        // 5. Generate round-started events (Everyone has 13 tiles)
+        const doraIndicators = this.getDora().map((t) => t.toString())
+        const actualDora = RuleManager.getActualDoraList(doraIndicators)
 
-        // 6. Generate round-started events
         const startEvents: GameUpdate['events'] = this.players.map((p) => ({
             eventName: 'round-started',
             payload: {
                 hand: p.getHand().map((t) => t.toString()),
-                dora: this.getDora().map((t) => t.toString()),
+                dora: doraIndicators,
+                actualDora: actualDora,
                 wallCount: this.wall.getRemainingTiles(),
                 bakaze: this.bakaze,
                 kyoku: this.kyokuNum,
@@ -138,7 +139,9 @@ export class MahjongGame {
                 scores: this.players.map((pl) => ({
                     id: pl.getId(),
                     points: pl.points,
+                    jikaze: this.getSeatWind(pl),
                 })),
+                waits: RuleManager.getWaits(p),
             },
             to: 'player',
             playerId: p.getId(),
@@ -147,8 +150,13 @@ export class MahjongGame {
         return {
             roomId,
             isGameOver: false,
-            events: [...startEvents, ...drawUpdate.events],
+            events: startEvents,
         }
+    }
+
+    /** 첫 턴(오야의 첫 쯔모)을 시작합니다. */
+    public startFirstTurn(roomId: string): GameUpdate {
+        return this.drawTileForCurrentPlayer(roomId)
     }
 
     /** 현재 턴인 플레이어가 타일을 버립니다. */
@@ -274,6 +282,14 @@ export class MahjongGame {
                     isFuriten: player.isFuriten,
                 },
                 to: 'all',
+            },
+            {
+                eventName: 'update-waits',
+                payload: {
+                    waits: RuleManager.getWaits(player),
+                },
+                to: 'player',
+                playerId: player.getId(),
             },
         ]
 
@@ -642,6 +658,9 @@ export class MahjongGame {
         // Update Furiten status
         player.isFuriten = RuleManager.calculateFuriten(player)
 
+        const doraIndicators = this.getDora().map((t) => t.toString())
+        const actualDora = RuleManager.getActualDoraList(doraIndicators)
+
         const events: GameUpdate['events'] = [
             {
                 eventName: 'update-meld',
@@ -655,12 +674,21 @@ export class MahjongGame {
                 to: 'all',
             },
             {
+                eventName: 'update-waits',
+                payload: {
+                    waits: RuleManager.getWaits(player),
+                },
+                to: 'player',
+                playerId: player.getId(),
+            },
+            {
                 eventName: 'turn-changed',
                 payload: {
                     playerId,
                     wallCount: this.wall.getRemainingTiles(),
                     deadWallCount: this.wall.getRemainingDeadWall(),
-                    dora: this.getDora().map((t) => t.toString()),
+                    dora: doraIndicators,
+                    actualDora: actualDora,
                     isFuriten: player.isFuriten,
                 },
                 to: 'all',
@@ -683,14 +711,23 @@ export class MahjongGame {
                 const ankanList = RuleManager.getAnkanOptions(player)
                 const kakanList = RuleManager.getKakanOptions(player)
 
+                const newDoraIndicators = this.getDora().map((t) =>
+                    t.toString(),
+                )
+                const newActualDora =
+                    RuleManager.getActualDoraList(newDoraIndicators)
+
                 events.push({
                     eventName: 'new-tile-drawn',
                     payload: {
                         tile: replacementTile.toString(),
                         riichiDiscards: RuleManager.getRiichiDiscards(player),
                         canTsumo: this.checkCanTsumo(player.getId()),
+                        waits: RuleManager.getWaits(player),
                         ankanList,
                         kakanList,
+                        dora: newDoraIndicators,
+                        actualDora: newActualDora,
                     },
                     to: 'player',
                     playerId: player.getId(),
@@ -721,6 +758,9 @@ export class MahjongGame {
             score?: ScoreCalculation
         },
     ): GameUpdate {
+        const startScores: Record<string, number> = {}
+        this.players.forEach((p) => (startScores[p.getId()] = p.points))
+
         const events: GameUpdate['events'] = []
         let nextOyaIndex = this.oyaIndex
         let nextKyokuNum = this.kyokuNum
@@ -890,6 +930,12 @@ export class MahjongGame {
         this.kyokuNum = nextKyokuNum
         this.bakaze = nextBakaze
 
+        // Calculate Deltas
+        const scoreDeltas: Record<string, number> = {}
+        this.players.forEach((p) => {
+            scoreDeltas[p.getId()] = p.points - startScores[p.getId()]
+        })
+
         // 3. Return Update
         events.push({
             eventName: 'round-ended',
@@ -899,6 +945,10 @@ export class MahjongGame {
                     id: p.getId(),
                     points: p.points,
                 })),
+                scoreDeltas,
+                winScore: result.score,
+                winnerId: result.winnerId,
+                loserId: result.loserId,
                 nextState: {
                     bakaze: this.bakaze,
                     kyoku: this.kyokuNum,
@@ -979,6 +1029,9 @@ export class MahjongGame {
         const ankanList = RuleManager.getAnkanOptions(currentPlayer)
         const kakanList = RuleManager.getKakanOptions(currentPlayer)
 
+        const doraIndicators = this.getDora().map((t) => t.toString())
+        const actualDora = RuleManager.getActualDoraList(doraIndicators)
+
         // 모든 플레이어에게 턴 변경 알림
         const events: GameUpdate['events'] = [
             {
@@ -987,7 +1040,8 @@ export class MahjongGame {
                     playerId: currentPlayer.getId(),
                     wallCount: this.wall.getRemainingTiles(),
                     deadWallCount: this.wall.getRemainingDeadWall(),
-                    dora: this.getDora().map((t) => t.toString()),
+                    dora: doraIndicators,
+                    actualDora: actualDora,
                     isFuriten: currentPlayer.isFuriten,
                 },
                 to: 'all',
@@ -1004,6 +1058,7 @@ export class MahjongGame {
                         RuleManager.getRiichiDiscards(currentPlayer),
                     canTsumo: this.checkCanTsumo(currentPlayer.getId()),
                     isFuriten: currentPlayer.isFuriten,
+                    waits: RuleManager.getWaits(currentPlayer),
                     ankanList,
                     kakanList,
                 },
@@ -1173,7 +1228,31 @@ export class MahjongGame {
             }
         }
 
-        return options
+        // Deduplicate options
+        const uniqueOptions: string[][] = []
+        const seen = new Set<string>()
+
+        for (const option of options) {
+            // Sort to ensure [3m, 4m] is same as [4m, 3m] (though current logic preserves order)
+            // Current logic: minus2, minus1 -> strictly ordered. minus1, plus1 -> strictly ordered.
+            // But checking duplicates is about the exact set of tiles.
+            // Since we push in specific order, JSON.stringify is sufficient for identical pairs.
+            const key = JSON.stringify([...option].sort())
+            if (!seen.has(key)) {
+                seen.add(key)
+                uniqueOptions.push(option)
+            }
+        }
+
+        return uniqueOptions
+    }
+
+    public getSeatWind(player: Player): string {
+        const playerIndex = this.players.indexOf(player)
+        // Winds relative to Oya
+        // East=1z, South=2z, West=3z, North=4z
+        const relativePos = (playerIndex - this.oyaIndex + 4) % 4
+        return `${relativePos + 1}z`
     }
 
     // #endregion

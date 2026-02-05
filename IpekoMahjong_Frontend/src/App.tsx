@@ -26,6 +26,7 @@ function cn(...inputs: ClassValue[]) {
 const SOCKET_URL = 'http://localhost:3000'
 
 function App() {
+    const [tileMode, setTileMode] = useState<'text' | 'emoji'>('text')
     const [state, setState] = useState<GameState>({
         isConnected: false,
         roomId: null,
@@ -33,6 +34,7 @@ function App() {
         myHand: [],
         drawnTile: null,
         dora: [],
+        actualDora: [],
         players: [],
         wallCount: 0,
         deadWallCount: 0,
@@ -42,6 +44,7 @@ function App() {
         roundEndedData: null,
         riichiDiscards: [],
         canTsumo: false,
+        waits: [],
         ankanList: [],
         kakanList: [],
         logs: [],
@@ -103,11 +106,13 @@ function App() {
                 roomId: payload.roomId,
                 myPlayerId: payload.yourPlayerId,
                 dora: payload.dora,
+                actualDora: payload.actualDora || [],
                 wallCount: payload.wallCount,
                 deadWallCount: payload.deadWallCount,
                 dealerId: payload.oyaId,
                 myHand: sortTiles(payload.hand),
                 riichiDiscards: payload.riichiDiscards || [],
+                waits: payload.waits || [],
                 players: payload.players.map((p) => ({
                     id: p.id,
                     isAi: p.isAi,
@@ -116,38 +121,46 @@ function App() {
                     melds: [],
                     isMyTurn: false,
                     isRiichi: false,
-                    points: 25000 // Initial default
+                    points: 25000, // Initial default
+                    jikaze: p.jikaze
                 })),
             }))
         })
 
+        socket.on('update-waits', (payload: { waits: string[] }) => {
+            setState((prev) => ({ ...prev, waits: payload.waits }))
+        })
+
         socket.on('round-started', (payload: RoundStartedPayload) => {
-             addLog(`Round Started: ${payload.bakaze}-${payload.kyoku}`)
-             setState(prev => ({
-                 ...prev,
-                 myHand: sortTiles(payload.hand),
-                 dora: payload.dora,
-                 wallCount: payload.wallCount,
-                 bakaze: payload.bakaze,
-                 kyoku: payload.kyoku,
-                 honba: payload.honba,
-                 kyotaku: payload.kyotaku,
-                 dealerId: payload.oyaId,
-                 roundEndedData: null,
-                 gameOverData: null,
-                 players: prev.players.map(p => {
-                     const scoreInfo = payload.scores.find(s => s.id === p.id)
-                     return {
-                         ...p,
-                         handCount: 13,
-                         discards: [],
-                         melds: [],
-                         isRiichi: false,
-                         isFuriten: false,
-                         points: scoreInfo ? scoreInfo.points : p.points
-                     }
-                 })
-             }))
+            addLog(`Round Started: ${payload.bakaze}-${payload.kyoku}`)
+            setState((prev) => ({
+                ...prev,
+                myHand: sortTiles(payload.hand),
+                dora: payload.dora,
+                actualDora: payload.actualDora || [],
+                wallCount: payload.wallCount,
+                bakaze: payload.bakaze,
+                kyoku: payload.kyoku,
+                honba: payload.honba,
+                kyotaku: payload.kyotaku,
+                dealerId: payload.oyaId,
+                roundEndedData: null,
+                gameOverData: null,
+                waits: payload.waits || [],
+                players: prev.players.map((p) => {
+                    const scoreInfo = payload.scores.find((s) => s.id === p.id)
+                    return {
+                        ...p,
+                        handCount: 13,
+                        discards: [],
+                        melds: [],
+                        isRiichi: false,
+                        isFuriten: false,
+                        points: scoreInfo ? scoreInfo.points : p.points,
+                        jikaze: scoreInfo ? scoreInfo.jikaze : p.jikaze,
+                    }
+                }),
+            }))
         })
 
         socket.on('round-ended', (payload: RoundEndedPayload) => {
@@ -186,6 +199,7 @@ function App() {
                     wallCount: payload.wallCount,
                     deadWallCount: payload.deadWallCount,
                     dora: payload.dora || prev.dora,
+                    actualDora: payload.actualDora || prev.actualDora,
                     actionRequest: null,
                     canTsumo: false,
                     riichiDiscards: [],
@@ -203,7 +217,9 @@ function App() {
             setState((prev) => ({
                 ...prev,
                 players: prev.players.map((p) =>
-                    p.id === payload.playerId ? { ...p, isRiichi: true } : p,
+                    p.id === payload.playerId 
+                        ? { ...p, isRiichi: true, riichiIndex: p.discards.length - 1 } 
+                        : p,
                 ),
             }))
         })
@@ -215,8 +231,11 @@ function App() {
                 drawnTile: payload.tile,
                 riichiDiscards: payload.riichiDiscards || [],
                 canTsumo: !!payload.canTsumo,
+                waits: payload.waits || [],
                 ankanList: payload.ankanList || [],
                 kakanList: payload.kakanList || [],
+                dora: payload.dora || prev.dora,
+                actualDora: payload.actualDora || prev.actualDora,
                 actionRequest: null,
                 players: prev.players.map((p) =>
                     p.id === prev.myPlayerId
@@ -274,6 +293,7 @@ function App() {
                     actionRequest: null,
                     myHand: newHand,
                     drawnTile: newDrawnTile,
+                    waits: payload.waits || prev.waits,
                 }
             })
         })
@@ -352,6 +372,7 @@ function App() {
                     myHand: newHand,
                     drawnTile: null,
                     actionRequest: null,
+                    waits: payload.waits || prev.waits,
                 }
             })
         })
@@ -458,7 +479,7 @@ function App() {
     const leftPlayer = getPlayerByOffset(3) // 상가 (Prev)
 
     // Helper to determine which tile in a meld should be rotated
-    const getRotatedTileIndex = (playerId: string, stolenFromId?: string) => {
+    const getRotatedTileIndex = (playerId: string, stolenFromId?: string, tileCount: number = 3) => {
         if (!stolenFromId) return -1
         const playerIdx = state.players.findIndex((p) => p.id === playerId)
         const stolenFromIdx = state.players.findIndex(
@@ -470,18 +491,87 @@ function App() {
         const relativePos = (playerIdx - stolenFromIdx + 4) % 4
         if (relativePos === 1) return 0 // Left player -> 1st tile
         if (relativePos === 2) return 1 // Opposite player -> Middle tile (approximated for Kan)
-        if (relativePos === 3) return 2 // Right player -> Last tile (assuming 3 tiles for Pon/Chi)
+        if (relativePos === 3) return tileCount - 1 // Right player -> Last tile
         return -1
     }
 
-    const getWindName = (bakaze: string) => {
-        switch (bakaze) {
-            case '1z': return 'East'
-            case '2z': return 'South'
-            case '3z': return 'West'
-            case '4z': return 'North'
+    const getWindName = (wind: string, short = false) => {
+        switch (wind) {
+            case '1z': return short ? '東' : 'East (東)'
+            case '2z': return short ? '南' : 'South (南)'
+            case '3z': return short ? '西' : 'West (西)'
+            case '4z': return short ? '北' : 'North (北)'
             default: return 'East'
         }
+    }
+
+    const isDora = (tile: string) => {
+        // Red 5 is always dora in most rules (though usually designated by indicator too)
+        // If rank is 0, it's aka dora.
+        if (tile[0] === '0') return true
+        return state.actualDora.includes(tile)
+    }
+
+    const renderPond = (p: typeof state.players[0] | undefined, containerRotation: number, origin: string = 'center') => {
+        if (!p) return null
+        return (
+            <div 
+                style={{ transform: `rotate(${containerRotation}deg)`, transformOrigin: origin }}
+                className="grid grid-cols-6 gap-x-0.5 gap-y-1 w-[156px] content-start"
+            >
+                {p.discards.map((t, i) => {
+                    const isRiichiTile = p.riichiIndex === i
+                    // Riichi tile is rotated 90 degrees relative to other tiles in the pond
+                    const rotation = isRiichiTile ? 90 : 0
+                    return (
+                        <MahjongTile
+                            key={i}
+                            tile={t}
+                            size="sm"
+                            isDora={isDora(t)}
+                            rotation={rotation}
+                            mode={tileMode}
+                            className={cn(
+                                'shadow-none transition-all',
+                                isRiichiTile && 'ring-1 ring-orange-500/50 z-10 shadow-md',
+                            )}
+                        />
+                    )
+                })}
+            </div>
+        )
+    }
+
+    const renderMelds = (p: typeof state.players[0] | undefined) => {
+        if (!p || !p.melds.length) return null
+        return (
+            <div className="flex gap-2 ml-4">
+                {p.melds.map((meld, i) => {
+                    const rotatedIdx = getRotatedTileIndex(p.id, meld.stolenFrom, meld.tiles.length)
+                    return (
+                        <div key={i} className="flex bg-black/40 p-1 rounded gap-0.5 shadow-lg backdrop-blur-sm">
+                            {meld.tiles.map((t, j) => {
+                                const isRotated = j === rotatedIdx
+                                return (
+                                    <MahjongTile
+                                        key={j}
+                                        tile={t}
+                                        size="sm"
+                                        isDora={isDora(t)}
+                                        rotation={isRotated ? 90 : 0}
+                                        mode={tileMode}
+                                        className={cn(
+                                            'shadow-none',
+                                            isRotated && "mx-1"
+                                        )}
+                                    />
+                                )
+                            })}
+                        </div>
+                    )
+                })}
+            </div>
+        )
     }
 
     if (!state.roomId) {
@@ -506,315 +596,207 @@ function App() {
     }
 
     return (
-        <div className="max-w-4xl mx-auto p-2 flex flex-col h-screen bg-gray-900 text-white overflow-hidden">
+        <div className="max-w-[1200px] mx-auto p-4 flex flex-col h-screen bg-gray-900 text-white overflow-hidden font-sans">
             {/* Mahjong Table Area */}
-            <div className="flex-grow flex items-center justify-center py-2 min-h-0">
-                <div className="grid grid-cols-3 grid-rows-3 gap-1 items-center justify-items-center w-full max-w-2xl h-full max-h-[60vh]">
-                    {/* Row 1, Col 2: Opposite AI */}
-                    <div
-                        className={cn(
-                            'col-start-2 row-start-1 flex flex-col items-center p-2 rounded-lg transition-all',
-                            oppositePlayer?.isMyTurn
-                                ? 'bg-blue-500/20 ring-2 ring-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.5)]'
-                                : '',
-                        )}
-                    >
-                        <div className="text-[10px] mb-0.5 flex items-center gap-1 opacity-80 font-bold uppercase tracking-tighter">
-                            <span className="bg-gray-700 px-1 rounded text-white mr-1 font-mono">{oppositePlayer?.points}</span>
-                            {oppositePlayer?.id === state.dealerId && (
-                                <span className="bg-red-600 text-white px-1 rounded font-bold">
-                                    親
-                                </span>
-                            )}
-                            TOIMEN{' '}
-                            {oppositePlayer?.isMyTurn && (
-                                <span className="text-blue-400 animate-pulse ml-1">
-                                    ●
-                                </span>
-                            )}
-                            {oppositePlayer?.isRiichi && (
-                                <span className="bg-orange-600 text-white px-1 rounded text-[8px] font-black animate-bounce ml-1 shadow-sm">
-                                    RIICHI
-                                </span>
-                            )}
-                            {oppositePlayer?.isFuriten && (
-                                <span className="bg-purple-600 text-white px-1 rounded text-[8px] font-black ml-1 shadow-sm">
-                                    FURITEN
-                                </span>
-                            )}
-                        </div>
-
-                        {/* Opposite Melds */}
-                        <div className="flex gap-1 mb-1">
-                            {oppositePlayer?.melds.map((meld, i) => {
-                                const rotatedIdx = getRotatedTileIndex(
-                                    oppositePlayer.id,
-                                    meld.stolenFrom,
-                                )
-                                return (
-                                    <div
-                                        key={i}
-                                        className="flex border border-blue-900/30 p-0.5 rounded bg-gray-800/50 scale-75 items-center"
-                                    >
-                                        {meld.tiles.map((t, j) => (
-                                            <MahjongTile
-                                                key={j}
-                                                tile={t}
-                                                className={cn(
-                                                    'w-4 h-6 shadow-none transition-transform',
-                                                    j === rotatedIdx
-                                                        ? 'rotate-90 -mx-0.5'
-                                                        : '',
-                                                )}
-                                            />
-                                        ))}
-                                    </div>
-                                )
-                            })}
-                        </div>
-
-                        {/* Opposite Pond */}
-                        <div className="flex flex-wrap gap-0.5 w-[140px] justify-center content-start min-h-[70px] bg-gray-800/30 p-1 rounded relative">
-                            {oppositePlayer?.isRiichi && (
-                                <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 w-8 h-1 bg-white border border-gray-400 rounded-sm shadow-sm flex items-center justify-center">
-                                    <div className="w-0.5 h-0.5 bg-red-600 rounded-full"></div>
+            <div className="flex-grow flex items-center justify-center py-4 min-h-0">
+                <div className="aspect-[4/3] w-full max-h-full bg-gray-800/20 rounded-3xl border-4 border-gray-800 shadow-2xl relative flex items-center justify-center p-4">
+                    
+                    {/* Center Area with Ponds */}
+                    <div className="relative w-56 h-56">
+                        {/* Center Info Box */}
+                        <div className="absolute inset-0 bg-gray-900/90 border-4 border-gray-700 rounded-3xl shadow-2xl flex flex-col items-center justify-center p-2 z-20 ring-4 ring-black/20 overflow-hidden">
+                            {/* Top: Opposite */}
+                            <div className="absolute top-2 left-0 right-0 flex flex-col items-center">
+                                <div className="flex items-center gap-1.5">
+                                    {oppositePlayer?.id === state.dealerId && <span className="bg-red-600 text-white px-1.5 py-0.5 rounded text-[10px] font-bold">親</span>}
+                                    <span className="text-[10px] text-gray-400 font-bold uppercase tracking-tighter">
+                                        {oppositePlayer?.jikaze ? getWindName(oppositePlayer.jikaze, true) : ''}
+                                    </span>
+                                    <span className="text-lg font-mono font-black text-white">{oppositePlayer?.points}</span>
                                 </div>
-                            )}
-                            {oppositePlayer?.discards.map((t, i) => (
-                                <MahjongTile
-                                    key={i}
-                                    tile={t}
-                                    className="w-5 h-7 shadow-none border-gray-700"
-                                />
-                            ))}
-                        </div>
-                    </div>
+                                {oppositePlayer?.isRiichi && (
+                                    <div className="w-16 h-1.5 bg-white border border-gray-400 rounded-full flex items-center justify-center mt-0.5">
+                                        <div className="w-1 h-1 bg-red-600 rounded-full"></div>
+                                    </div>
+                                )}
+                            </div>
 
-                    {/* Row 2, Col 1: Left AI */}
-                    <div
-                        className={cn(
-                            'col-start-1 row-start-2 flex flex-row items-center gap-1 p-2 rounded-lg transition-all',
-                            leftPlayer?.isMyTurn
-                                ? 'bg-blue-500/20 ring-2 ring-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.5)]'
-                                : '',
-                        )}
-                    >
-                        <div className="flex flex-col items-center gap-1">
-                            <div className="text-[10px] flex flex-col items-center gap-0.5 opacity-80 -rotate-90 font-bold uppercase tracking-tighter">
-                                <span className="bg-gray-700 px-1 rounded text-white mb-1 font-mono">{leftPlayer?.points}</span>
-                                {leftPlayer?.id === state.dealerId && (
-                                    <span className="bg-red-600 text-white px-1 rounded font-bold">
-                                        親
+                            {/* Left: Left Player */}
+                            <div className="absolute left-1 top-0 bottom-0 flex flex-col justify-center items-center -rotate-90">
+                                <div className="flex items-center gap-1.5">
+                                    {leftPlayer?.id === state.dealerId && <span className="bg-red-600 text-white px-1.5 py-0.5 rounded text-[10px] font-bold">親</span>}
+                                    <span className="text-[10px] text-gray-400 font-bold uppercase tracking-tighter">
+                                        {leftPlayer?.jikaze ? getWindName(leftPlayer.jikaze, true) : ''}
                                     </span>
-                                )}
-                                <span>KAMICHA</span>
-                                {leftPlayer?.isMyTurn && (
-                                    <span className="text-blue-400 animate-pulse mt-1">
-                                        ●
-                                    </span>
-                                )}
+                                    <span className="text-lg font-mono font-black text-white">{leftPlayer?.points}</span>
+                                </div>
                                 {leftPlayer?.isRiichi && (
-                                    <span className="bg-orange-600 text-white px-1 rounded text-[8px] font-black animate-bounce mt-1 shadow-sm">
-                                        RIICHI
-                                    </span>
-                                )}
-                                {leftPlayer?.isFuriten && (
-                                    <span className="bg-purple-600 text-white px-1 rounded text-[8px] font-black mt-1 shadow-sm">
-                                        FURITEN
-                                    </span>
+                                    <div className="w-16 h-1.5 bg-white border border-gray-400 rounded-full flex items-center justify-center mt-0.5">
+                                        <div className="w-1 h-1 bg-red-600 rounded-full"></div>
+                                    </div>
                                 )}
                             </div>
 
-                            {/* Left Melds */}
-                            <div className="flex flex-col gap-1 -rotate-90 origin-center">
-                                {leftPlayer?.melds.map((meld, i) => {
-                                    const rotatedIdx = getRotatedTileIndex(
-                                        leftPlayer.id,
-                                        meld.stolenFrom,
-                                    )
-                                    return (
-                                        <div
-                                            key={i}
-                                            className="flex border border-blue-900/30 p-0.5 rounded bg-gray-800/50 scale-75 items-center"
-                                        >
-                                            {meld.tiles.map((t, j) => (
-                                                <MahjongTile
-                                                    key={j}
-                                                    tile={t}
-                                                    className={cn(
-                                                        'w-4 h-6 shadow-none',
-                                                        j === rotatedIdx
-                                                            ? 'rotate-90 -mx-0.5'
-                                                            : '',
-                                                    )}
-                                                />
-                                            ))}
-                                        </div>
-                                    )
-                                })}
+                            {/* Right: Right Player */}
+                            <div className="absolute right-1 top-0 bottom-0 flex flex-col justify-center items-center rotate-90">
+                                <div className="flex items-center gap-1.5">
+                                    {rightPlayer?.id === state.dealerId && <span className="bg-red-600 text-white px-1.5 py-0.5 rounded text-[10px] font-bold">親</span>}
+                                    <span className="text-[10px] text-gray-400 font-bold uppercase tracking-tighter">
+                                        {rightPlayer?.jikaze ? getWindName(rightPlayer.jikaze, true) : ''}
+                                    </span>
+                                    <span className="text-lg font-mono font-black text-white">{rightPlayer?.points}</span>
+                                </div>
+                                {rightPlayer?.isRiichi && (
+                                    <div className="w-16 h-1.5 bg-white border border-gray-400 rounded-full flex items-center justify-center mt-0.5">
+                                        <div className="w-1 h-1 bg-red-600 rounded-full"></div>
+                                    </div>
+                                )}
                             </div>
+
+                            {/* Bottom: Me */}
+                            <div className="absolute bottom-2 left-0 right-0 flex flex-col items-center">
+                                {myPlayer?.isRiichi && (
+                                    <div className="w-16 h-1.5 bg-white border border-gray-400 rounded-full flex items-center justify-center mb-0.5">
+                                        <div className="w-1 h-1 bg-red-600 rounded-full"></div>
+                                    </div>
+                                )}
+                                <div className="flex items-center gap-1.5">
+                                    <span className="text-lg font-mono font-black text-white">{myPlayer?.points}</span>
+                                    <span className="text-[10px] text-gray-400 font-bold uppercase tracking-tighter">
+                                        {myPlayer?.jikaze ? getWindName(myPlayer.jikaze, true) : ''}
+                                    </span>
+                                    {myPlayer?.id === state.dealerId && <span className="bg-red-600 text-white px-1.5 py-0.5 rounded text-[10px] font-bold">親</span>}
+                                </div>
+                            </div>
+
+                            {/* Center: Kyoku Info */}
+                            <div className="flex flex-col items-center justify-center bg-gray-800/80 p-3 rounded-2xl border-2 border-gray-700 shadow-inner">
+                                <div className="text-xl font-black text-white leading-tight">
+                                    {getWindName(state.bakaze, true)}{state.kyoku}
+                                </div>
+                                <div className="flex items-center gap-2 mt-1">
+                                    <div className="flex items-center gap-1">
+                                        <div className="w-1 h-3 bg-red-500 rounded-full"></div>
+                                        <span className="text-[10px] font-mono text-yellow-500">{state.honba}</span>
+                                    </div>
+                                    <div className="flex items-center gap-1">
+                                        <div className="w-3 h-1 bg-white border border-gray-400 rounded-full flex items-center justify-center">
+                                            <div className="w-0.5 h-0.5 bg-red-600 rounded-full"></div>
+                                        </div>
+                                        <span className="text-[10px] font-mono text-white">{state.kyotaku}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Ponds */}
+                        {/* Opposite Pond */}
+                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-[120px]">
+                             {renderPond(oppositePlayer, 180, 'top center')}
+                        </div>
+
+                        {/* My Pond */}
+                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 translate-y-[120px]">
+                             {renderPond(myPlayer, 0, 'top center')}
                         </div>
 
                         {/* Left Pond */}
-                        <div className="flex flex-wrap gap-0.5 w-[140px] justify-center content-start min-h-[70px] bg-gray-800/30 p-1 rounded relative">
-                            {leftPlayer?.isRiichi && (
-                                <div className="absolute -right-3 top-1/2 -translate-y-1/2 w-1 h-8 bg-white border border-gray-400 rounded-sm shadow-sm flex flex-col items-center justify-center">
-                                    <div className="w-0.5 h-0.5 bg-red-600 rounded-full"></div>
-                                </div>
-                            )}
-                            {leftPlayer?.discards.map((t, i) => (
-                                <MahjongTile
-                                    key={i}
-                                    tile={t}
-                                    className="w-5 h-7 shadow-none border-gray-700"
-                                />
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* Row 2, Col 2: Center Info Box */}
-                    <div className="col-start-2 row-start-2 w-36 h-36 bg-gray-800 border border-gray-700 rounded-lg shadow-xl flex flex-col items-center justify-center p-1 relative">
-                        <div className="absolute top-1 left-2 text-[10px] font-bold text-white">
-                            {getWindName(state.bakaze)} {state.kyoku}-{state.honba}
-                        </div>
-                        <div className="absolute top-1 right-2 text-[10px] text-yellow-400 font-mono flex items-center gap-0.5">
-                             <div className="w-1 h-3 bg-red-500 rounded-sm"></div> {state.kyotaku}
-                        </div>
-
-                        <div className="text-[8px] font-bold text-gray-500 mb-0.5 mt-4 tracking-widest uppercase">
-                            Dora
-                        </div>
-                        <div className="flex gap-0.5 mb-1">
-                            {state.dora.map((t, i) => (
-                                <MahjongTile
-                                    key={i}
-                                    tile={t}
-                                    className="w-6 h-8"
-                                />
-                            ))}
-                        </div>
-                        <div className="grid grid-cols-2 gap-2 text-[10px] font-mono text-gray-400">
-                            <div className="flex flex-col items-center border-r border-gray-700 pr-2">
-                                <span>WALL</span>
-                                <span className="text-base text-white font-black">
-                                    {state.wallCount}
-                                </span>
-                            </div>
-                            <div className="flex flex-col items-center">
-                                <span>DEAD</span>
-                                <span className="text-base text-white font-black">
-                                    {state.deadWallCount}
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Row 2, Col 3: Right AI */}
-                    <div
-                        className={cn(
-                            'col-start-3 row-start-2 flex flex-row-reverse items-center gap-1 p-2 rounded-lg transition-all',
-                            rightPlayer?.isMyTurn
-                                ? 'bg-blue-500/20 ring-2 ring-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.5)]'
-                                : '',
-                        )}
-                    >
-                        <div className="flex flex-col items-center gap-1">
-                            <div className="text-[10px] flex flex-col items-center gap-0.5 opacity-80 rotate-90 font-bold uppercase tracking-tighter">
-                                <span className="bg-gray-700 px-1 rounded text-white mb-1 font-mono">{rightPlayer?.points}</span>
-                                {rightPlayer?.id === state.dealerId && (
-                                    <span className="bg-red-600 text-white px-1 rounded font-bold">
-                                        親
-                                    </span>
-                                )}
-                                <span>SHIMOCHA</span>
-                                {rightPlayer?.isMyTurn && (
-                                    <span className="text-blue-400 animate-pulse mt-1">
-                                        ●
-                                    </span>
-                                )}
-                                {rightPlayer?.isRiichi && (
-                                    <span className="bg-orange-600 text-white px-1 rounded text-[8px] font-black animate-bounce mt-1 shadow-sm">
-                                        RIICHI
-                                    </span>
-                                )}
-                                {rightPlayer?.isFuriten && (
-                                    <span className="bg-purple-600 text-white px-1 rounded text-[8px] font-black mt-1 shadow-sm">
-                                        FURITEN
-                                    </span>
-                                )}
-                            </div>
-
-                            {/* Right Melds */}
-                            <div className="flex flex-col gap-1 rotate-90 origin-center">
-                                {rightPlayer?.melds.map((meld, i) => {
-                                    const rotatedIdx = getRotatedTileIndex(
-                                        rightPlayer.id,
-                                        meld.stolenFrom,
-                                    )
-                                    return (
-                                        <div
-                                            key={i}
-                                            className="flex border border-blue-900/30 p-0.5 rounded bg-gray-800/50 scale-75 items-center"
-                                        >
-                                            {meld.tiles.map((t, j) => (
-                                                <MahjongTile
-                                                    key={j}
-                                                    tile={t}
-                                                    className={cn(
-                                                        'w-4 h-6 shadow-none',
-                                                        j === rotatedIdx
-                                                            ? 'rotate-90 -mx-0.5'
-                                                            : '',
-                                                    )}
-                                                />
-                                            ))}
-                                        </div>
-                                    )
-                                })}
-                            </div>
+                        <div className="absolute top-1/2 left-9 -translate-x-[120px] -translate-x-1/2">
+                             {renderPond(leftPlayer, 90, 'top center')}
                         </div>
 
                         {/* Right Pond */}
-                        <div className="flex flex-wrap gap-0.5 w-[140px] justify-center content-start min-h-[70px] bg-gray-800/30 p-1 rounded relative">
-                            {rightPlayer?.isRiichi && (
-                                <div className="absolute -left-3 top-1/2 -translate-y-1/2 w-1 h-8 bg-white border border-gray-400 rounded-sm shadow-sm flex flex-col items-center justify-center">
-                                    <div className="w-0.5 h-0.5 bg-red-600 rounded-full"></div>
-                                </div>
-                            )}
-                            {rightPlayer?.discards.map((t, i) => (
-                                <MahjongTile
-                                    key={i}
-                                    tile={t}
-                                    className="w-5 h-7 shadow-none border-gray-700"
-                                />
-                            ))}
+                        <div className="absolute top-1/2 left-9 translate-x-[120px] -translate-x-1/2">
+                             {renderPond(rightPlayer, 270, 'top center')}
                         </div>
                     </div>
 
-                    {/* Row 3, Col 2: My Pond */}
-                    <div className="col-start-2 row-start-3 flex flex-col items-center">
-                        <div className="flex flex-wrap gap-0.5 w-[140px] justify-center content-start min-h-[70px] bg-gray-800/30 p-1 rounded mb-0.5 relative">
-                            {myPlayer?.isRiichi && (
-                                <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-8 h-1 bg-white border border-gray-400 rounded-sm shadow-sm flex items-center justify-center">
-                                    <div className="w-0.5 h-0.5 bg-red-600 rounded-full"></div>
+                    {/* Dora & Wall Info (Moved to top left) */}
+                    <div className="absolute top-4 left-4 flex gap-4 items-start">
+                        <div className="bg-gray-800/80 p-3 rounded-2xl border-2 border-gray-700 shadow-lg backdrop-blur-sm flex flex-col items-center gap-2">
+                            <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest opacity-60">Dora</div>
+                            <div className="flex gap-1">
+                                {state.dora.map((t, i) => (
+                                    <MahjongTile key={i} tile={t} size="sm" mode={tileMode} />
+                                ))}
+                            </div>
+                            <div className="flex gap-4 mt-1 border-t border-gray-700 pt-2 w-full justify-center">
+                                <div className="flex flex-col items-center">
+                                    <span className="text-[8px] font-bold text-gray-500 uppercase">Wall</span>
+                                    <span className="text-sm font-black text-white">{state.wallCount}</span>
                                 </div>
-                            )}
-                            {myPlayer?.discards.map((t, i) => (
-                                <MahjongTile
-                                    key={i}
-                                    tile={t}
-                                    className="w-5 h-7 shadow-none border-gray-700"
-                                />
-                            ))}
+                                <div className="flex flex-col items-center">
+                                    <span className="text-[8px] font-bold text-gray-500 uppercase">Dead</span>
+                                    <span className="text-sm font-black text-white">{state.deadWallCount}</span>
+                                </div>
+                            </div>
                         </div>
-                        <div className="text-[9px] opacity-80 uppercase tracking-tighter">
-                            Pond{' '}
-                            {myPlayer?.isRiichi && (
-                                <span className="ml-1 text-orange-500 font-bold font-black">
-                                    RIICHI
-                                </span>
-                            )}
+
+                        {/* Tile Mode Toggle */}
+                        <div className="bg-gray-800/80 p-3 rounded-2xl border-2 border-gray-700 shadow-lg backdrop-blur-sm flex flex-col gap-2">
+                            <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest opacity-60 text-center">Mode</div>
+                            <div className="flex bg-gray-900/50 p-1 rounded-xl">
+                                <button
+                                    onClick={() => setTileMode('text')}
+                                    className={cn(
+                                        "px-3 py-1 text-[10px] font-bold rounded-lg transition-all",
+                                        tileMode === 'text' ? "bg-blue-600 text-white shadow-lg" : "text-gray-400 hover:text-white"
+                                    )}
+                                >
+                                    TEXT
+                                </button>
+                                <button
+                                    onClick={() => setTileMode('emoji')}
+                                    className={cn(
+                                        "px-3 py-1 text-[10px] font-bold rounded-lg transition-all",
+                                        tileMode === 'emoji' ? "bg-blue-600 text-white shadow-lg" : "text-gray-400 hover:text-white"
+                                    )}
+                                >
+                                    EMOJI
+                                </button>
+                            </div>
                         </div>
+                    </div>
+
+                    {/* Player Info Labels & Melds */}
+                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center">
+                        <div className={cn(
+                            "px-4 py-1 rounded-full bg-blue-500/20 border border-blue-500/30 text-[10px] font-black uppercase tracking-widest text-blue-200 transition-all whitespace-nowrap",
+                            myPlayer?.isMyTurn && "bg-blue-500 ring-4 ring-blue-500/50 text-white"
+                        )}>
+                            YOU {myPlayer?.isMyTurn && "●"}
+                        </div>
+                        {renderMelds(myPlayer)}
+                    </div>
+
+                    <div className="absolute top-4 left-1/2 -translate-x-1/2 flex items-center">
+                        <div className={cn(
+                            "px-4 py-1 rounded-full bg-blue-500/20 border border-blue-500/30 text-[10px] font-black uppercase tracking-widest text-blue-200 transition-all whitespace-nowrap",
+                            oppositePlayer?.isMyTurn && "bg-blue-500 ring-4 ring-blue-500/50 text-white"
+                        )}>
+                            TOIMEN {oppositePlayer?.isMyTurn && "●"}
+                        </div>
+                        {renderMelds(oppositePlayer)}
+                    </div>
+
+                    <div className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center origin-center">
+                        <div className={cn(
+                            "px-4 py-1 rounded-full bg-blue-500/20 border border-blue-500/30 text-[10px] font-black uppercase tracking-widest text-blue-200 transition-all whitespace-nowrap",
+                            leftPlayer?.isMyTurn && "bg-blue-500 ring-4 ring-blue-500/50 text-white"
+                        )}>
+                            KAMICHA {leftPlayer?.isMyTurn && "●"}
+                        </div>
+                        {renderMelds(leftPlayer)}
+                    </div>
+
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center origin-center">
+                        <div className={cn(
+                            "px-4 py-1 rounded-full bg-blue-500/20 border border-blue-500/30 text-[10px] font-black uppercase tracking-widest text-blue-200 transition-all whitespace-nowrap",
+                            rightPlayer?.isMyTurn && "bg-blue-500 ring-4 ring-blue-500/50 text-white"
+                        )}>
+                            SHIMOCHA {rightPlayer?.isMyTurn && "●"}
+                        </div>
+                        {renderMelds(rightPlayer)}
                     </div>
                 </div>
             </div>
@@ -822,53 +804,18 @@ function App() {
             {/* Player Area */}
             <div
                 className={cn(
-                    'mt-auto border-t border-gray-800 pt-2 pb-1 transition-all',
+                    'mt-auto border-t-4 border-gray-800 pt-6 pb-4 transition-all rounded-t-[40px]',
                     myPlayer?.isMyTurn
-                        ? 'bg-blue-500/10 shadow-[0_-10px_30px_rgba(59,130,246,0.2)]'
+                        ? 'bg-blue-500/10 shadow-[0_-20px_60px_rgba(59,130,246,0.3)] border-blue-500/30'
                         : 'bg-gray-900',
                 )}
             >
-                <div className="flex flex-col items-center">
-                    {/* Player Melds */}
-                    <div className="flex gap-2 mb-1">
-                        {myPlayer?.melds.map((meld, i) => {
-                            const rotatedIdx = getRotatedTileIndex(
-                                myPlayer.id,
-                                meld.stolenFrom,
-                            )
-                            return (
-                                <div
-                                    key={i}
-                                    className="flex border border-blue-900/50 p-0.5 rounded bg-gray-800 shadow-sm items-center"
-                                >
-                                    {meld.tiles.map((t, j) => (
-                                        <MahjongTile
-                                            key={j}
-                                            tile={t}
-                                            className={cn(
-                                                'w-8 h-11',
-                                                j === rotatedIdx
-                                                    ? 'rotate-90 -mx-0.5'
-                                                    : '',
-                                            )}
-                                        />
-                                    ))}
-                                </div>
-                            )
-                        })}
-                    </div>
-
+                <div className="flex flex-col items-center max-w-6xl mx-auto px-4">
                     {/* Player Hand */}
-                    <div className="text-xs font-bold mb-1 flex items-center gap-2">
-                        <span className="bg-gray-700 px-1 rounded text-white mr-1 font-mono">{myPlayer?.points}</span>
-                        {myPlayer?.id === state.dealerId && (
-                            <span className="bg-red-600 text-white text-[8px] px-1 rounded font-bold">
-                                親
-                            </span>
-                        )}
+                    <div className="text-base font-black mb-3 flex items-center gap-4">
                         <span
                             className={cn(
-                                'transition-colors uppercase tracking-widest',
+                                'transition-colors uppercase tracking-[0.2em] text-lg',
                                 myPlayer?.isMyTurn
                                     ? 'text-blue-400 font-black'
                                     : 'text-gray-500',
@@ -879,18 +826,26 @@ function App() {
                                 <span className="animate-pulse">●</span>
                             )}
                         </span>
-                        {myPlayer?.isRiichi && (
-                            <span className="bg-orange-600 text-white px-2 py-0.5 rounded text-[10px] font-black animate-bounce shadow-lg ring-1 ring-white/20">
-                                RIICHI
-                            </span>
-                        )}
                         {myPlayer?.isFuriten && (
-                            <span className="bg-purple-600 text-white px-2 py-0.5 rounded text-[10px] font-black shadow-lg ring-1 ring-white/20">
+                            <span className="bg-purple-600 text-white px-3 py-1 rounded-md font-black shadow-xl ring-2 ring-white/30">
                                 FURITEN
                             </span>
                         )}
                     </div>
-                    <div className="flex items-end gap-0.5 mb-2">
+                    
+                    {/* Waits Display */}
+                    {state.waits.length > 0 && (
+                        <div className="flex items-center gap-4 mb-4 bg-gray-800/60 px-4 py-2 rounded-2xl border-2 border-gray-700/50 shadow-lg backdrop-blur-md">
+                            <span className="text-xs font-black text-gray-400 uppercase tracking-widest border-r border-gray-700 pr-4">Wait</span>
+                            <div className="flex gap-2">
+                                {state.waits.map((t, i) => (
+                                    <MahjongTile key={i} tile={t} size="sm" isDora={isDora(t)} mode={tileMode} className="opacity-90 hover:opacity-100" />
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="flex items-end gap-1 mb-6">
                         {state.myHand.map((t, i) => {
                             const isValidRiichiTile =
                                 state.riichiDiscards.includes(t)
@@ -904,13 +859,17 @@ function App() {
                                 <MahjongTile
                                     key={i}
                                     tile={t}
+                                    size="xl"
+                                    isDora={isDora(t)}
+                                    mode={tileMode}
                                     className={cn(
-                                        'w-10 h-14',
+                                        'transition-all duration-200 hover:-translate-y-[5px]',
                                         riichiIntent && isValidRiichiTile
-                                            ? 'ring-4 ring-orange-500 ring-offset-1 ring-offset-gray-900'
+                                            ? 'ring-4 ring-orange-500 ring-offset-4 ring-offset-gray-900 scale-105 z-10'
                                             : riichiIntent
-                                              ? 'opacity-40'
+                                              ? 'opacity-40 grayscale-[0.5]'
                                               : '',
+                                        !canClick && 'cursor-not-allowed opacity-90'
                                     )}
                                     onClick={() => canClick && handleDiscard(t)}
                                 />
@@ -920,15 +879,18 @@ function App() {
                             <MahjongTile
                                 tile={state.drawnTile}
                                 isDrawn
+                                size="xl"
+                                isDora={isDora(state.drawnTile)}
+                                mode={tileMode}
                                 className={cn(
-                                    'w-10 h-14 ml-2',
+                                    'ml-6 transition-all duration-200 hover:-translate-y-[5px]',
                                     riichiIntent &&
                                         state.riichiDiscards.includes(
                                             state.drawnTile,
                                         )
-                                        ? 'ring-4 ring-orange-500 ring-offset-1 ring-offset-gray-900'
+                                        ? 'ring-4 ring-orange-500 ring-offset-4 ring-offset-gray-900 scale-105 z-10'
                                         : riichiIntent
-                                          ? 'opacity-40'
+                                          ? 'opacity-40 grayscale-[0.5]'
                                           : '',
                                 )}
                                 onClick={() => {
@@ -947,7 +909,7 @@ function App() {
                     </div>
 
                     {/* Actions */}
-                    <div className="flex gap-2 flex-wrap justify-center scale-90 origin-bottom">
+                    <div className="flex gap-4 flex-wrap justify-center min-h-[48px]">
                         {state.actionRequest && (
                             <ActionButtons
                                 request={state.actionRequest}
@@ -961,11 +923,12 @@ function App() {
                                 <button
                                     onClick={handleRiichi}
                                     disabled={!myPlayer?.isMyTurn}
-                                    className={`px-6 py-1.5 rounded text-sm font-bold uppercase transition-colors ${
+                                    className={cn(
+                                        "px-10 py-3 rounded-xl text-lg font-black uppercase transition-all shadow-xl ring-2",
                                         riichiIntent
-                                            ? 'bg-orange-500 text-white animate-pulse'
-                                            : 'bg-orange-600 hover:bg-orange-700 text-white disabled:bg-gray-700'
-                                    }`}
+                                            ? 'bg-orange-500 text-white animate-pulse ring-white/50 scale-110'
+                                            : 'bg-orange-600 hover:bg-orange-700 text-white ring-orange-500/30 hover:scale-105 disabled:bg-gray-800 disabled:text-gray-600 disabled:ring-0'
+                                    )}
                                 >
                                     {riichiIntent ? 'Select Tile' : 'Riichi'}
                                 </button>
@@ -976,9 +939,9 @@ function App() {
                                 key={`ankan-${i}`}
                                 onClick={() => handleSelfKan('ankan', tile)}
                                 disabled={!myPlayer?.isMyTurn}
-                                className="px-6 py-1.5 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-700 rounded text-sm font-bold uppercase transition-colors flex items-center gap-2"
+                                className="px-8 py-3 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-800 disabled:text-gray-600 rounded-xl text-lg font-black uppercase transition-all hover:scale-105 shadow-xl flex items-center gap-3 border-b-4 border-purple-900"
                             >
-                                Ankan <MahjongTile tile={tile} className="w-4 h-6 inline-block" />
+                                Ankan <MahjongTile tile={tile} size="xs" mode={tileMode} className="inline-block" />
                             </button>
                         ))}
 
@@ -987,9 +950,9 @@ function App() {
                                 key={`kakan-${i}`}
                                 onClick={() => handleSelfKan('kakan', tile)}
                                 disabled={!myPlayer?.isMyTurn}
-                                className="px-6 py-1.5 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-700 rounded text-sm font-bold uppercase transition-colors flex items-center gap-2"
+                                className="px-8 py-3 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-800 disabled:text-gray-600 rounded-xl text-lg font-black uppercase transition-all hover:scale-105 shadow-xl flex items-center gap-3 border-b-4 border-purple-900"
                             >
-                                Kakan <MahjongTile tile={tile} className="w-4 h-6 inline-block" />
+                                Kakan <MahjongTile tile={tile} size="xs" mode={tileMode} className="inline-block" />
                             </button>
                         ))}
 
@@ -999,7 +962,7 @@ function App() {
                                 disabled={
                                     !state.drawnTile || !myPlayer?.isMyTurn
                                 }
-                                className="px-6 py-1.5 bg-red-600 hover:bg-red-700 disabled:bg-gray-700 rounded text-sm font-bold uppercase transition-colors"
+                                className="px-12 py-3 bg-red-600 hover:bg-red-700 disabled:bg-gray-800 disabled:text-gray-600 rounded-xl text-lg font-black uppercase transition-all hover:scale-110 shadow-xl border-b-4 border-red-900"
                             >
                                 Tsumo
                             </button>
@@ -1009,13 +972,14 @@ function App() {
             </div>
 
             {/* Log Console */}
-            <div className="mt-2 bg-black bg-opacity-50 p-1.5 h-20 overflow-y-auto text-[10px] font-mono rounded border border-gray-800">
+            <div className="mt-4 bg-black/60 p-3 h-32 overflow-y-auto text-[11px] font-mono rounded-2xl border-2 border-gray-800 shadow-inner backdrop-blur-sm">
                 {state.logs.map((log, i) => (
                     <div
                         key={i}
-                        className="border-b border-gray-800/50 py-0.5 text-gray-400"
+                        className="border-b border-gray-800/30 py-1 text-gray-500 flex gap-2"
                     >
-                        {log}
+                        <span className="opacity-30">[{state.logs.length - i}]</span>
+                        <span className="text-gray-400">{log}</span>
                     </div>
                 ))}
             </div>
@@ -1027,16 +991,74 @@ function App() {
                         <h2 className="text-2xl font-bold mb-4 text-center text-white">Round Ended</h2>
                         <div className="text-center mb-6">
                             <div className="text-xl font-bold text-yellow-400 mb-2 uppercase">{state.roundEndedData.reason}</div>
+
+                            {/* Win Details */}
+                            {state.roundEndedData.winScore && (
+                                <div className="bg-gray-700/50 p-3 rounded mb-4 text-left border border-gray-600">
+                                    <div className="flex justify-between items-end border-b border-gray-600 pb-2 mb-2">
+                                        <div>
+                                            <div className="font-bold text-white text-lg leading-tight">
+                                                {state.roundEndedData.winScore.name || 'Win'}
+                                            </div>
+                                            {state.roundEndedData.winnerId && (
+                                                <div className="text-[10px] text-gray-400">
+                                                    Winner: {state.roundEndedData.winnerId === state.myPlayerId ? 'You' : state.roundEndedData.winnerId}
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div className="text-right">
+                                            <div className="text-xl font-black text-yellow-400 leading-none">
+                                                {state.roundEndedData.winScore.ten}
+                                            </div>
+                                            <span className="text-[10px] text-gray-400">points</span>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex gap-4 text-xs text-gray-300 mb-2 font-mono">
+                                        <div>
+                                            <span className="font-bold text-white text-sm">{state.roundEndedData.winScore.han}</span> Han
+                                        </div>
+                                        <div>
+                                            <span className="font-bold text-white text-sm">{state.roundEndedData.winScore.fu}</span> Fu
+                                        </div>
+                                        {state.roundEndedData.winScore.yakuman > 0 && (
+                                            <div className="text-red-500 font-black animate-pulse">
+                                                YAKUMAN {state.roundEndedData.winScore.yakuman > 1 ? `x${state.roundEndedData.winScore.yakuman}` : ''}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {state.roundEndedData.winScore.yaku && (
+                                        <div className="space-y-1 bg-gray-800/50 p-2 rounded">
+                                            {Object.entries(state.roundEndedData.winScore.yaku).map(([name, val]) => (
+                                                <div key={name} className="flex justify-between text-xs text-gray-200">
+                                                    <span>{name}</span>
+                                                    <span className="font-mono text-yellow-600">{val}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                             
                             <div className="space-y-2">
                                 {state.roundEndedData.scores.map(score => {
                                     const isMe = score.id === state.myPlayerId
+                                    const delta = state.roundEndedData?.scoreDeltas?.[score.id]
+                                    
                                     return (
                                         <div key={score.id} className={cn("flex justify-between items-center p-2 rounded", isMe ? "bg-blue-900/30 border border-blue-500/30" : "bg-gray-700/30")}>
-                                            <span className={cn("font-bold", isMe ? "text-blue-300" : "text-gray-400")}>
+                                            <span className={cn("font-bold text-sm", isMe ? "text-blue-300" : "text-gray-400")}>
                                                 {isMe ? "You" : `Player ${score.id.slice(0,4)}`}
                                             </span>
-                                            <span className="font-mono text-white">{score.points}</span>
+                                            <div className="text-right flex flex-col items-end">
+                                                <span className="font-mono text-white font-bold">{score.points}</span>
+                                                {delta !== undefined && delta !== 0 && (
+                                                    <span className={cn("text-[10px] font-mono", delta > 0 ? "text-green-400" : "text-red-400")}>
+                                                        {delta > 0 ? "+" : ""}{delta}
+                                                    </span>
+                                                )}
+                                            </div>
                                         </div>
                                     )
                                 })}

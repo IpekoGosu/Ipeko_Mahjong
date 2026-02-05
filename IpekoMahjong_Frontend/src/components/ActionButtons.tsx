@@ -67,7 +67,8 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
                                     <MahjongTile
                                         key={i}
                                         tile={t}
-                                        className="w-5 h-7 text-[8px] shadow-sm border-gray-300 pointer-events-none"
+                                        size="xs"
+                                        className="shadow-sm border-gray-300 pointer-events-none"
                                     />
                                 ))}
                             </div>
