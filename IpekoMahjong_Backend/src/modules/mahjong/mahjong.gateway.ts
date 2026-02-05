@@ -186,8 +186,7 @@ export class MahjongGateway {
             // Wait, handlePostUpdateActions is needed to trigger AI.
             // processGameUpdate just emits events.
 
-            // I need to make handleNextRound async and await handlePostUpdateActions
-            void this.handlePostUpdateActions(data.roomId, gameUpdate)
+            this.handlePostUpdateActions(data.roomId, gameUpdate).catch(err => this.logger.error(`Error in post-action for next-round: ${err}`))
         } catch (error) {
             this.logger.error(`Error in handleNextRound: ${error}`)
         }
