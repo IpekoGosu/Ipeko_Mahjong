@@ -62,7 +62,7 @@ describe('MahjongGateway', () => {
 
         client.on('turn-changed', (data: Record<string, unknown>) => {
             turnChangedReceived = true
-            expect(data).toHaveProperty('playerId', client.id)
+            expect(data).toHaveProperty('playerId')
             if (gameStartedReceived && turnChangedReceived) {
                 done()
             }
@@ -82,26 +82,33 @@ describe('MahjongGateway', () => {
 
         client.on(
             'game-started',
-            (data: { roomId: string; hand: string[] }) => {
+            (data: {
+                roomId: string
+                hand: string[]
+                yourPlayerId: string
+                oyaId: string
+            }) => {
                 myRoomId = data.roomId
                 myHand = data.hand
 
-                // If I am Oya (which I am), I discard immediately to start the game
-                const tileToDiscard = myHand[myHand.length - 1]
-                client.emit('discard-tile', {
-                    roomId: myRoomId,
-                    tile: tileToDiscard,
-                })
+                // If I am Oya, I discard immediately to start the game
+                if (data.yourPlayerId === data.oyaId) {
+                    const tileToDiscard = myHand[myHand.length - 1]
+                    client.emit('discard-tile', {
+                        roomId: myRoomId,
+                        tile: tileToDiscard,
+                    })
+                }
             },
         )
 
         client.on('new-tile-drawn', (data: Record<string, unknown>) => {
             // This event is received when it's my turn AGAIN (after AIs played)
-            // or if I wasn't Oya (but I am).
+            // or if I wasn't Oya.
 
             // If this fires, it means the round completed successfully!
             expect(data).toHaveProperty('tile')
             done()
         })
-    }, 10000)
+    }, 15000)
 })

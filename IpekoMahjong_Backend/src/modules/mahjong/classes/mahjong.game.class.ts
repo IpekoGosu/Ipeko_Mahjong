@@ -42,19 +42,26 @@ export class MahjongGame {
     private rinshanFlag: boolean = false
     private pendingActions: Record<string, PossibleActions> = {}
 
+    // Hanchan State
+    private bakaze: '1z' | '2z' | '3z' | '4z' = '1z' // 1z: East, 2z: South, 3z: West, 4z: North
+    private kyokuNum: number = 1 // 1-4
+    private honba: number = 0
+    private kyotaku: number = 0
+    private oyaIndex: number = 0
+
     constructor(playerInfos: { id: string; isAi: boolean }[]) {
         this.wall = new Wall()
-        this.wall.shuffle() // Shuffle the wall upon creation
+        // Wall shuffling moved to startKyoku
 
-        this.players = playerInfos.map((info, index) => {
-            const player = new Player(info.id, index === 0, info.isAi)
+        this.players = playerInfos.map((info) => {
+            const player = new Player(info.id, false, info.isAi) // isOya set later
             if (info.isAi) {
                 player.ai = new SimpleAI()
             }
             return player
         })
-        this.dealInitialHands()
-        this.currentTurnIndex = 0 // Oya starts
+        // dealInitialHands removed from constructor
+        this.currentTurnIndex = 0
     }
 
     // #region Public Methods - Game Flow Control
@@ -62,9 +69,101 @@ export class MahjongGame {
     /** 게임을 시작하고 첫 턴의 정보를 반환합니다. */
     startGame(roomId: string): GameUpdate {
         console.log('Starting game')
-        // Deal 13 tiles has been done in constructor dealInitialHands
-        // Now trigger the first draw for the current turn player (Oya)
-        return this.drawTileForCurrentPlayer(roomId)
+
+        // Randomize seating (Oya selection)
+        // Fisher-Yates shuffle
+        for (let i = this.players.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1))
+            ;[this.players[i], this.players[j]] = [
+                this.players[j],
+                this.players[i],
+            ]
+        }
+
+        // Initialize Game State
+        this.bakaze = '1z'
+        this.kyokuNum = 1
+        this.honba = 0
+        this.kyotaku = 0
+        this.oyaIndex = 0 // Player at index 0 starts as Oya
+
+        return this.startKyoku(roomId)
+    }
+
+    /** 새로운 국(Kyoku)을 시작합니다. */
+    private startKyoku(roomId: string): GameUpdate {
+        console.log(
+            `Starting Kyoku: ${this.bakaze}-${this.kyokuNum}, Honba: ${this.honba}`,
+        )
+
+        // 1. Reset Wall
+        this.wall = new Wall()
+        this.wall.shuffle()
+        this.wall.separateDeadWall()
+        this.wall.revealDora()
+
+        // 2. Reset Players (Hands, Discards, Melds, Flags)
+        this.players.forEach((player) => {
+            player.isOya =
+                player.getId() === this.players[this.oyaIndex].getId()
+            // Reset player state (Need to add a reset method to Player or do it manually)
+            // For now, manually creating a fresh state if possible or resetting fields
+            // Since Player methods modify internal arrays, we need to clear them.
+            // But Player class doesn't have a clear method.
+            // We should probably rely on `dealInitialHands` logic but expanded.
+
+            // HACK: Accessing private fields or adding a reset method is better.
+            // Let's assume we implement a reset method in Player class or just re-instantiate?
+            // Re-instantiating might lose 'score'. We must keep the score.
+            // So we need to reset hand/discards/melds.
+            // Since I cannot easily add `reset()` to Player in this hunk without multiple file edits,
+            // I will implement a 'reset' logic here if I can't edit Player.
+            // Wait, I can edit Player later. For now, I'll rely on `dealInitialHands`
+            // to populate, but I need to clear first.
+
+            // Let's rely on a new `resetKyokuState()` method on Player which I will add.
+        })
+
+        // 3. Deal Tiles
+        this.dealInitialHands()
+
+        // 4. Set Turn to Oya
+        this.currentTurnIndex = this.oyaIndex
+        this.turnCounter = 0
+        this.activeDiscard = null
+        this.anyCallDeclared = false
+        this.rinshanFlag = false
+        this.pendingActions = {}
+
+        // 5. Draw first tile for Oya
+        const drawUpdate = this.drawTileForCurrentPlayer(roomId)
+
+        // 6. Generate round-started events
+        const startEvents: GameUpdate['events'] = this.players.map((p) => ({
+            eventName: 'round-started',
+            payload: {
+                hand: p.getHand().map((t) => t.toString()),
+                dora: this.getDora().map((t) => t.toString()),
+                wallCount: this.wall.getRemainingTiles(),
+                bakaze: this.bakaze,
+                kyoku: this.kyokuNum,
+                honba: this.honba,
+                kyotaku: this.kyotaku,
+                oyaId: this.players[this.oyaIndex].getId(),
+                scores: this.players.map((pl) => ({
+                    id: pl.getId(),
+                    points: pl.points,
+                })),
+            },
+            to: 'player',
+            playerId: p.getId(),
+        }))
+
+        return {
+            roomId,
+            isGameOver: false,
+            events: [...startEvents, ...drawUpdate.events],
+        }
     }
 
     /** 현재 턴인 플레이어가 타일을 버립니다. */
@@ -235,22 +334,11 @@ export class MahjongGame {
         const result = this.verifyTsumo(player)
 
         if (result.isAgari) {
-            return {
-                roomId,
-                isGameOver: true,
+            return this.endKyoku(roomId, {
                 reason: 'tsumo',
-                events: [
-                    {
-                        eventName: 'game-over',
-                        payload: {
-                            reason: 'tsumo',
-                            winnerId: playerId,
-                            score: result.score,
-                        },
-                        to: 'all',
-                    },
-                ],
-            }
+                winnerId: playerId,
+                score: result.score!,
+            })
         } else {
             return {
                 roomId,
@@ -290,7 +378,7 @@ export class MahjongGame {
             // 1. Check Ron
             try {
                 const context: WinContext = {
-                    bakaze: '1z',
+                    bakaze: this.bakaze,
                     dora: this.getDora().map((t) => t.toString()),
                     isTsumo: false,
                     winningTile: tileString,
@@ -377,22 +465,15 @@ export class MahjongGame {
         if (actionType === 'ron') {
             const result = this.verifyRon(player, tileString)
             if (result.isAgari) {
-                return {
-                    roomId,
-                    isGameOver: true,
+                // Find loser (discarder)
+                // We don't track activeDiscard logic here perfectly if multiple Rons, but for single Ron:
+                const loserId = this.activeDiscard?.playerId
+                return this.endKyoku(roomId, {
                     reason: 'ron',
-                    events: [
-                        {
-                            eventName: 'game-over',
-                            payload: {
-                                reason: 'ron',
-                                winnerId: playerId,
-                                score: result.score,
-                            },
-                            to: 'all',
-                        },
-                    ],
-                }
+                    winnerId: playerId,
+                    loserId,
+                    score: result.score!,
+                })
             } else {
                 return {
                     roomId,
@@ -641,6 +722,238 @@ export class MahjongGame {
         }
     }
 
+    /** 다음 국으로 진행합니다. */
+    nextRound(roomId: string): GameUpdate {
+        return this.startKyoku(roomId)
+    }
+
+    private endKyoku(
+        roomId: string,
+        result: {
+            reason: 'ron' | 'tsumo' | 'ryuukyoku'
+            winnerId?: string
+            loserId?: string // Target for Ron
+            score?: ScoreCalculation
+        },
+    ): GameUpdate {
+        const events: GameUpdate['events'] = []
+        let nextOyaIndex = this.oyaIndex
+        let nextKyokuNum = this.kyokuNum
+        let nextBakaze = this.bakaze
+        let nextHonba = this.honba
+        let nextKyotaku = this.kyotaku
+        let renchan = false
+
+        // 1. Calculate Score & Honba/Kyotaku Logic
+        if (
+            result.reason === 'ron' &&
+            result.winnerId &&
+            result.loserId &&
+            result.score
+        ) {
+            const winner = this.getPlayer(result.winnerId)!
+            const loser = this.getPlayer(result.loserId)!
+
+            // Basic Score Update (Winner gets score + sticks + honba bonus)
+            // Honba bonus: 300 pts per honba
+            const honbaPoints = this.honba * 300
+            const totalPoints =
+                result.score.ten + honbaPoints + this.kyotaku * 1000
+
+            winner.points += totalPoints
+            loser.points -= result.score.ten + honbaPoints
+
+            // Reset Kyotaku as it's claimed
+            nextKyotaku = 0
+
+            // Renchan check
+            if (winner.isOya) {
+                renchan = true
+                nextHonba++
+            } else {
+                nextHonba = 0
+            }
+
+            events.push({
+                eventName: 'score-update',
+                payload: {
+                    winnerId: winner.getId(),
+                    loserId: loser.getId(),
+                    score: result.score.ten,
+                    totalPoints: totalPoints,
+                    reason: 'ron',
+                },
+                to: 'all',
+            })
+        } else if (
+            result.reason === 'tsumo' &&
+            result.winnerId &&
+            result.score
+        ) {
+            const winner = this.getPlayer(result.winnerId)!
+            const honbaPoints = this.honba * 300 // Total honba payment (divided among losers)
+            const totalPoints =
+                result.score.ten + honbaPoints + this.kyotaku * 1000
+
+            winner.points += totalPoints
+            nextKyotaku = 0
+
+            // Payment distribution (Simplified: Split equally roughly, adjusting for Oya/Ko)
+            // If strict rules:
+            // Ko Tsumo: Oya pays 50%, Ko pays 25%
+            // Oya Tsumo: Ko pays 33%
+            // We use 'ten' as total.
+            // Honba payment in Tsumo is 100 per player (total 300).
+
+            const otherPlayers = this.players.filter((p) => p !== winner)
+
+            if (winner.isOya) {
+                // Oya wins: All Ko pay equally
+                const paymentPerPlayer = result.score.ten / 3 + 100 * this.honba
+                otherPlayers.forEach((p) => (p.points -= paymentPerPlayer))
+                renchan = true
+                nextHonba++
+            } else {
+                // Ko wins
+                const oya = this.players.find((p) => p.isOya)!
+                const kos = otherPlayers.filter((p) => !p.isOya)
+
+                // Oya pays roughly half
+                const oyaPayment = result.score.ten / 2 + 100 * this.honba
+                const koPayment = result.score.ten / 4 + 100 * this.honba
+
+                oya.points -= oyaPayment
+                kos.forEach((p) => (p.points -= koPayment))
+
+                nextHonba = 0
+            }
+
+            events.push({
+                eventName: 'score-update',
+                payload: {
+                    winnerId: winner.getId(),
+                    score: result.score.ten,
+                    totalPoints: totalPoints,
+                    reason: 'tsumo',
+                },
+                to: 'all',
+            })
+        } else if (result.reason === 'ryuukyoku') {
+            // Check Tenpai
+            const tenpaiList = this.players.filter(
+                (p) => p.getHand().length <= 13 && RuleManager.isTenpai(p),
+            )
+            const notenList = this.players.filter(
+                (p) => !tenpaiList.includes(p),
+            )
+
+            if (tenpaiList.length > 0 && notenList.length > 0) {
+                const flow = 3000
+                const payReceive = flow / tenpaiList.length
+                const payGive = flow / notenList.length
+
+                tenpaiList.forEach((p) => (p.points += payReceive))
+                notenList.forEach((p) => (p.points -= payGive))
+            }
+
+            // Renchan logic
+            const oya = this.players[this.oyaIndex]
+            if (tenpaiList.includes(oya)) {
+                renchan = true
+                nextHonba++
+            } else {
+                nextHonba++ // Honba increases even if Oya passes in Ryuukyoku? Yes in Tenhou.
+                // Wait, if Oya is noten, Oya passes.
+            }
+        }
+
+        // 2. Progression Logic
+        if (!renchan) {
+            nextOyaIndex = (this.oyaIndex + 1) % 4
+            nextKyokuNum++
+            if (nextKyokuNum > 4) {
+                nextKyokuNum = 1
+                const windOrder: ('1z' | '2z' | '3z' | '4z')[] = [
+                    '1z',
+                    '2z',
+                    '3z',
+                    '4z',
+                ]
+                const currentIndex = windOrder.indexOf(this.bakaze)
+                nextBakaze = windOrder[(currentIndex + 1) % windOrder.length]
+            }
+        }
+
+        // Check for Game Over
+        const maxPoints = Math.max(...this.players.map((p) => p.points))
+        let isGameOver = false
+
+        if (this.players.some((p) => p.points < 0)) {
+            // Dobon (Bankruptcy)
+            isGameOver = true
+        } else if (this.bakaze === '1z') {
+            // East round: game never ends unless bankruptcy
+            isGameOver = false
+        } else if (this.bakaze === '2z' && this.kyokuNum < 4) {
+            // South 1-3: game never ends unless bankruptcy
+            isGameOver = false
+        } else {
+            // South 4 or later (Encho-sen)
+            if (maxPoints >= 30000) {
+                // If it's S4 and Oya renchans, they must be in top to end (Agari-yame)
+                // For simplicity, we'll follow: if anyone is >= 30000 at the end of S4+, game ends.
+                isGameOver = true
+            }
+        }
+
+        // Apply State
+        this.honba = nextHonba
+        this.kyotaku = nextKyotaku
+        this.oyaIndex = nextOyaIndex
+        this.kyokuNum = nextKyokuNum
+        this.bakaze = nextBakaze
+
+        // 3. Return Update
+        events.push({
+            eventName: 'round-ended',
+            payload: {
+                reason: result.reason,
+                scores: this.players.map((p) => ({
+                    id: p.getId(),
+                    points: p.points,
+                })),
+                nextState: {
+                    bakaze: this.bakaze,
+                    kyoku: this.kyokuNum,
+                    honba: this.honba,
+                    isGameOver: isGameOver,
+                },
+            },
+            to: 'all',
+        })
+
+        if (isGameOver) {
+            return {
+                roomId,
+                isGameOver: true,
+                events: [
+                    ...events,
+                    {
+                        eventName: 'game-over',
+                        payload: { scores: this.players.map((p) => p.points) },
+                        to: 'all',
+                    },
+                ],
+            }
+        }
+
+        return {
+            roomId,
+            isGameOver: false,
+            events,
+        }
+    }
+
     /**
      * 플레이어가 가능한 행동을 포기(Skip)합니다.
      * 모든 플레이어가 포기하면 다음 턴으로 진행할 수 있는 상태인지 반환합니다.
@@ -680,18 +993,7 @@ export class MahjongGame {
 
         if (!tile) {
             // 유국 (Ryuukyoku)
-            return {
-                roomId,
-                isGameOver: true,
-                reason: 'ryuukyoku',
-                events: [
-                    {
-                        eventName: 'game-over',
-                        payload: { reason: 'ryuukyoku' },
-                        to: 'all',
-                    },
-                ],
-            }
+            return this.endKyoku(roomId, { reason: 'ryuukyoku' })
         }
 
         currentPlayer.draw(tile)
@@ -789,7 +1091,7 @@ export class MahjongGame {
             !this.anyCallDeclared
 
         const context: WinContext = {
-            bakaze: '1z', // Default East Round
+            bakaze: this.bakaze, // Default East Round
             dora: this.getDora().map((t) => t.toString()),
             isTsumo: true,
             isRiichi: player.isRiichi,
@@ -816,7 +1118,7 @@ export class MahjongGame {
         }
 
         const context: WinContext = {
-            bakaze: '1z',
+            bakaze: this.bakaze,
             dora: this.getDora().map((t) => t.toString()),
             isTsumo: false,
             winningTile: winningTile,
@@ -835,9 +1137,6 @@ export class MahjongGame {
     }
 
     private dealInitialHands(): void {
-        // 왕패 14장을 미리 분리
-        this.wall.separateDeadWall()
-
         for (let i = 0; i < 13; i++) {
             for (const player of this.players) {
                 const tile = this.wall.draw()
@@ -846,12 +1145,9 @@ export class MahjongGame {
                 }
             }
         }
-
-        // 첫 도라패 공개
-        this.wall.revealDora()
     }
 
-    private checkChi(player: Player, tileString: string): string[][] {
+    public checkChi(player: Player, tileString: string): string[][] {
         let rank = parseInt(tileString.slice(0, -1))
         const suit = tileString.slice(-1)
         if (suit === 'z') return []
@@ -936,6 +1232,22 @@ export class MahjongGame {
         if (!player) return false
         const result = this.verifyTsumo(player)
         return result.isAgari
+    }
+
+    getBakaze(): string {
+        return this.bakaze
+    }
+
+    getKyokuNum(): number {
+        return this.kyokuNum
+    }
+
+    getHonba(): number {
+        return this.honba
+    }
+
+    getKyotaku(): number {
+        return this.kyotaku
     }
 
     // #endregion

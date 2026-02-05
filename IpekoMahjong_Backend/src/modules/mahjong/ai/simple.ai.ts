@@ -1,6 +1,5 @@
-import Riichi from 'riichi'
 import { GameObservation, MahjongAI } from './mahjong-ai.interface'
-import { PossibleActions, RiichiResult } from '../interfaces/mahjong.types'
+import { PossibleActions } from '../interfaces/mahjong.types'
 
 export class SimpleAI implements MahjongAI {
     private sleep(ms: number) {

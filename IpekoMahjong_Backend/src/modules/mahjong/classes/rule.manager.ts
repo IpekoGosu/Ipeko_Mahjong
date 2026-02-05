@@ -157,6 +157,39 @@ export class RuleManager {
         return false
     }
 
+    static isTenpai(player: Player): boolean {
+        // Construct hand string including melds
+        let handStr = player.getHandStringForRiichi()
+        const melds = player.getMelds()
+        if (melds.length > 0) {
+            melds.forEach((meld) => {
+                const suit = meld.tiles[0].getSuit()
+                const ranks = meld.tiles
+                    .map((t) => {
+                        const s = t.toString()
+                        return s[0]
+                    })
+                    .sort()
+                    .join('')
+                handStr += `+${ranks}${suit}`
+            })
+        }
+
+        try {
+            const result = new Riichi(handStr).calc() as RiichiResult
+            return (
+                (result.hairi?.now ?? 100) === 0 ||
+                (result.hairi7and13?.now ?? 100) === 0
+            )
+        } catch (e) {
+            console.error(
+                `Error checking Tenpai for player ${player.getId()}:`,
+                e,
+            )
+            return false
+        }
+    }
+
     private static convertTilesToRiichiString(tiles: string[]): string {
         const groups: Record<string, string[]> = { m: [], p: [], s: [], z: [] }
         tiles.forEach((t) => {

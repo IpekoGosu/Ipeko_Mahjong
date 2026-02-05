@@ -65,12 +65,19 @@ export class MahjongGateway {
         const room = this.gameRoomService.createRoom(client.id)
         await client.join(room.roomId)
 
+        // Start the game logic FIRST to initialize state and deal hands
+        const gameUpdate = room.mahjongGame.startGame(room.roomId)
+
         // Send initial state to the human player
         const human = room.mahjongGame.getPlayer(client.id)
         if (human) {
             client.emit('game-started', {
                 roomId: room.roomId,
                 yourPlayerId: client.id,
+                oyaId: room.mahjongGame
+                    .getPlayers()
+                    .find((p) => p.isOya)
+                    ?.getId(),
                 players: room.mahjongGame
                     .getPlayers()
                     .map((p) => ({ id: p.getId(), isAi: p.isAi })),
@@ -82,8 +89,6 @@ export class MahjongGateway {
             })
         }
 
-        // Start the game logic
-        const gameUpdate = room.mahjongGame.startGame(room.roomId)
         // Use a small delay to ensure the client has processed 'game-started'
         this.processGameUpdate(gameUpdate)
         await this.handlePostUpdateActions(room.roomId, gameUpdate)
@@ -159,6 +164,32 @@ export class MahjongGateway {
             client.emit('error', {
                 message: 'Internal server error during tsumo',
             })
+        }
+    }
+
+    @SubscribeMessage('next-round')
+    handleNextRound(
+        @ConnectedSocket() client: Socket,
+        @MessageBody() data: { roomId: string },
+    ): void {
+        try {
+            const room = this.gameRoomService.getRoom(data.roomId)
+            if (!room) return
+
+            const gameUpdate = room.mahjongGame.nextRound(data.roomId)
+            this.processGameUpdate(gameUpdate)
+            // Check AI? AI might need to discard if it's Oya.
+            // nextRound calls startKyoku -> drawTile -> turn-changed
+            // processGameUpdate handles turn-changed -> checkAndNotifyAiTurn
+            // So AI should work.
+
+            // Wait, handlePostUpdateActions is needed to trigger AI.
+            // processGameUpdate just emits events.
+
+            // I need to make handleNextRound async and await handlePostUpdateActions
+            void this.handlePostUpdateActions(data.roomId, gameUpdate)
+        } catch (error) {
+            this.logger.error(`Error in handleNextRound: ${error}`)
         }
     }
 

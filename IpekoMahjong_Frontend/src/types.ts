@@ -11,12 +11,38 @@ export interface PlayerInfo {
 export interface GameStartedPayload {
     roomId: string
     yourPlayerId: string
+    oyaId: string
     players: PlayerInfo[]
     hand: TileString[] // Your starting hand (13 tiles)
     dora: TileString[] // Initial dora indicators
     wallCount: number
     deadWallCount: number
     riichiDiscards?: TileString[]
+}
+
+// Event: 'round-started'
+export interface RoundStartedPayload {
+    hand: TileString[]
+    dora: TileString[]
+    wallCount: number
+    bakaze: string
+    kyoku: number
+    honba: number
+    kyotaku: number
+    oyaId: string
+    scores: { id: string; points: number }[]
+}
+
+// Event: 'round-ended'
+export interface RoundEndedPayload {
+    reason: 'ron' | 'tsumo' | 'ryuukyoku'
+    scores: { id: string; points: number }[]
+    nextState: {
+        bakaze: string
+        kyoku: number
+        honba: number
+        isGameOver: boolean
+    }
 }
 
 // Event: 'turn-changed'
@@ -85,6 +111,7 @@ export interface GameOverPayload {
         name: string
         text: string
     }
+    scores?: number[] // Final scores
 }
 
 // Event: 'error'
@@ -101,6 +128,7 @@ export interface PlayerState {
     isMyTurn: boolean
     isRiichi?: boolean
     isFuriten?: boolean
+    points: number
 }
 
 export interface GameState {
@@ -116,9 +144,16 @@ export interface GameState {
     dealerId: string | null
     actionRequest: AskActionPayload | null
     gameOverData: GameOverPayload | null
+    roundEndedData: RoundEndedPayload | null
     riichiDiscards: string[]
     canTsumo: boolean
     ankanList: string[]
     kakanList: string[]
     logs: string[]
+    // Hanchan State
+    bakaze: string
+    kyoku: number
+    honba: number
+    kyotaku: number
 }
+
