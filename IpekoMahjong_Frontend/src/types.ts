@@ -152,6 +152,7 @@ export interface PlayerState {
     melds: { tiles: string[]; stolenFrom?: string }[] // List of melds with metadata
     isMyTurn: boolean
     isRiichi?: boolean
+    riichiIndex?: number
     isFuriten?: boolean
     points: number
     jikaze?: string

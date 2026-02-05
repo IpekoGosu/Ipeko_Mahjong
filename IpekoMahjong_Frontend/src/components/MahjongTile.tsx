@@ -13,6 +13,7 @@ interface MahjongTileProps {
     isDora?: boolean
     className?: string
     size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl'
+    rotation?: number
 }
 
 const MahjongTile: React.FC<MahjongTileProps> = ({
@@ -22,6 +23,7 @@ const MahjongTile: React.FC<MahjongTileProps> = ({
     isDora,
     className,
     size = 'lg',
+    rotation = 0,
 }) => {
     const getTileDisplay = (t: string) => {
         let num = t[0]
@@ -101,8 +103,9 @@ const MahjongTile: React.FC<MahjongTileProps> = ({
     return (
         <div
             onClick={onClick}
+            style={{ transform: `rotate(${rotation}deg)` }}
             className={cn(
-                'relative bg-[#f8f5e6] border border-gray-400 rounded flex flex-col items-center justify-center cursor-pointer hover:bg-gray-100 transition-colors shadow-sm',
+                'relative bg-[#f8f5e6] border border-gray-400 rounded flex flex-col items-center justify-center cursor-pointer hover:bg-gray-100 transition-all shadow-sm',
                 sizeClasses[size],
                 isDrawn && 'ml-3',
                 isDora && 'bg-[#fff9c4] ring-2 ring-yellow-400/70 border-yellow-500 shadow-[0_0_8px_rgba(250,204,21,0.4)]',
