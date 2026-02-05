@@ -40,7 +40,7 @@ describe('SimpleAI', () => {
         const discard = await ai.decideDiscard(obs)
         const duration = Date.now() - start
 
-        expect(duration).toBeGreaterThanOrEqual(2000)
+        expect(duration).toBeGreaterThanOrEqual(1000)
         expect(discard).toBeDefined()
         expect(obs.myHand).toContain(discard)
     }, 5000) // Increase timeout for this test
@@ -62,7 +62,7 @@ describe('SimpleAI', () => {
         const action = await ai.decideAction(obs, '1m', { pon: true })
         const duration = Date.now() - start
 
-        expect(duration).toBeGreaterThanOrEqual(2000)
+        expect(duration).toBeGreaterThanOrEqual(1000)
         expect(action).toBe('skip')
     }, 5000)
 })

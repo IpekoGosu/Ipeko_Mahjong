@@ -8,6 +8,8 @@ import GameOverModal from './components/GameOverModal'
 import {
     GameState,
     GameStartedPayload,
+    RoundStartedPayload,
+    RoundEndedPayload,
     TurnChangedPayload,
     NewTileDrawnPayload,
     UpdateDiscardPayload,
@@ -37,11 +39,16 @@ function App() {
         dealerId: null,
         actionRequest: null,
         gameOverData: null,
+        roundEndedData: null,
         riichiDiscards: [],
         canTsumo: false,
         ankanList: [],
         kakanList: [],
         logs: [],
+        bakaze: '1z',
+        kyoku: 1,
+        honba: 0,
+        kyotaku: 0
     })
 
     const [riichiIntent, setRiichiIntent] = useState(false)
@@ -98,7 +105,7 @@ function App() {
                 dora: payload.dora,
                 wallCount: payload.wallCount,
                 deadWallCount: payload.deadWallCount,
-                dealerId: payload.players[0].id, // 첫 번째 플레이어를 오야로 가정
+                dealerId: payload.oyaId,
                 myHand: sortTiles(payload.hand),
                 riichiDiscards: payload.riichiDiscards || [],
                 players: payload.players.map((p) => ({
@@ -109,7 +116,52 @@ function App() {
                     melds: [],
                     isMyTurn: false,
                     isRiichi: false,
+                    points: 25000 // Initial default
                 })),
+            }))
+        })
+
+        socket.on('round-started', (payload: RoundStartedPayload) => {
+             addLog(`Round Started: ${payload.bakaze}-${payload.kyoku}`)
+             setState(prev => ({
+                 ...prev,
+                 myHand: sortTiles(payload.hand),
+                 dora: payload.dora,
+                 wallCount: payload.wallCount,
+                 bakaze: payload.bakaze,
+                 kyoku: payload.kyoku,
+                 honba: payload.honba,
+                 kyotaku: payload.kyotaku,
+                 dealerId: payload.oyaId,
+                 roundEndedData: null,
+                 gameOverData: null,
+                 players: prev.players.map(p => {
+                     const scoreInfo = payload.scores.find(s => s.id === p.id)
+                     return {
+                         ...p,
+                         handCount: 13,
+                         discards: [],
+                         melds: [],
+                         isRiichi: false,
+                         isFuriten: false,
+                         points: scoreInfo ? scoreInfo.points : p.points
+                     }
+                 })
+             }))
+        })
+
+        socket.on('round-ended', (payload: RoundEndedPayload) => {
+            addLog(`Round Ended: ${payload.reason}`)
+            setState(prev => ({
+                ...prev,
+                roundEndedData: payload,
+                players: prev.players.map(p => {
+                     const scoreInfo = payload.scores.find(s => s.id === p.id)
+                     return {
+                         ...p,
+                         points: scoreInfo ? scoreInfo.points : p.points
+                     }
+                })
             }))
         })
 
@@ -328,6 +380,11 @@ function App() {
         socketRef.current?.emit('start-game')
     }
 
+    const handleNextRound = () => {
+        if (!state.roomId) return
+        socketRef.current?.emit('next-round', { roomId: state.roomId })
+    }
+
     const handleDiscard = (tile: string) => {
         if (!state.roomId) return
         socketRef.current?.emit('discard-tile', {
@@ -417,6 +474,16 @@ function App() {
         return -1
     }
 
+    const getWindName = (bakaze: string) => {
+        switch (bakaze) {
+            case '1z': return 'East'
+            case '2z': return 'South'
+            case '3z': return 'West'
+            case '4z': return 'North'
+            default: return 'East'
+        }
+    }
+
     if (!state.roomId) {
         return (
             <div className="flex flex-col items-center justify-center min-h-screen">
@@ -453,12 +520,13 @@ function App() {
                         )}
                     >
                         <div className="text-[10px] mb-0.5 flex items-center gap-1 opacity-80 font-bold uppercase tracking-tighter">
+                            <span className="bg-gray-700 px-1 rounded text-white mr-1 font-mono">{oppositePlayer?.points}</span>
                             {oppositePlayer?.id === state.dealerId && (
                                 <span className="bg-red-600 text-white px-1 rounded font-bold">
                                     親
                                 </span>
                             )}
-                            Opposite{' '}
+                            TOIMEN{' '}
                             {oppositePlayer?.isMyTurn && (
                                 <span className="text-blue-400 animate-pulse ml-1">
                                     ●
@@ -533,12 +601,13 @@ function App() {
                     >
                         <div className="flex flex-col items-center gap-1">
                             <div className="text-[10px] flex flex-col items-center gap-0.5 opacity-80 -rotate-90 font-bold uppercase tracking-tighter">
+                                <span className="bg-gray-700 px-1 rounded text-white mb-1 font-mono">{leftPlayer?.points}</span>
                                 {leftPlayer?.id === state.dealerId && (
                                     <span className="bg-red-600 text-white px-1 rounded font-bold">
                                         親
                                     </span>
                                 )}
-                                <span>Left</span>
+                                <span>KAMICHA</span>
                                 {leftPlayer?.isMyTurn && (
                                     <span className="text-blue-400 animate-pulse mt-1">
                                         ●
@@ -604,11 +673,18 @@ function App() {
                     </div>
 
                     {/* Row 2, Col 2: Center Info Box */}
-                    <div className="col-start-2 row-start-2 w-36 h-36 bg-gray-800 border border-gray-700 rounded-lg shadow-xl flex flex-col items-center justify-center p-2">
-                        <div className="text-[8px] font-bold text-gray-500 mb-1 tracking-widest uppercase">
+                    <div className="col-start-2 row-start-2 w-36 h-36 bg-gray-800 border border-gray-700 rounded-lg shadow-xl flex flex-col items-center justify-center p-1 relative">
+                        <div className="absolute top-1 left-2 text-[10px] font-bold text-white">
+                            {getWindName(state.bakaze)} {state.kyoku}-{state.honba}
+                        </div>
+                        <div className="absolute top-1 right-2 text-[10px] text-yellow-400 font-mono flex items-center gap-0.5">
+                             <div className="w-1 h-3 bg-red-500 rounded-sm"></div> {state.kyotaku}
+                        </div>
+
+                        <div className="text-[8px] font-bold text-gray-500 mb-0.5 mt-4 tracking-widest uppercase">
                             Dora
                         </div>
-                        <div className="flex gap-0.5 mb-2">
+                        <div className="flex gap-0.5 mb-1">
                             {state.dora.map((t, i) => (
                                 <MahjongTile
                                     key={i}
@@ -644,12 +720,13 @@ function App() {
                     >
                         <div className="flex flex-col items-center gap-1">
                             <div className="text-[10px] flex flex-col items-center gap-0.5 opacity-80 rotate-90 font-bold uppercase tracking-tighter">
+                                <span className="bg-gray-700 px-1 rounded text-white mb-1 font-mono">{rightPlayer?.points}</span>
                                 {rightPlayer?.id === state.dealerId && (
                                     <span className="bg-red-600 text-white px-1 rounded font-bold">
                                         親
                                     </span>
                                 )}
-                                <span>Right</span>
+                                <span>SHIMOCHA</span>
                                 {rightPlayer?.isMyTurn && (
                                     <span className="text-blue-400 animate-pulse mt-1">
                                         ●
@@ -783,6 +860,7 @@ function App() {
 
                     {/* Player Hand */}
                     <div className="text-xs font-bold mb-1 flex items-center gap-2">
+                        <span className="bg-gray-700 px-1 rounded text-white mr-1 font-mono">{myPlayer?.points}</span>
                         {myPlayer?.id === state.dealerId && (
                             <span className="bg-red-600 text-white text-[8px] px-1 rounded font-bold">
                                 親
@@ -941,6 +1019,58 @@ function App() {
                     </div>
                 ))}
             </div>
+
+            {/* Round Ended Modal */}
+            {state.roundEndedData && (
+                 <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
+                    <div className="bg-gray-800 p-6 rounded-lg shadow-2xl max-w-md w-full border border-gray-700">
+                        <h2 className="text-2xl font-bold mb-4 text-center text-white">Round Ended</h2>
+                        <div className="text-center mb-6">
+                            <div className="text-xl font-bold text-yellow-400 mb-2 uppercase">{state.roundEndedData.reason}</div>
+                            
+                            <div className="space-y-2">
+                                {state.roundEndedData.scores.map(score => {
+                                    const isMe = score.id === state.myPlayerId
+                                    return (
+                                        <div key={score.id} className={cn("flex justify-between items-center p-2 rounded", isMe ? "bg-blue-900/30 border border-blue-500/30" : "bg-gray-700/30")}>
+                                            <span className={cn("font-bold", isMe ? "text-blue-300" : "text-gray-400")}>
+                                                {isMe ? "You" : `Player ${score.id.slice(0,4)}`}
+                                            </span>
+                                            <span className="font-mono text-white">{score.points}</span>
+                                        </div>
+                                    )
+                                })}
+                            </div>
+
+                            <div className="mt-6 text-sm text-gray-400">
+                                {state.roundEndedData.nextState.isGameOver 
+                                    ? 'Game Complete' 
+                                    : `Next: ${getWindName(state.roundEndedData.nextState.bakaze)} ${state.roundEndedData.nextState.kyoku}-${state.roundEndedData.nextState.honba}`
+                                }
+                            </div>
+                        </div>
+                        
+                        <div className="flex justify-center">
+                            {!state.roundEndedData.nextState.isGameOver && (
+                                <button 
+                                    onClick={handleNextRound}
+                                    className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded transition-colors"
+                                >
+                                    Next Round
+                                </button>
+                            )}
+                            {state.roundEndedData.nextState.isGameOver && (
+                                <button 
+                                    onClick={() => setState(prev => ({ ...prev, roundEndedData: null }))}
+                                    className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded transition-colors"
+                                >
+                                    View Final Results
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Game Over Modal */}
             {state.gameOverData && (

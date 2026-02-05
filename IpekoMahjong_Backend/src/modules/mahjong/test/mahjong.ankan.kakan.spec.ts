@@ -15,20 +15,18 @@ describe('Ankan and Kakan Logic', () => {
             { id: 'p3', isAi: true },
             { id: 'p4', isAi: true },
         ])
+        game.startGame('room1')
         player = game.getPlayer('p1')!
+        player.resetKyokuState()
     })
 
     it('should identify Ankan option', () => {
         // Give player four 1m
-        const tiles = [
-            new Tile('m', 1, false, 0),
-            new Tile('m', 1, false, 1),
-            new Tile('m', 1, false, 2),
-            new Tile('m', 1, false, 3),
-            new Tile('p', 1, false, 4), // filler
-        ]
-        // Override hand
-        ;(player as unknown as { hand: Tile[] }).hand = tiles
+        player.draw(new Tile('m', 1, false, 0))
+        player.draw(new Tile('m', 1, false, 1))
+        player.draw(new Tile('m', 1, false, 2))
+        player.draw(new Tile('m', 1, false, 3))
+        player.draw(new Tile('p', 1, false, 4)) // filler
 
         const options = RuleManager.getAnkanOptions(player)
         expect(options).toContain('1m')
@@ -48,10 +46,8 @@ describe('Ankan and Kakan Logic', () => {
         player.addMeld(ponMeld)
 
         // Give player the 4th 5p in hand
-        ;(player as unknown as { hand: Tile[] }).hand = [
-            new Tile('p', 5, false, 3),
-            new Tile('m', 1, false, 4),
-        ]
+        player.draw(new Tile('p', 5, false, 3))
+        player.draw(new Tile('m', 1, false, 4))
 
         const options = RuleManager.getKakanOptions(player)
         expect(options).toContain('5p')
@@ -59,15 +55,13 @@ describe('Ankan and Kakan Logic', () => {
 
     it('should perform Ankan correctly', () => {
         // Setup hand
-        ;(player as unknown as { hand: Tile[] }).hand = [
-            new Tile('s', 2, false, 0),
-            new Tile('s', 2, false, 1),
-            new Tile('s', 2, false, 2),
-            new Tile('s', 2, false, 3),
-            new Tile('z', 1, false, 4),
-        ]
+        player.draw(new Tile('s', 2, false, 0))
+        player.draw(new Tile('s', 2, false, 1))
+        player.draw(new Tile('s', 2, false, 2))
+        player.draw(new Tile('s', 2, false, 3))
+        player.draw(new Tile('z', 1, false, 4))
 
-        const update = game.performAction('room1', 'p1', 'ankan', '2s')
+        game.performAction('room1', 'p1', 'ankan', '2s')
 
         // Check meld
         expect(player.getMelds().length).toBe(1)
@@ -75,12 +69,9 @@ describe('Ankan and Kakan Logic', () => {
         expect(player.getMelds()[0].opened).toBe(false)
         expect(player.getMelds()[0].tiles.length).toBe(4)
 
-        // Check hand reduced (4 removed, 1 replacement drawn - wait, replacement is drawn in performAction)
+        // Check hand reduced (4 removed, 1 replacement drawn)
         // Hand size: Started 5. Removed 4 -> 1. Drew 1 -> 2.
-        // Wait, performAction draws replacement.
         expect(player.getHand().length).toBe(2)
-
-        // Check Rinshan flag (internal state, hard to check directly without getter, but inferred by draw)
     })
 
     it('should perform Kakan correctly', () => {
@@ -97,10 +88,8 @@ describe('Ankan and Kakan Logic', () => {
         player.addMeld(ponMeld)
 
         // Setup hand
-        ;(player as unknown as { hand: Tile[] }).hand = [
-            new Tile('z', 5, false, 3),
-            new Tile('m', 1, false, 4),
-        ]
+        player.draw(new Tile('z', 5, false, 3))
+        player.draw(new Tile('m', 1, false, 4))
 
         game.performAction('room1', 'p1', 'kakan', '5z')
 

@@ -4,7 +4,7 @@ import { MahjongAI } from '../ai/mahjong-ai.interface'
 
 export class Player {
     private readonly id: string
-    public readonly isOya: boolean
+    public isOya: boolean
     readonly isAi: boolean
     public ai?: MahjongAI
     private hand: Tile[] = []
@@ -22,6 +22,18 @@ export class Player {
         this.id = id
         this.isOya = isOya
         this.isAi = isAi
+    }
+
+    resetKyokuState(): void {
+        this.hand = []
+        this.discards = []
+        this.melds = []
+        this.lastDrawnTile = null
+        this.isRiichi = false
+        this.isDoubleRiichi = false
+        this.ippatsuEligible = false
+        this.riichiDeclarationTurn = null
+        this.isFuriten = false
     }
 
     // ... (keep existing methods)
