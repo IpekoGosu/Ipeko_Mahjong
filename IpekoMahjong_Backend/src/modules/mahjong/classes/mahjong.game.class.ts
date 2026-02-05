@@ -783,29 +783,21 @@ export class MahjongGame {
             winner.points += totalPoints
             nextKyotaku = 0
 
-            // Payment distribution (Simplified: Split equally roughly, adjusting for Oya/Ko)
-            // If strict rules:
-            // Ko Tsumo: Oya pays 50%, Ko pays 25%
-            // Oya Tsumo: Ko pays 33%
-            // We use 'ten' as total.
-            // Honba payment in Tsumo is 100 per player (total 300).
-
             const otherPlayers = this.players.filter((p) => p !== winner)
 
             if (winner.isOya) {
-                // Oya wins: All Ko pay equally
-                const paymentPerPlayer = result.score.ten / 3 + 100 * this.honba
+                // Oya wins: All Ko pay `result.score.oya[0]` + honba bonus
+                const paymentPerPlayer = result.score.oya[0] + 100 * this.honba
                 otherPlayers.forEach((p) => (p.points -= paymentPerPlayer))
                 renchan = true
                 nextHonba++
             } else {
-                // Ko wins
+                // Ko wins: Oya pays `result.score.oya[0]`, other Ko pay `result.score.ko[0]`
                 const oya = this.players.find((p) => p.isOya)!
                 const kos = otherPlayers.filter((p) => !p.isOya)
 
-                // Oya pays roughly half
-                const oyaPayment = result.score.ten / 2 + 100 * this.honba
-                const koPayment = result.score.ten / 4 + 100 * this.honba
+                const oyaPayment = result.score.oya[0] + 100 * this.honba
+                const koPayment = result.score.ko[0] + 100 * this.honba
 
                 oya.points -= oyaPayment
                 kos.forEach((p) => (p.points -= koPayment))
