@@ -26,6 +26,7 @@ function cn(...inputs: ClassValue[]) {
 const SOCKET_URL = 'http://localhost:3000'
 
 function App() {
+    const [tileMode, setTileMode] = useState<'text' | 'emoji'>('text')
     const [state, setState] = useState<GameState>({
         isConnected: false,
         roomId: null,
@@ -529,6 +530,7 @@ function App() {
                             size="sm"
                             isDora={isDora(t)}
                             rotation={rotation}
+                            mode={tileMode}
                             className={cn(
                                 'shadow-none transition-all',
                                 isRiichiTile && 'ring-1 ring-orange-500/50 z-10 shadow-md',
@@ -557,6 +559,7 @@ function App() {
                                         size="sm"
                                         isDora={isDora(t)}
                                         rotation={isRotated ? 90 : 0}
+                                        mode={tileMode}
                                         className={cn(
                                             'shadow-none',
                                             isRotated && "mx-1"
@@ -709,12 +712,12 @@ function App() {
                     </div>
 
                     {/* Dora & Wall Info (Moved to top left) */}
-                    <div className="absolute top-4 left-4">
+                    <div className="absolute top-4 left-4 flex gap-4 items-start">
                         <div className="bg-gray-800/80 p-3 rounded-2xl border-2 border-gray-700 shadow-lg backdrop-blur-sm flex flex-col items-center gap-2">
                             <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest opacity-60">Dora</div>
                             <div className="flex gap-1">
                                 {state.dora.map((t, i) => (
-                                    <MahjongTile key={i} tile={t} size="sm" />
+                                    <MahjongTile key={i} tile={t} size="sm" mode={tileMode} />
                                 ))}
                             </div>
                             <div className="flex gap-4 mt-1 border-t border-gray-700 pt-2 w-full justify-center">
@@ -726,6 +729,31 @@ function App() {
                                     <span className="text-[8px] font-bold text-gray-500 uppercase">Dead</span>
                                     <span className="text-sm font-black text-white">{state.deadWallCount}</span>
                                 </div>
+                            </div>
+                        </div>
+
+                        {/* Tile Mode Toggle */}
+                        <div className="bg-gray-800/80 p-3 rounded-2xl border-2 border-gray-700 shadow-lg backdrop-blur-sm flex flex-col gap-2">
+                            <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest opacity-60 text-center">Mode</div>
+                            <div className="flex bg-gray-900/50 p-1 rounded-xl">
+                                <button
+                                    onClick={() => setTileMode('text')}
+                                    className={cn(
+                                        "px-3 py-1 text-[10px] font-bold rounded-lg transition-all",
+                                        tileMode === 'text' ? "bg-blue-600 text-white shadow-lg" : "text-gray-400 hover:text-white"
+                                    )}
+                                >
+                                    TEXT
+                                </button>
+                                <button
+                                    onClick={() => setTileMode('emoji')}
+                                    className={cn(
+                                        "px-3 py-1 text-[10px] font-bold rounded-lg transition-all",
+                                        tileMode === 'emoji' ? "bg-blue-600 text-white shadow-lg" : "text-gray-400 hover:text-white"
+                                    )}
+                                >
+                                    EMOJI
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -811,7 +839,7 @@ function App() {
                             <span className="text-xs font-black text-gray-400 uppercase tracking-widest border-r border-gray-700 pr-4">Wait</span>
                             <div className="flex gap-2">
                                 {state.waits.map((t, i) => (
-                                    <MahjongTile key={i} tile={t} size="sm" isDora={isDora(t)} className="opacity-90 hover:opacity-100" />
+                                    <MahjongTile key={i} tile={t} size="sm" isDora={isDora(t)} mode={tileMode} className="opacity-90 hover:opacity-100" />
                                 ))}
                             </div>
                         </div>
@@ -833,8 +861,9 @@ function App() {
                                     tile={t}
                                     size="xl"
                                     isDora={isDora(t)}
+                                    mode={tileMode}
                                     className={cn(
-                                        'transition-all duration-200 hover:-translate-y-2',
+                                        'transition-all duration-200 hover:-translate-y-[5px]',
                                         riichiIntent && isValidRiichiTile
                                             ? 'ring-4 ring-orange-500 ring-offset-4 ring-offset-gray-900 scale-105 z-10'
                                             : riichiIntent
@@ -852,8 +881,9 @@ function App() {
                                 isDrawn
                                 size="xl"
                                 isDora={isDora(state.drawnTile)}
+                                mode={tileMode}
                                 className={cn(
-                                    'ml-6 transition-all duration-200 hover:-translate-y-2',
+                                    'ml-6 transition-all duration-200 hover:-translate-y-[5px]',
                                     riichiIntent &&
                                         state.riichiDiscards.includes(
                                             state.drawnTile,
@@ -911,7 +941,7 @@ function App() {
                                 disabled={!myPlayer?.isMyTurn}
                                 className="px-8 py-3 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-800 disabled:text-gray-600 rounded-xl text-lg font-black uppercase transition-all hover:scale-105 shadow-xl flex items-center gap-3 border-b-4 border-purple-900"
                             >
-                                Ankan <MahjongTile tile={tile} size="xs" className="inline-block" />
+                                Ankan <MahjongTile tile={tile} size="xs" mode={tileMode} className="inline-block" />
                             </button>
                         ))}
 
@@ -922,7 +952,7 @@ function App() {
                                 disabled={!myPlayer?.isMyTurn}
                                 className="px-8 py-3 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-800 disabled:text-gray-600 rounded-xl text-lg font-black uppercase transition-all hover:scale-105 shadow-xl flex items-center gap-3 border-b-4 border-purple-900"
                             >
-                                Kakan <MahjongTile tile={tile} size="xs" className="inline-block" />
+                                Kakan <MahjongTile tile={tile} size="xs" mode={tileMode} className="inline-block" />
                             </button>
                         ))}
 
