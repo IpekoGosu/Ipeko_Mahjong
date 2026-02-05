@@ -106,22 +106,7 @@ export class MahjongGame {
         this.players.forEach((player) => {
             player.isOya =
                 player.getId() === this.players[this.oyaIndex].getId()
-            // Reset player state (Need to add a reset method to Player or do it manually)
-            // For now, manually creating a fresh state if possible or resetting fields
-            // Since Player methods modify internal arrays, we need to clear them.
-            // But Player class doesn't have a clear method.
-            // We should probably rely on `dealInitialHands` logic but expanded.
-
-            // HACK: Accessing private fields or adding a reset method is better.
-            // Let's assume we implement a reset method in Player class or just re-instantiate?
-            // Re-instantiating might lose 'score'. We must keep the score.
-            // So we need to reset hand/discards/melds.
-            // Since I cannot easily add `reset()` to Player in this hunk without multiple file edits,
-            // I will implement a 'reset' logic here if I can't edit Player.
-            // Wait, I can edit Player later. For now, I'll rely on `dealInitialHands`
-            // to populate, but I need to clear first.
-
-            // Let's rely on a new `resetKyokuState()` method on Player which I will add.
+            player.resetKyokuState()
         })
 
         // 3. Deal Tiles
