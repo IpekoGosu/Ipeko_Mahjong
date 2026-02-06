@@ -1,14 +1,40 @@
 import { UserEntity } from '@src/modules/user/entity/user.entity'
+import { ApiProperty } from '@nestjs/swagger'
 import { format, toZonedTime } from 'date-fns-tz'
 export class UserDto {
     constructor(
-        public readonly id: number,
-        public readonly email: string,
-        public readonly name: string,
-        public readonly type: number,
-        public readonly createdAt: string,
-        public readonly updatedAt: string,
-    ) {}
+        id: number,
+        email: string,
+        name: string,
+        type: number,
+        createdAt: string,
+        updatedAt: string,
+    ) {
+        this.id = id
+        this.email = email
+        this.name = name
+        this.type = type
+        this.createdAt = createdAt
+        this.updatedAt = updatedAt
+    }
+
+    @ApiProperty()
+    readonly id: number
+
+    @ApiProperty()
+    readonly email: string
+
+    @ApiProperty()
+    readonly name: string
+
+    @ApiProperty()
+    readonly type: number
+
+    @ApiProperty()
+    readonly createdAt: string
+
+    @ApiProperty()
+    readonly updatedAt: string
 
     static fromUserEntityToDto(userEntity: UserEntity) {
         return new UserDto(

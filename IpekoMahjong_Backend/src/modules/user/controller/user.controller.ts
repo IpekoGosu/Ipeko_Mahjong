@@ -13,12 +13,17 @@ import { UserDto } from '@src/modules/user/dto/user.dto'
 import { UserLoginDto } from '@src/modules/user/dto/user.login.dto'
 import { UserService } from '@src/modules/user/service/user.service'
 import { Response } from 'express'
+import { ApiOperation, ApiTags } from '@nestjs/swagger'
+import { ApiSuccessResponse } from '@src/common/decorator/swagger.decorator'
 
+@ApiTags('user')
 @Controller('user')
 export class UserController {
     constructor(private readonly userService: UserService) {}
 
     @Post()
+    @ApiOperation({ summary: 'Create a new user' })
+    @ApiSuccessResponse(UserDto, 'created')
     @HttpCode(HttpStatus.CREATED)
     async create(
         @Body() userCreateDto: UserCreateDto,
@@ -28,6 +33,8 @@ export class UserController {
     }
 
     @Post('login')
+    @ApiOperation({ summary: 'User login' })
+    @ApiSuccessResponse(JwtDto)
     @HttpCode(HttpStatus.OK)
     async login(
         @Body() userLogDto: UserLoginDto,
