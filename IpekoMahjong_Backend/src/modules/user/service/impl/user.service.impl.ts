@@ -1,5 +1,4 @@
 import { Injectable } from '@nestjs/common'
-import { PrismaClient } from '@prisma/client'
 import { CommonError } from '@src/common/error/common.error'
 import { ERROR_STATUS } from '@src/common/error/error.status'
 import { JwtDto } from '@src/modules/user/dto/jwt.dto'
@@ -11,13 +10,14 @@ import { hashPassword, matchPassword } from '@src/common/utils/bcrypt.hash'
 import { UserRepository } from '@src/modules/user/repository/user.repository'
 import { UserService } from '@src/modules/user/service/user.service'
 import { Response } from 'express'
+import { PrismaService } from '@src/modules/prisma/prisma.service'
 
 @Injectable()
 export class UserServiceImpl extends UserService {
     constructor(
         private readonly userRepository: UserRepository,
         private readonly authService: AuthService,
-        private readonly prisma: PrismaClient,
+        private readonly prisma: PrismaService,
     ) {
         super()
     }
