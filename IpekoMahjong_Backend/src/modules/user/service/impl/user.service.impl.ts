@@ -7,10 +7,7 @@ import { AuthService } from '@src/modules/authorization/service/auth.service'
 import { UserCreateDto } from '@src/modules/user/dto/user.create.dto'
 import { UserDto } from '@src/modules/user/dto/user.dto'
 import { UserLoginDto } from '@src/modules/user/dto/user.login.dto'
-import {
-    hashPassword,
-    matchPassword,
-} from '@src/modules/user/helper/bcrypt.hash'
+import { hashPassword, matchPassword } from '@src/common/utils/bcrypt.hash'
 import { UserRepository } from '@src/modules/user/repository/user.repository'
 import { UserService } from '@src/modules/user/service/user.service'
 import { Response } from 'express'

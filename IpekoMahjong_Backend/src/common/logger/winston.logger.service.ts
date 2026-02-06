@@ -1,7 +1,7 @@
 import { Injectable, LoggerService } from '@nestjs/common'
 import * as winston from 'winston'
-import { format, toZonedTime } from 'date-fns-tz'
 import chalk from 'chalk'
+import { convertUtcToKst } from '@src/common/utils/date.utils'
 
 @Injectable()
 export class WinstonLoggerService implements LoggerService {
@@ -13,10 +13,8 @@ export class WinstonLoggerService implements LoggerService {
             format: winston.format.combine(
                 winston.format.timestamp({
                     format: () => {
-                        const timeZone = 'Asia/Seoul'
                         const utcDate = new Date()
-                        const kstDate = toZonedTime(utcDate, timeZone)
-                        return format(kstDate, 'yyyy-MM-dd HH:mm:ss')
+                        return convertUtcToKst(utcDate)
                     },
                 }),
                 winston.format.printf(({ timestamp, level, message }) => {

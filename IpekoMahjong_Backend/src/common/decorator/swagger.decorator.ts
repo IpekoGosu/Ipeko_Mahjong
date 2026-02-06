@@ -9,7 +9,7 @@ import { CommonSuccessResponse } from '@src/common/response/common.response'
 
 export const ApiSuccessResponse = <TModel extends Type<unknown>>(
     model: TModel,
-    status: 'ok' | 'created' = 'ok',
+    status?: 'ok' | 'created',
 ) => {
     const decorator = status === 'created' ? ApiCreatedResponse : ApiOkResponse
 
