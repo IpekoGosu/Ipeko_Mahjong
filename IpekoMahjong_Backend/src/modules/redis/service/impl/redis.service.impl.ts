@@ -4,10 +4,11 @@ import { RedisService } from '@src/modules/redis/service/redis.service'
 import Redis from 'ioredis'
 
 @Injectable()
-export class RedisServiceImpl implements RedisService {
+export class RedisServiceImpl extends RedisService {
     private client: Redis
 
     constructor(private readonly logger: WinstonLoggerService) {
+        super()
         // Redis 클라이언트 생성
         this.client = new Redis({
             host: 'localhost', // Redis 서버 주소

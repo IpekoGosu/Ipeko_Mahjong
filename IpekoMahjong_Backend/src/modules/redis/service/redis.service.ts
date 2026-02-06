@@ -1,14 +1,12 @@
-export const REDIS_SERVICE = Symbol('RedisService')
-
-export interface RedisService {
-    get(key: string): Promise<string | null>
+export abstract class RedisService {
+    abstract get(key: string): Promise<string | null>
     /**
      * add data to redis
      * @param key identifier key
      * @param value value string
      * @param ttl time to live (seconds)
      */
-    set(key: string, value: string, ttl?: number): Promise<'OK'>
-    del(key: string): Promise<number>
-    quit(): Promise<void>
+    abstract set(key: string, value: string, ttl?: number): Promise<'OK'>
+    abstract del(key: string): Promise<number>
+    abstract quit(): Promise<void>
 }

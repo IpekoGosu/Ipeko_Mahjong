@@ -3,11 +3,14 @@ import { AppModule } from './app.module'
 import { WinstonLoggerService } from '@src/common/logger/winston.logger.service'
 import { ValidationPipe } from '@nestjs/common'
 import * as dotenv from 'dotenv'
+import cookieParser from 'cookie-parser'
+import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger'
 
 dotenv.config()
 
 async function bootstrap() {
     const app = await NestFactory.create(AppModule)
+    app.use(cookieParser())
     // winston logger
     app.useLogger(app.get(WinstonLoggerService))
     // validation pipe
@@ -18,6 +21,16 @@ async function bootstrap() {
             transform: true, // 클라이언트에서 받은 데이터를 DTO 클래스에 맞게 변환
         }),
     )
+
+    const config = new DocumentBuilder()
+        .setTitle('Ipeko Mahjong API')
+        .setDescription('API documentation')
+        .setVersion('1.0')
+        .addBearerAuth()
+        .addCookieAuth('access_token')
+        .build()
+    const document = SwaggerModule.createDocument(app, config)
+    SwaggerModule.setup('api-docs', app, document)
 
     await app.listen(process.env.PORT ?? 3000)
 }

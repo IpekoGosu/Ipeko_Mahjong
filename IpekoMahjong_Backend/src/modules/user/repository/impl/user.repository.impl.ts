@@ -2,12 +2,13 @@ import { Injectable } from '@nestjs/common'
 import { Prisma, users } from '@prisma/client'
 import { CommonError } from '@src/common/error/common.error'
 import { ERROR_STATUS } from '@src/common/error/error.status'
-import { UserCreateDto } from '@src/modules/user/dto/user.create.dto'
 import { UserRepository } from '@src/modules/user/repository/user.repository'
 
 @Injectable()
-export class UserRepositoryImpl implements UserRepository {
-    constructor() {}
+export class UserRepositoryImpl extends UserRepository {
+    constructor() {
+        super()
+    }
 
     async findById(id: number, tx: Prisma.TransactionClient): Promise<users> {
         try {
@@ -19,11 +20,11 @@ export class UserRepositoryImpl implements UserRepository {
     }
 
     async create(
-        userCreateDto: UserCreateDto,
+        usersCreateInput: Prisma.usersCreateInput,
         tx: Prisma.TransactionClient,
     ): Promise<users> {
         try {
-            return await tx.users.create({ data: userCreateDto })
+            return await tx.users.create({ data: usersCreateInput })
         } catch (error) {
             console.error(error)
             throw new CommonError(ERROR_STATUS.DB_INSERT_ERROR)

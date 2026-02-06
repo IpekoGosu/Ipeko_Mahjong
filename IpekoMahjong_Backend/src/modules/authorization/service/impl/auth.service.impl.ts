@@ -4,8 +4,10 @@ import { AuthService } from '@src/modules/authorization/service/auth.service'
 import { UserDto } from '@src/modules/user/dto/user.dto'
 
 @Injectable()
-export class AuthServiceImpl implements AuthService {
-    constructor(private readonly jwtService: JwtService) {}
+export class AuthServiceImpl extends AuthService {
+    constructor(private readonly jwtService: JwtService) {
+        super()
+    }
 
     createAccessToken(userDto: UserDto): string {
         return this.jwtService.sign(

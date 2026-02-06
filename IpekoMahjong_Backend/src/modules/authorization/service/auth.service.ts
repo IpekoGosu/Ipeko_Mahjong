@@ -1,8 +1,6 @@
 import { UserDto } from '@src/modules/user/dto/user.dto'
 
-export const AUTH_SERVICE = Symbol('AuthService')
-
-export interface AuthService {
-    createAccessToken(userDto: UserDto): string
-    createRefreshToken(userDto: UserDto): string
+export abstract class AuthService {
+    abstract createAccessToken(userDto: UserDto): string
+    abstract createRefreshToken(userDto: UserDto): string
 }

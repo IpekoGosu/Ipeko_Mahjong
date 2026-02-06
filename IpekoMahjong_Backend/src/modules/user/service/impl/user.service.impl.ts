@@ -1,12 +1,9 @@
-import { Inject, Injectable } from '@nestjs/common'
+import { Injectable } from '@nestjs/common'
 import { PrismaClient } from '@prisma/client'
 import { CommonError } from '@src/common/error/common.error'
 import { ERROR_STATUS } from '@src/common/error/error.status'
 import { JwtDto } from '@src/modules/user/dto/jwt.dto'
-import {
-    AUTH_SERVICE,
-    AuthService,
-} from '@src/modules/authorization/service/auth.service'
+import { AuthService } from '@src/modules/authorization/service/auth.service'
 import { UserCreateDto } from '@src/modules/user/dto/user.create.dto'
 import { UserDto } from '@src/modules/user/dto/user.dto'
 import { UserLoginDto } from '@src/modules/user/dto/user.login.dto'
@@ -14,35 +11,34 @@ import {
     hashPassword,
     matchPassword,
 } from '@src/modules/user/helper/bcrypt.hash'
-import {
-    USER_REPOSITORY,
-    UserRepository,
-} from '@src/modules/user/repository/user.repository'
+import { UserRepository } from '@src/modules/user/repository/user.repository'
 import { UserService } from '@src/modules/user/service/user.service'
 import { Response } from 'express'
-import {
-    REDIS_SERVICE,
-    RedisService,
-} from '@src/modules/redis/service/redis.service'
+import { RedisService } from '@src/modules/redis/service/redis.service'
 
 @Injectable()
-export class UserServiceImpl implements UserService {
+export class UserServiceImpl extends UserService {
     constructor(
-        @Inject(USER_REPOSITORY)
         private readonly userRepository: UserRepository,
-        @Inject(AUTH_SERVICE)
         private readonly authService: AuthService,
-        @Inject(REDIS_SERVICE)
         private readonly redisService: RedisService,
         private readonly prisma: PrismaClient,
-    ) {}
+    ) {
+        super()
+    }
 
     async create(userCreateDto: UserCreateDto): Promise<UserDto> {
         const createUserResult = await this.prisma.$transaction(async (tx) => {
-            userCreateDto.type = 2
+            const type = 2
             const encryptedPassword = await hashPassword(userCreateDto.password)
             userCreateDto.password = encryptedPassword
-            return await this.userRepository.create(userCreateDto, tx)
+            return await this.userRepository.create(
+                {
+                    ...userCreateDto,
+                    type,
+                },
+                tx,
+            )
         })
         return UserDto.fromUserEntityToDto(createUserResult)
     }

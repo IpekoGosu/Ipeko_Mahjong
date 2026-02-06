@@ -3,7 +3,6 @@ import {
     Controller,
     HttpCode,
     HttpStatus,
-    Inject,
     Post,
     Res,
 } from '@nestjs/common'
@@ -12,17 +11,12 @@ import { JwtDto } from '@src/modules/user/dto/jwt.dto'
 import { UserCreateDto } from '@src/modules/user/dto/user.create.dto'
 import { UserDto } from '@src/modules/user/dto/user.dto'
 import { UserLoginDto } from '@src/modules/user/dto/user.login.dto'
-import {
-    USER_SERVICE,
-    UserService,
-} from '@src/modules/user/service/user.service'
+import { UserService } from '@src/modules/user/service/user.service'
 import { Response } from 'express'
 
 @Controller('user')
 export class UserController {
-    constructor(
-        @Inject(USER_SERVICE) private readonly userService: UserService,
-    ) {}
+    constructor(private readonly userService: UserService) {}
 
     @Post()
     @HttpCode(HttpStatus.CREATED)

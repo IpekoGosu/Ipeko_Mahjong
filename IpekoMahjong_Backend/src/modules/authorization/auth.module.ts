@@ -3,7 +3,7 @@ import { JwtModule } from '@nestjs/jwt'
 import { PassportModule } from '@nestjs/passport'
 import { JwtAuthGuard } from '@src/modules/authorization/jwt-auth.guard'
 import { JwtStrategy } from '@src/modules/authorization/jwt-strategy'
-import { AUTH_SERVICE } from '@src/modules/authorization/service/auth.service'
+import { AuthService } from '@src/modules/authorization/service/auth.service'
 import { AuthServiceImpl } from '@src/modules/authorization/service/impl/auth.service.impl'
 import * as dotenv from 'dotenv'
 
@@ -20,14 +20,14 @@ dotenv.config()
         JwtStrategy,
         JwtAuthGuard,
         {
-            provide: AUTH_SERVICE,
+            provide: AuthService,
             useClass: AuthServiceImpl,
         },
     ],
     controllers: [],
     exports: [
         {
-            provide: AUTH_SERVICE,
+            provide: AuthService,
             useClass: AuthServiceImpl,
         },
     ],
