@@ -11,5 +11,8 @@ export abstract class UserRepository {
         email: string,
         tx: Prisma.TransactionClient,
     ): Promise<users | null>
-    abstract findById(id: number, tx: Prisma.TransactionClient): Promise<users>
+    abstract findById(
+        id: number,
+        tx: Prisma.TransactionClient,
+    ): Promise<Omit<users, 'password'>>
 }

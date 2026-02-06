@@ -160,7 +160,15 @@ export interface PlayerState {
     jikaze?: string
 }
 
+export interface User {
+    id: number
+    email: string
+}
+
 export interface GameState {
+    isAuthenticated: boolean
+    user: User | null
+    token: string | null
     isConnected: boolean
     roomId: string | null
     myPlayerId: string | null

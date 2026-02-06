@@ -36,7 +36,7 @@ export class UserDto {
     @ApiProperty()
     readonly updatedAt: string
 
-    static fromUserEntityToDto(userEntity: users) {
+    static fromUserEntityToDto(userEntity: Omit<users, 'password'>) {
         return new UserDto(
             userEntity.id,
             userEntity.email,

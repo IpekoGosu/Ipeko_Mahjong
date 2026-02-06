@@ -1,7 +1,7 @@
 {
     "compilerOptions": {
-        "module": "CommonJS",
-        "moduleResolution": "node",
+        "module": "NodeNext",
+        "moduleResolution": "nodenext",
         "esModuleInterop": true,
         "resolveJsonModule": true,
         "declaration": true,
@@ -9,10 +9,9 @@
         "emitDecoratorMetadata": true,
         "experimentalDecorators": true,
         "allowSyntheticDefaultImports": true,
-        "target": "ES2023",
+        "target": "esnext",
         "sourceMap": true,
         "outDir": "./dist",
-        "baseUrl": "./",
         "incremental": true,
         "skipLibCheck": true,
         "strictNullChecks": true,
@@ -22,6 +21,7 @@
         "noFallthroughCasesInSwitch": false,
         "paths": {
             "@src/*": ["./src/*"]
-        }
+        },
+        "strict": true
     }
 }

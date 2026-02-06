@@ -30,6 +30,7 @@ dotenv.config()
             provide: AuthService,
             useClass: AuthServiceImpl,
         },
+        JwtModule,
     ],
 })
 export class AuthModule {}

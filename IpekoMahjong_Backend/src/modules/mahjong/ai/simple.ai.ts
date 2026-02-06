@@ -10,40 +10,9 @@ export class SimpleAI implements MahjongAI {
      * Decides which tile to discard to minimize Shanten.
      */
     async decideDiscard(obs: GameObservation): Promise<string> {
-        await this.sleep(1000)
+        await this.sleep(100)
 
         const handTiles = [...obs.myHand]
-        // if (obs.myLastDraw) {
-        //     // If we don't already have the last draw in the hand (it usually is added to hand in our engine)
-        //     // But let's check if it's there. The engine's draw() sorts the hand.
-        //     // In MahjongGame.drawTileForCurrentPlayer, draw(tile) is called before decideDiscard.
-        // }
-
-        // if (handTiles.length === 0) return ''
-
-        // let bestDiscard = handTiles[handTiles.length - 1]
-        // let minShanten = 100
-
-        // // Try discarding each unique tile
-        // const uniqueTiles = Array.from(new Set(handTiles))
-
-        // for (const tile of uniqueTiles) {
-        //     const remainingTiles = [...handTiles]
-        //     const idx = remainingTiles.indexOf(tile)
-        //     if (idx > -1) remainingTiles.splice(idx, 1)
-
-        //     const handStr = this.convertTilesToString(remainingTiles)
-        //     const result = new Riichi(handStr).calc() as RiichiResult
-
-        //     const shanten = result.hairi?.now ?? 100
-
-        //     if (shanten < minShanten) {
-        //         minShanten = shanten
-        //         bestDiscard = tile
-        //     }
-        // }
-
-        // return bestDiscard
         return handTiles[handTiles.length - 1]
     }
 
@@ -55,7 +24,7 @@ export class SimpleAI implements MahjongAI {
         _discardedTile: string,
         _possibleActions: PossibleActions,
     ): Promise<'chi' | 'pon' | 'kan' | 'ron' | 'skip'> {
-        await this.sleep(1000)
+        await this.sleep(100)
         return 'skip'
     }
 

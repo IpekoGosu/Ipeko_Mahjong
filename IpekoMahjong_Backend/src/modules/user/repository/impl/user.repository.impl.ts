@@ -10,9 +10,15 @@ export class UserRepositoryImpl extends UserRepository {
         super()
     }
 
-    async findById(id: number, tx: Prisma.TransactionClient): Promise<users> {
+    async findById(
+        id: number,
+        tx: Prisma.TransactionClient,
+    ): Promise<Omit<users, 'password'>> {
         try {
-            return await tx.users.findUniqueOrThrow({ where: { id } })
+            return await tx.users.findUniqueOrThrow({
+                where: { id },
+                omit: { password: true },
+            })
         } catch (error) {
             console.error(error)
             throw new CommonError(ERROR_STATUS.DB_SELECT_ERROR)
