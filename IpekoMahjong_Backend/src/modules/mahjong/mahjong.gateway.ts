@@ -14,6 +14,7 @@ import { SimpleAI } from './ai/simple.ai'
 import { UseGuards } from '@nestjs/common'
 import { JwtAuthGuard } from '../authorization/jwt-auth.guard'
 import { JwtService } from '@nestjs/jwt'
+import { extractJwt } from '@src/common/utils/auth.utils'
 
 @UseGuards(JwtAuthGuard)
 @WebSocketGateway({
@@ -36,24 +37,7 @@ export class MahjongGateway {
 
     async handleConnection(client: Socket) {
         try {
-            let token = client.handshake.auth?.token as string | undefined
-
-            if (!token) {
-                const authHeader = client.handshake.headers?.authorization
-                if (authHeader?.startsWith('Bearer ')) {
-                    token = authHeader.split(' ')[1]
-                }
-            }
-
-            if (!token) {
-                const cookies = client.handshake.headers?.cookie
-                if (cookies) {
-                    const match = cookies.match(/access_token=([^;]+)/)
-                    if (match) {
-                        token = match[1]
-                    }
-                }
-            }
+            const token = extractJwt(client as any)
 
             if (!token) {
                 this.logger.warn(

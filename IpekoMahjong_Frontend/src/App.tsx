@@ -107,7 +107,9 @@ function App() {
                     credentials: 'include',
                 })
                 if (response.ok) {
-                    const result = await response.json()
+                    const result = (await response.json()) as {
+                        data: User
+                    }
                     // If backend doesn't return token in /me, we might still need it for socket.
                     // But socket can also use cookie if we configure it correctly.
                     handleLoginSuccess(result.data, null)

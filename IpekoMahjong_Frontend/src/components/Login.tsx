@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { User } from '../types'
+import { User, LoginResponse, RegisterResponse } from '../types'
 
 interface LoginProps {
     onLoginSuccess: (user: User, token: string) => void
@@ -30,29 +30,23 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                 credentials: 'include',
             })
 
-            const result = await response.json()
-
-            if (!response.ok) {
-                throw new Error(result.message || 'Authentication failed')
-            }
-
             if (isRegistering) {
+                const result = (await response.json()) as RegisterResponse
+                if (!response.ok) {
+                    throw new Error(result.message || 'Registration failed')
+                }
                 // After successful registration, switch to login
                 setIsRegistering(false)
                 setError('Registration successful! Please login.')
             } else {
-                // Login success
-                // result.data contains accessToken and refreshToken (JwtDto)
-                // Note: The backend also sets cookies, but we'll use the token explicitly for Socket.IO
-                const token = result.data.accessToken
-                
-                // We need the user info. Since the login only returns JwtDto, 
-                // we'll decode the token or just set a placeholder for now.
-                // In a real app, you might have another endpoint to fetch user info.
-                const user: User = {
-                    id: 0, // Placeholder
-                    email: email
+                const result = (await response.json()) as LoginResponse
+                if (!response.ok) {
+                    throw new Error(result.message || 'Authentication failed')
                 }
+                // Login success
+                // result.data contains jwt (accessToken, refreshToken) and user
+                const token = result.data.jwt.accessToken
+                const user = result.data.user
                 
                 onLoginSuccess(user, token)
             }

@@ -7,5 +7,8 @@ import { Response } from 'express'
 export abstract class UserService {
     abstract create(userCreateDto: UserCreateDto): Promise<UserDto>
     abstract findById(id: number): Promise<UserDto>
-    abstract login(userLoginDto: UserLoginDto, res: Response): Promise<JwtDto>
+    abstract login(
+        userLoginDto: UserLoginDto,
+        res: Response,
+    ): Promise<{ jwt: JwtDto; user: UserDto }>
 }

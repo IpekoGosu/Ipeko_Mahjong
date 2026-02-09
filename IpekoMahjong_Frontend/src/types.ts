@@ -165,6 +165,23 @@ export interface User {
     email: string
 }
 
+export interface CommonResponse<T> {
+    success: boolean
+    message: string
+    data: T
+}
+
+export interface LoginResponseData {
+    jwt: {
+        accessToken: string
+        refreshToken: string
+    }
+    user: User
+}
+
+export type LoginResponse = CommonResponse<LoginResponseData>
+export type RegisterResponse = CommonResponse<User>
+
 export interface GameState {
     isAuthenticated: boolean
     user: User | null

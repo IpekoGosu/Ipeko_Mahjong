@@ -27,14 +27,12 @@ export class UserServiceImpl extends UserService {
         const createUserResult = await this.prisma.$transaction(async (tx) => {
             const type = 2
             const encryptedPassword = await hashPassword(userCreateDto.password)
-            userCreateDto.password = encryptedPassword
-            return await this.userRepository.create(
-                {
-                    ...userCreateDto,
-                    type,
-                },
-                tx,
-            )
+            const createInput = {
+                ...userCreateDto,
+                password: encryptedPassword,
+                type,
+            }
+            return await this.userRepository.create(createInput, tx)
         })
         return UserDto.fromUserEntityToDto(createUserResult)
     }
@@ -74,7 +72,8 @@ export class UserServiceImpl extends UserService {
             maxAge: 1000 * 60 * 60 * 24 * 14,
         })
 
-        return new JwtDto(accessToken, refreshToken)
+        const jwt = new JwtDto(accessToken, refreshToken)
+        return { jwt, user: userDto }
     }
 
     async findById(id: number) {
