@@ -17,6 +17,7 @@ interface RiichiInstance {
 
 export interface WinContext {
     bakaze: string // '1z', '2z', etc.
+    seatWind: string // '1z', '2z', etc.
     dora: string[] // List of dora tiles (e.g. ['1m'])
     isTsumo: boolean
     isRiichi?: boolean
@@ -29,6 +30,7 @@ export interface WinContext {
     isTenhou?: boolean
     isChiihou?: boolean
     winningTile?: string // Required for Ron
+    uradora?: string[]
 }
 
 export class RuleManager {
@@ -291,18 +293,17 @@ export class RuleManager {
         // Winds
         // 1z=East(1), 2z=South(2), etc.
         riichi.bakaze = parseInt(context.bakaze[0])
-        // Seat wind: Player doesn't store seat wind directly usually,
-        // but let's assume MahjongGame passes correct generic seat index or we derive it.
-        // For now, let's assume the context or player should provide it.
-        // Actually, Player.isOya is known.
-        // If we don't have exact seat, default to 2 (South) unless Oya (1).
-        // ideally, Player should know their wind.
-        // Let's assume for now: Oya=1, others=2 (Ko).
-        // To be precise, we need the wind. Let's add it to Player or Context later.
-        riichi.jikaze = player.isOya ? 1 : 2
+        // Seat wind
+        riichi.jikaze = parseInt(context.seatWind[0])
 
         // Dora (Convert indicators to actual tiles)
         riichi.dora = context.dora.map((d) => this.getActualDora(d))
+
+        // Add Uradora if Riichi
+        if (context.isRiichi && context.uradora) {
+            const uradoraList = context.uradora.map((u) => this.getActualDora(u))
+            riichi.dora = [...riichi.dora, ...uradoraList]
+        }
 
         // 3. Construct Extra String (Situational Yaku)
         let extra = ''

@@ -406,6 +406,7 @@ export class MahjongGame {
             try {
                 const context: WinContext = {
                     bakaze: this.bakaze,
+                    seatWind: this.getSeatWind(player),
                     dora: this.getDora().map((t) => t.toString()),
                     isTsumo: false,
                     winningTile: tileString,
@@ -1150,6 +1151,7 @@ export class MahjongGame {
 
         const context: WinContext = {
             bakaze: this.bakaze, // Default East Round
+            seatWind: this.getSeatWind(player),
             dora: this.getDora().map((t) => t.toString()),
             isTsumo: true,
             isRiichi: player.isRiichi,
@@ -1160,6 +1162,10 @@ export class MahjongGame {
             isChankan: false, // Tsumo cannot be Chankan
             isTenhou,
             isChiihou,
+        }
+
+        if (player.isRiichi || player.isDoubleRiichi) {
+            context.uradora = this.wall.getUradora().map((t) => t.toString())
         }
 
         const score = RuleManager.calculateScore(player, context)
@@ -1177,6 +1183,7 @@ export class MahjongGame {
 
         const context: WinContext = {
             bakaze: this.bakaze,
+            seatWind: this.getSeatWind(player),
             dora: this.getDora().map((t) => t.toString()),
             isTsumo: false,
             winningTile: winningTile,
@@ -1188,6 +1195,10 @@ export class MahjongGame {
             isChankan: false, // TODO: Implement Chankan logic
             isTenhou: false,
             isChiihou: false,
+        }
+
+        if (player.isRiichi || player.isDoubleRiichi) {
+            context.uradora = this.wall.getUradora().map((t) => t.toString())
         }
 
         const score = RuleManager.calculateScore(player, context)

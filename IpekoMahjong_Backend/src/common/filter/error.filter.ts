@@ -104,10 +104,11 @@ export class AllExceptionsFilter implements ExceptionFilter {
         const message =
             exception instanceof Error
                 ? exception.message
-                : 'Caught a non-Error exception';
-        const stack = exception instanceof Error ? exception.stack : String(exception);
+                : 'Caught a non-Error exception'
+        const stack =
+            exception instanceof Error ? exception.stack : String(exception)
 
-        this.logger.error(`UnhandledException: ${message}`, stack);
+        this.logger.error(`UnhandledException: ${message}`, stack)
 
         const data = {
             statusCode: status,
