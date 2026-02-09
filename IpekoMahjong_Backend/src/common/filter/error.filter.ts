@@ -25,6 +25,7 @@ export class CommonErrorFilter implements ExceptionFilter {
                 'yyyy-MM-dd HH:mm:ss',
             ),
             path: request.url,
+            method: request.method,
             error: exception.status,
             message: exception.message,
         }

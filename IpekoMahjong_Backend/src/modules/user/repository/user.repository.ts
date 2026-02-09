@@ -1,13 +1,18 @@
 import { Prisma, users } from '@prisma/client'
-import { UserCreateDto } from '@src/modules/user/dto/user.create.dto'
 
 export const USER_REPOSITORY = Symbol('UserRepository')
 
-export interface UserRepository {
-    create(data: UserCreateDto, tx: Prisma.TransactionClient): Promise<users>
-    findByEmail(
+export abstract class UserRepository {
+    abstract create(
+        data: Prisma.usersCreateInput,
+        tx: Prisma.TransactionClient,
+    ): Promise<users>
+    abstract findByEmail(
         email: string,
         tx: Prisma.TransactionClient,
     ): Promise<users | null>
-    findById(id: number, tx: Prisma.TransactionClient): Promise<users>
+    abstract findById(
+        id: number,
+        tx: Prisma.TransactionClient,
+    ): Promise<Omit<users, 'password'>>
 }

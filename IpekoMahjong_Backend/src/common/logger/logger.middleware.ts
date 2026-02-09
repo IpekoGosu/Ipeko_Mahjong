@@ -42,9 +42,15 @@ export class LoggerMiddleware implements NestMiddleware {
 
         // 응답이 끝난 후 로깅
         res.on('finish', () => {
-            this.logger.log(
-                `Response - ${res.statusCode} ${req.originalUrl} - Response Body: ${res.locals.body}`,
-            )
+            // if Body is File Buffer
+            if (res.locals.body instanceof Buffer) {
+                this.logger.log(
+                    `Response - ${res.statusCode} ${req.originalUrl} - Response Body: File Buffer`,
+                )
+            } else
+                this.logger.log(
+                    `Response - ${res.statusCode} ${req.originalUrl} - Response Body: ${res.locals.body}`,
+                )
         })
 
         next()

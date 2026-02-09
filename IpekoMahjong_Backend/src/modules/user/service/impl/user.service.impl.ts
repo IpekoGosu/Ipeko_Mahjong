@@ -1,48 +1,38 @@
-import { Inject, Injectable } from '@nestjs/common'
-import { PrismaClient } from '@prisma/client'
+import { Injectable } from '@nestjs/common'
 import { CommonError } from '@src/common/error/common.error'
 import { ERROR_STATUS } from '@src/common/error/error.status'
 import { JwtDto } from '@src/modules/user/dto/jwt.dto'
-import {
-    AUTH_SERVICE,
-    AuthService,
-} from '@src/modules/authorization/service/auth.service'
+import { AuthService } from '@src/modules/authorization/service/auth.service'
 import { UserCreateDto } from '@src/modules/user/dto/user.create.dto'
 import { UserDto } from '@src/modules/user/dto/user.dto'
 import { UserLoginDto } from '@src/modules/user/dto/user.login.dto'
-import {
-    hashPassword,
-    matchPassword,
-} from '@src/modules/user/helper/bcrypt.hash'
-import {
-    USER_REPOSITORY,
-    UserRepository,
-} from '@src/modules/user/repository/user.repository'
+import { hashPassword, matchPassword } from '@src/common/utils/bcrypt.hash'
+import { UserRepository } from '@src/modules/user/repository/user.repository'
 import { UserService } from '@src/modules/user/service/user.service'
 import { Response } from 'express'
-import {
-    REDIS_SERVICE,
-    RedisService,
-} from '@src/modules/redis/service/redis.service'
+import { PrismaService } from '@src/modules/prisma/prisma.service'
+import { ENV } from '@src/common/utils/dotenv'
 
 @Injectable()
-export class UserServiceImpl implements UserService {
+export class UserServiceImpl extends UserService {
     constructor(
-        @Inject(USER_REPOSITORY)
         private readonly userRepository: UserRepository,
-        @Inject(AUTH_SERVICE)
         private readonly authService: AuthService,
-        @Inject(REDIS_SERVICE)
-        private readonly redisService: RedisService,
-        private readonly prisma: PrismaClient,
-    ) {}
+        private readonly prisma: PrismaService,
+    ) {
+        super()
+    }
 
     async create(userCreateDto: UserCreateDto): Promise<UserDto> {
         const createUserResult = await this.prisma.$transaction(async (tx) => {
-            userCreateDto.type = 2
+            const type = 2
             const encryptedPassword = await hashPassword(userCreateDto.password)
-            userCreateDto.password = encryptedPassword
-            return await this.userRepository.create(userCreateDto, tx)
+            const createInput = {
+                ...userCreateDto,
+                password: encryptedPassword,
+                type,
+            }
+            return await this.userRepository.create(createInput, tx)
         })
         return UserDto.fromUserEntityToDto(createUserResult)
     }
@@ -73,23 +63,17 @@ export class UserServiceImpl implements UserService {
 
         res.cookie('access_token', accessToken, {
             httpOnly: true,
-            secure: !!(process.env.NODE_ENV === 'production'), // HTTPS에만 적용
+            secure: !!(ENV.NODE_ENV === 'production'), // HTTPS에만 적용
             maxAge: 1000 * 60 * 120,
         })
         res.cookie('refresh_token', refreshToken, {
             httpOnly: true,
-            secure: !!(process.env.NODE_ENV === 'production'),
+            secure: !!(ENV.NODE_ENV === 'production'),
             maxAge: 1000 * 60 * 60 * 24 * 14,
         })
 
-        // 3. add refreshToken to redis
-        await this.redisService.set(
-            `refreshToken:${userDto.id}`,
-            refreshToken,
-            60 * 60 * 24 * 14,
-        )
-
-        return new JwtDto(accessToken, refreshToken)
+        const jwt = new JwtDto(accessToken, refreshToken)
+        return { jwt, user: userDto }
     }
 
     async findById(id: number) {

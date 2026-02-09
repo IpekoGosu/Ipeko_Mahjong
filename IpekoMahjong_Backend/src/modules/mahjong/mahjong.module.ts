@@ -3,8 +3,10 @@ import { MahjongGateway } from './mahjong.gateway'
 import { GameRoomService } from './service/game-room.service'
 import { GameRoomServiceImpl } from './service/impl/game-room.service.impl'
 import { WinstonLoggerService } from '@src/common/logger/winston.logger.service'
+import { AuthModule } from '../authorization/auth.module'
 
 @Module({
+    imports: [AuthModule],
     providers: [
         MahjongGateway,
         {

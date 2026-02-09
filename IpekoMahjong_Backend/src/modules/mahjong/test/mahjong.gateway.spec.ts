@@ -4,16 +4,22 @@ import { Socket, io } from 'socket.io-client'
 import { MahjongModule } from '../mahjong.module'
 import { AddressInfo } from 'net'
 import { Server } from 'http'
+import { JwtService } from '@nestjs/jwt'
 
 describe('MahjongGateway', () => {
     let app: INestApplication
     let client: Socket
     let port: number
+    let jwtService: JwtService
+    let token: string
 
     beforeAll(async () => {
         const moduleFixture: TestingModule = await Test.createTestingModule({
             imports: [MahjongModule],
         }).compile()
+
+        jwtService = moduleFixture.get<JwtService>(JwtService)
+        token = jwtService.sign({ sub: 1, email: 'test@example.com' })
 
         app = moduleFixture.createNestApplication()
         await app.listen(0) // Listen on a random port
@@ -28,7 +34,9 @@ describe('MahjongGateway', () => {
 
     beforeEach((done) => {
         // Connect to the WebSocket server
-        client = io(`http://localhost:${port}`)
+        client = io(`http://localhost:${port}`, {
+            auth: { token },
+        })
         client.on('connect', () => {
             done()
         })

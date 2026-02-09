@@ -11,10 +11,16 @@ import { GameUpdate } from './classes/mahjong.game.class'
 import { WinstonLoggerService } from '@src/common/logger/winston.logger.service'
 import { RuleManager } from './classes/rule.manager'
 import { SimpleAI } from './ai/simple.ai'
+import { UseGuards } from '@nestjs/common'
+import { JwtAuthGuard } from '../authorization/jwt-auth.guard'
+import { JwtService } from '@nestjs/jwt'
+import { extractJwt } from '@src/common/utils/auth.utils'
 
+@UseGuards(JwtAuthGuard)
 @WebSocketGateway({
     cors: {
-        origin: '*',
+        origin: true,
+        credentials: true,
     },
 })
 export class MahjongGateway {
@@ -24,12 +30,52 @@ export class MahjongGateway {
     constructor(
         private readonly gameRoomService: GameRoomService,
         private readonly logger: WinstonLoggerService,
+        private readonly jwtService: JwtService,
     ) {}
 
     // #region WebSocket Lifecycle Handlers
 
-    handleConnection(client: Socket) {
-        this.logger.log(`Client connected: ${client.id}`)
+    async handleConnection(client: Socket) {
+        try {
+            const token = extractJwt(client as any)
+
+            if (!token) {
+                this.logger.warn(
+                    `Client connection rejected: No token provided`,
+                )
+                client.disconnect()
+                return
+            }
+
+            const rawPayload: unknown = await this.jwtService.verifyAsync(token)
+            if (!rawPayload || typeof rawPayload !== 'object') {
+                this.logger.warn(`Client connection rejected: Invalid token`)
+                client.disconnect()
+                return
+            }
+
+            const payload = rawPayload as Record<string, unknown>
+            const sub = payload['sub']
+            const email = payload['email']
+
+            if (typeof sub !== 'number' || typeof email !== 'string') {
+                this.logger.warn(`Client connection rejected: Invalid payload`)
+                client.disconnect()
+                return
+            }
+
+            // Store user info in socket data for later use
+            const user = {
+                userId: sub,
+                email: email,
+            }
+            const data = client.data as Record<string, unknown>
+            data['user'] = user
+            this.logger.log(`Client connected: ${client.id} (User: ${email})`)
+        } catch (error) {
+            this.logger.error(`Client connection rejected: Invalid token`, error instanceof Error ? error.stack : String(error));
+            client.disconnect();
+        }
     }
 
     handleDisconnect(client: Socket) {
@@ -200,11 +246,11 @@ export class MahjongGateway {
 
             this.handlePostUpdateActions(data.roomId, drawUpdate).catch((err) =>
                 this.logger.error(
-                    `Error in post-action for next-round: ${err}`,
+                    `Error in post-action for next-round: ${String(err)}`,
                 ),
             )
         } catch (error) {
-            this.logger.error(`Error in handleNextRound: ${error}`)
+            this.logger.error(`Error in handleNextRound: ${String(error)}`)
         }
     }
 
@@ -323,7 +369,6 @@ export class MahjongGateway {
         const hasActions = Object.keys(actions).length > 0
 
         if (hasActions) {
-            console.log('Possible actions:', JSON.stringify(actions))
             // 행동이 가능한 플레이어에게 선택지를 보냅니다.
             for (const [playerId, actionData] of Object.entries(actions)) {
                 const player = room.mahjongGame.getPlayer(playerId)
@@ -419,7 +464,9 @@ export class MahjongGateway {
             this.processGameUpdate(gameUpdate)
             await this.handlePostUpdateActions(roomId, gameUpdate)
         } catch (error) {
-            this.logger.error(`AI Turn Error in room ${roomId}: ${error}`)
+            this.logger.error(
+                `AI Turn Error in room ${roomId}: ${String(error)}`,
+            )
         }
     }
 

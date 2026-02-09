@@ -1,6 +1,12 @@
-import { IsEmail, IsEmpty, IsNotEmpty, IsString } from 'class-validator'
+import { IsEmail, IsNotEmpty, IsString } from 'class-validator'
 
 export class UserCreateDto {
+    constructor(email: string, name: string, password: string) {
+        this.email = email
+        this.name = name
+        this.password = password
+    }
+
     @IsEmail()
     @IsNotEmpty()
     email: string
@@ -12,7 +18,4 @@ export class UserCreateDto {
     @IsString()
     @IsNotEmpty()
     password: string
-
-    @IsEmpty()
-    type: number
 }

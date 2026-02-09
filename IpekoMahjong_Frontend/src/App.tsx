@@ -5,6 +5,7 @@ import { twMerge } from 'tailwind-merge'
 import MahjongTile from './components/MahjongTile'
 import ActionButtons from './components/ActionButtons'
 import GameOverModal from './components/GameOverModal'
+import Login from './components/Login'
 import {
     GameState,
     GameStartedPayload,
@@ -18,6 +19,7 @@ import {
     AskActionPayload,
     UpdateMeldPayload,
     RiichiDeclaredPayload,
+    User,
 } from './types'
 
 function cn(...inputs: ClassValue[]) {
@@ -28,7 +30,11 @@ const SOCKET_URL = 'http://localhost:3000'
 
 function App() {
     const [tileMode, setTileMode] = useState<'text' | 'emoji'>('emoji')
+    const [isLoadingAuth, setIsLoadingAuth] = useState(true)
     const [state, setState] = useState<GameState>({
+        isAuthenticated: false,
+        user: null,
+        token: null,
         isConnected: false,
         roomId: null,
         myPlayerId: null,
@@ -85,8 +91,45 @@ function App() {
         }))
     }, [])
 
+    const handleLoginSuccess = (user: User, token: string | null) => {
+        setState((prev) => ({
+            ...prev,
+            isAuthenticated: true,
+            user,
+            token,
+        }))
+    }
+
     useEffect(() => {
-        const socket = io(SOCKET_URL)
+        const checkAuth = async () => {
+            try {
+                const response = await fetch('http://localhost:3000/user/me', {
+                    credentials: 'include',
+                })
+                if (response.ok) {
+                    const result = (await response.json()) as {
+                        data: User
+                    }
+                    // If backend doesn't return token in /me, we might still need it for socket.
+                    // But socket can also use cookie if we configure it correctly.
+                    handleLoginSuccess(result.data, null)
+                }
+            } catch (error) {
+                console.error('Auth check failed:', error)
+            } finally {
+                setIsLoadingAuth(false)
+            }
+        }
+        void checkAuth()
+    }, [])
+
+    useEffect(() => {
+        if (!state.isAuthenticated) return
+
+        const socket = io(SOCKET_URL, {
+            auth: state.token ? { token: state.token } : {},
+            withCredentials: true, // Crucial for cookie-based auth
+        })
         socketRef.current = socket
 
         socket.on('connect', () => {
@@ -402,7 +445,7 @@ function App() {
         return () => {
             socket.disconnect()
         }
-    }, [addLog])
+    }, [addLog, state.isAuthenticated, state.token])
 
     const handleStartGame = () => {
         socketRef.current?.emit('start-game')
@@ -581,6 +624,18 @@ function App() {
         )
     }
 
+    if (isLoadingAuth) {
+        return (
+            <div className="flex items-center justify-center min-h-screen bg-gray-900">
+                <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+            </div>
+        )
+    }
+
+    if (!state.isAuthenticated) {
+        return <Login onLoginSuccess={handleLoginSuccess} />
+    }
+
     if (!state.roomId) {
         return (
             <div className="flex flex-col items-center justify-center min-h-screen">
@@ -590,6 +645,11 @@ function App() {
                         Status:{' '}
                         {state.isConnected ? '✅ Connected' : '❌ Disconnected'}
                     </p>
+                    {state.user && (
+                        <p className="mb-4 text-sm text-gray-400">
+                            Logged in as: {state.user.email}
+                        </p>
+                    )}
                     <button
                         onClick={handleStartGame}
                         disabled={!state.isConnected}

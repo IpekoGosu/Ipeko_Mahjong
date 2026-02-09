@@ -160,7 +160,32 @@ export interface PlayerState {
     jikaze?: string
 }
 
+export interface User {
+    id: number
+    email: string
+}
+
+export interface CommonResponse<T> {
+    success: boolean
+    message: string
+    data: T
+}
+
+export interface LoginResponseData {
+    jwt: {
+        accessToken: string
+        refreshToken: string
+    }
+    user: User
+}
+
+export type LoginResponse = CommonResponse<LoginResponseData>
+export type RegisterResponse = CommonResponse<User>
+
 export interface GameState {
+    isAuthenticated: boolean
+    user: User | null
+    token: string | null
     isConnected: boolean
     roomId: string | null
     myPlayerId: string | null

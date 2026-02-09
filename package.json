@@ -10,6 +10,10 @@
     "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\" --names \"BACKEND,FRONTEND\" --prefix-colors \"blue,green\""
   },
   "devDependencies": {
+    "@types/cookie-parser": "^1.4.10",
     "concurrently": "^8.2.0"
+  },
+  "dependencies": {
+    "cookie-parser": "^1.4.7"
   }
 }
