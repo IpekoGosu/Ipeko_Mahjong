@@ -2,7 +2,7 @@
 import { Injectable } from '@nestjs/common'
 import { PassportStrategy } from '@nestjs/passport'
 import { Strategy, ExtractJwt } from 'passport-jwt'
-import { ENV } from '@src/common/utils/dotenv'
+import { ENV } from '@src/common/utils/env'
 import { extractJwt, RequestWithAuth } from '@src/common/utils/auth.utils'
 
 @Injectable()
