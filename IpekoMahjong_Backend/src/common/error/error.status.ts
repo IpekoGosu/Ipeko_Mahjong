@@ -9,4 +9,5 @@ export const ERROR_STATUS = {
         'failed to upload file to google cloud storage',
     GOOGLE_CLOUD_STORAGE_DOWNLOAD_ERROR:
         'failed to download file from google cloud storage',
+    ENV_MISSING_ERROR: 'missing environment variable',
 }

@@ -19,8 +19,7 @@ export class UserRepositoryImpl extends UserRepository {
                 where: { id },
                 omit: { password: true },
             })
-        } catch (error) {
-            console.error(error)
+        } catch {
             throw new CommonError(ERROR_STATUS.DB_SELECT_ERROR)
         }
     }
@@ -31,8 +30,7 @@ export class UserRepositoryImpl extends UserRepository {
     ): Promise<users> {
         try {
             return await tx.users.create({ data: usersCreateInput })
-        } catch (error) {
-            console.error(error)
+        } catch {
             throw new CommonError(ERROR_STATUS.DB_INSERT_ERROR)
         }
     }
@@ -43,8 +41,7 @@ export class UserRepositoryImpl extends UserRepository {
     ): Promise<users | null> {
         try {
             return await tx.users.findUnique({ where: { email } })
-        } catch (error) {
-            console.error(error)
+        } catch {
             throw new CommonError(ERROR_STATUS.DB_SELECT_ERROR)
         }
     }

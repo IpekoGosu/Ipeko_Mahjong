@@ -1,6 +1,8 @@
 import * as dotenv from 'dotenv'
 import * as path from 'path'
 import { SecretManagerServiceClient } from '@google-cloud/secret-manager'
+import { CommonError } from '@src/common/error/common.error'
+import { ERROR_STATUS } from '@src/common/error/error.status'
 
 // Load .env file initially for local development
 dotenv.config({ path: path.resolve(process.cwd(), '.env') })
@@ -8,9 +10,7 @@ dotenv.config({ path: path.resolve(process.cwd(), '.env') })
 function getEnv(key: string, required = true): string | undefined {
     const value = process.env[key]
     if (!value) {
-        if (required) {
-            throw new Error(`Environment variable ${key} is missing`)
-        }
+        if (required) throw new CommonError(ERROR_STATUS.ENV_MISSING_ERROR)
         return undefined
     }
     return value
@@ -44,9 +44,7 @@ export async function initializeEnv() {
     // 1. If USE_GSM is true, fetch from Google Secret Manager
     if (process.env.USE_GSM === 'true') {
         const client = new SecretManagerServiceClient()
-        const projectPath =
-            process.env.GSM_PROJECT_PATH ||
-            'projects/project-c3f44f86-9bcc-45c8-baf/secrets/ipeko-mahjong/versions/latest'
+        const projectPath = getEnv('GSM_PROJECT_PATH')
 
         try {
             const [version] = await client.accessSecretVersion({
