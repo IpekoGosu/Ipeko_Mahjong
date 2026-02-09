@@ -79,5 +79,7 @@ export async function initializeEnv() {
         }
     }
 
+    // prevent ENV value modifications
+    Object.freeze(ENV)
     isInitialized = true
 }
