@@ -46,23 +46,18 @@ export class UserController {
     @ApiOperation({ summary: 'Create a new user' })
     @ApiSuccessResponse(UserDto, 'created')
     @HttpCode(HttpStatus.CREATED)
-    async create(
-        @Body() userCreateDto: UserCreateDto,
-    ): Promise<CommonSuccessResponse<UserDto>> {
+    async create(@Body() userCreateDto: UserCreateDto) {
         const data = await this.userService.create(userCreateDto)
-        return new CommonSuccessResponse<UserDto>(data)
+        return new CommonSuccessResponse(data)
     }
 
     @Post('login')
     @ApiOperation({ summary: 'User login' })
     @ApiSuccessResponse(JwtDto)
     @HttpCode(HttpStatus.OK)
-    async login(
-        @Body() userLogDto: UserLoginDto,
-        @Res() res: Response,
-    ): Promise<void> {
+    async login(@Body() userLogDto: UserLoginDto, @Res() res: Response) {
         const data = await this.userService.login(userLogDto, res)
-        res.send(new CommonSuccessResponse<JwtDto>(data))
+        res.send(new CommonSuccessResponse(data))
     }
 
     @Get('me')
@@ -70,11 +65,9 @@ export class UserController {
     @ApiOperation({ summary: 'Get current user profile' })
     @ApiSuccessResponse(UserDto)
     @HttpCode(HttpStatus.OK)
-    async getMe(
-        @CurrentUser() user: { userId: number; email: string },
-    ): Promise<CommonSuccessResponse<UserDto>> {
+    async getMe(@CurrentUser() user: { userId: number; email: string }) {
         const data = await this.userService.findById(user.userId)
-        return new CommonSuccessResponse<UserDto>(data)
+        return new CommonSuccessResponse(data)
     }
 
     @Post('test')
@@ -97,7 +90,7 @@ export class UserController {
                 file.originalname,
                 file,
             )
-            return new CommonSuccessResponse<string>(updloadedFileName)
+            return new CommonSuccessResponse(updloadedFileName)
         } catch (error) {
             console.error(error)
             return new CommonErrorResponse(error)
