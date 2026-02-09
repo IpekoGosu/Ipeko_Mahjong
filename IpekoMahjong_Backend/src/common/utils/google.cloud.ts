@@ -1,5 +1,5 @@
 import { Storage } from '@google-cloud/storage'
-import { ENV } from '@src/common/utils/dotenv'
+import { ENV } from '@src/common/utils/env'
 import { randomUUID } from 'crypto'
 
 let googleStorage: Storage | null = null

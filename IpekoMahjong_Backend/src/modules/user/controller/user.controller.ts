@@ -90,9 +90,8 @@ export class UserController {
                 file,
             )
             return new CommonSuccessResponse(updloadedFileName)
-        } catch (error) {
-            console.error(error)
-            return new CommonError(
+        } catch {
+            throw new CommonError(
                 ERROR_STATUS.GOOGLE_CLOUD_STORAGE_UPLOAD_ERROR,
             )
         }
@@ -109,9 +108,8 @@ export class UserController {
                 `attachment; filename=${fileName}`,
             )
             res.send(file)
-        } catch (error) {
-            console.error(error)
-            return new CommonError(
+        } catch {
+            throw new CommonError(
                 ERROR_STATUS.GOOGLE_CLOUD_STORAGE_DOWNLOAD_ERROR,
             )
         }

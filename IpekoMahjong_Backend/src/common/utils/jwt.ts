@@ -1,6 +1,6 @@
 import { UserDto } from '@src/modules/user/dto/user.dto'
 import * as jwt from 'jsonwebtoken'
-import { ENV } from '@src/common/utils/dotenv'
+import { ENV } from '@src/common/utils/env'
 
 // Access Token 생성
 export function createAccessToken(payload: UserDto) {
@@ -20,8 +20,7 @@ export function createRefreshToken(payload: UserDto) {
 export function verifyToken(token: string) {
     try {
         return jwt.verify(token, ENV.JWT_SECRET_KEY)
-    } catch (error) {
-        console.error(error)
+    } catch {
         return null
     }
 }

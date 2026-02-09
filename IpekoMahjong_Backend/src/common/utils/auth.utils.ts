@@ -36,7 +36,8 @@ export function extractJwt(req: RequestWithAuth): string | null {
 
     // 3. Check raw cookie header
     if (!token) {
-        const cookieHeader = req.headers?.cookie || req.handshake?.headers?.cookie
+        const cookieHeader =
+            req.headers?.cookie || req.handshake?.headers?.cookie
         if (cookieHeader) {
             const match = cookieHeader.match(/access_token=([^;]+)/)
             if (match) {

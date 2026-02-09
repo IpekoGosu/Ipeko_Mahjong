@@ -14,7 +14,7 @@ import { SimpleAI } from './ai/simple.ai'
 import { UseGuards } from '@nestjs/common'
 import { JwtAuthGuard } from '../authorization/jwt-auth.guard'
 import { JwtService } from '@nestjs/jwt'
-import { extractJwt } from '@src/common/utils/auth.utils'
+import { extractJwt, RequestWithAuth } from '@src/common/utils/auth.utils'
 
 @UseGuards(JwtAuthGuard)
 @WebSocketGateway({
@@ -37,7 +37,7 @@ export class MahjongGateway {
 
     async handleConnection(client: Socket) {
         try {
-            const token = extractJwt(client as any)
+            const token = extractJwt(client as unknown as RequestWithAuth)
 
             if (!token) {
                 this.logger.warn(
@@ -73,8 +73,11 @@ export class MahjongGateway {
             data['user'] = user
             this.logger.log(`Client connected: ${client.id} (User: ${email})`)
         } catch (error) {
-            this.logger.error(`Client connection rejected: Invalid token`, error instanceof Error ? error.stack : String(error));
-            client.disconnect();
+            this.logger.error(
+                `Client connection rejected: Invalid token`,
+                error instanceof Error ? error.stack : String(error),
+            )
+            client.disconnect()
         }
     }
 

@@ -4,9 +4,12 @@ import { WinstonLoggerService } from '@src/common/logger/winston.logger.service'
 import { ValidationPipe } from '@nestjs/common'
 import cookieParser from 'cookie-parser'
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger'
-import { ENV } from '@src/common/utils/dotenv'
+import { ENV, initializeEnv } from '@src/common/utils/env'
 
 async function bootstrap() {
+    // Load environment variables (from .env or GSM)
+    await initializeEnv()
+
     const app = await NestFactory.create(AppModule)
     app.enableCors({
         origin: ['http://localhost:5173'],
@@ -35,6 +38,6 @@ async function bootstrap() {
     const document = SwaggerModule.createDocument(app, config)
     SwaggerModule.setup('api-docs', app, document)
 
-    await app.listen(ENV.PORT)
+    await app.listen(Number(ENV.PORT))
 }
 void bootstrap()

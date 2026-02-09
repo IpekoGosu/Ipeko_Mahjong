@@ -4,6 +4,7 @@ import { APP_FILTER } from '@nestjs/core'
 import {
     CommonErrorFilter,
     HttpErrorFilter,
+    AllExceptionsFilter,
 } from '@src/common/filter/error.filter'
 import { UserModule } from '@src/modules/user/user.module'
 import { LoggerMiddleware } from './common/logger/logger.middleware'
@@ -19,6 +20,10 @@ import { WinstonLoggerService } from './common/logger/winston.logger.service'
         {
             provide: APP_FILTER,
             useClass: HttpErrorFilter,
+        },
+        {
+            provide: APP_FILTER,
+            useClass: AllExceptionsFilter,
         },
         WinstonLoggerService,
     ],
