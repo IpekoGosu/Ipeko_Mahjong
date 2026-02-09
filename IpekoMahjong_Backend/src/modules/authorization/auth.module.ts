@@ -5,13 +5,15 @@ import { JwtAuthGuard } from '@src/modules/authorization/jwt-auth.guard'
 import { JwtStrategy } from '@src/modules/authorization/jwt-strategy'
 import { AuthService } from '@src/modules/authorization/service/auth.service'
 import { AuthServiceImpl } from '@src/modules/authorization/service/impl/auth.service.impl'
-import { ENV } from '@src/common/utils/dotenv'
+import { ENV } from '@src/common/utils/env'
 
 @Module({
     imports: [
         PassportModule,
-        JwtModule.register({
-            secret: ENV.JWT_SECRET_KEY,
+        JwtModule.registerAsync({
+            useFactory: () => ({
+                secret: ENV.JWT_SECRET_KEY,
+            }),
         }),
     ],
     providers: [

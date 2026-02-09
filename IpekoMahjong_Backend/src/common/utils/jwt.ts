@@ -1,6 +1,6 @@
 import { UserDto } from '@src/modules/user/dto/user.dto'
 import * as jwt from 'jsonwebtoken'
-import { ENV } from '@src/common/utils/dotenv'
+import { ENV } from '@src/common/utils/env'
 
 // Access Token 생성
 export function createAccessToken(payload: UserDto) {

@@ -1,5 +1,5 @@
 import { PrismaMariaDb } from '@prisma/adapter-mariadb'
-import { ENV } from '@src/common/utils/dotenv'
+import { ENV } from '@src/common/utils/env'
 
 export interface DbConfig {
     host: string
@@ -16,7 +16,7 @@ export function getDbConfig(): DbConfig {
     const isCloud = dbEnv === 'google'
     return {
         host: isCloud ? ENV.GOOGLE_DATABASE_HOST : ENV.LOCAL_DATABASE_HOST,
-        port: ENV.DATABASE_PORT,
+        port: Number(ENV.DATABASE_PORT),
         user: isCloud ? ENV.GOOGLE_DATABASE_USER : ENV.LOCAL_DATABASE_USER,
         password: isCloud
             ? ENV.GOOGLE_DATABASE_PASSWORD

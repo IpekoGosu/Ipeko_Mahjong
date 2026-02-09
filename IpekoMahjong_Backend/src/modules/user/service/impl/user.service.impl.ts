@@ -11,7 +11,7 @@ import { UserRepository } from '@src/modules/user/repository/user.repository'
 import { UserService } from '@src/modules/user/service/user.service'
 import { Response } from 'express'
 import { PrismaService } from '@src/modules/prisma/prisma.service'
-import { ENV } from '@src/common/utils/dotenv'
+import { ENV } from '@src/common/utils/env'
 
 @Injectable()
 export class UserServiceImpl extends UserService {
