@@ -1,4 +1,8 @@
-import { ExecutionContext, Injectable } from '@nestjs/common'
+import {
+    ExecutionContext,
+    Injectable,
+    UnauthorizedException,
+} from '@nestjs/common'
 import { AuthGuard } from '@nestjs/passport'
 import { WsException } from '@nestjs/websockets'
 import { Socket } from 'socket.io'
@@ -21,18 +25,30 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
         err: unknown,
         user: TUser,
         info: unknown,
+        context: ExecutionContext,
     ): TUser {
+        const isWs = context.getType() === 'ws'
+
         if (err || !user) {
             const jwtInfo = info as JwtError | undefined
+            let exception: Error
+
             if (jwtInfo?.name === 'JsonWebTokenError') {
-                throw new WsException('Invalid token')
+                exception = isWs
+                    ? new WsException('Invalid token')
+                    : new UnauthorizedException('Invalid token')
             } else if (jwtInfo?.name === 'TokenExpiredError') {
-                throw new WsException('Token expired')
+                exception = isWs
+                    ? new WsException('Token expired')
+                    : new UnauthorizedException('Token expired')
+            } else if (err instanceof Error) {
+                exception = err
+            } else {
+                exception = isWs
+                    ? new WsException('Unauthorized')
+                    : new UnauthorizedException()
             }
-            if (err instanceof Error) {
-                throw err
-            }
-            throw new WsException('Unauthorized')
+            throw exception
         }
         return user
     }
