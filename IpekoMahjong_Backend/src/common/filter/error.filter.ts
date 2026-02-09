@@ -104,10 +104,10 @@ export class AllExceptionsFilter implements ExceptionFilter {
         const message =
             exception instanceof Error
                 ? exception.message
-                : 'Internal Server Error'
-        const stack = exception instanceof Error ? exception.stack : undefined
+                : 'Caught a non-Error exception';
+        const stack = exception instanceof Error ? exception.stack : String(exception);
 
-        this.logger.error(`UnhandledException: ${message}`, stack)
+        this.logger.error(`UnhandledException: ${message}`, stack);
 
         const data = {
             statusCode: status,
