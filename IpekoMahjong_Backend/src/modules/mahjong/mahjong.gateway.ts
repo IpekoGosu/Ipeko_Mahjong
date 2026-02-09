@@ -88,9 +88,9 @@ export class MahjongGateway {
             const data = client.data as Record<string, unknown>
             data['user'] = user
             this.logger.log(`Client connected: ${client.id} (User: ${email})`)
-        } catch (_error) {
-            this.logger.error(`Client connection rejected: Invalid token`)
-            client.disconnect()
+        } catch (error) {
+            this.logger.error(`Client connection rejected: Invalid token`, error instanceof Error ? error.stack : String(error));
+            client.disconnect();
         }
     }
 
