@@ -20,8 +20,7 @@ export function createRefreshToken(payload: UserDto) {
 export function verifyToken(token: string) {
     try {
         return jwt.verify(token, ENV.JWT_SECRET_KEY)
-    } catch (error) {
-        console.error(error)
+    } catch {
         return null
     }
 }
