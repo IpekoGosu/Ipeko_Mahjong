@@ -38,5 +38,7 @@ export function getPrismaUrl() {
     const config = getDbConfig()
     const encodedPassword = encodeURIComponent(config.password || '')
     const url = `mysql://${config.user}:${encodedPassword}@${config.host}:${config.port}/${config.database}`
-    return config.isCloud ? `${url}?sslmode=require&sslaccept=accept_invalid_certs` : url
+    return config.isCloud
+        ? `${url}?sslmode=require&sslaccept=accept_invalid_certs`
+        : url
 }
