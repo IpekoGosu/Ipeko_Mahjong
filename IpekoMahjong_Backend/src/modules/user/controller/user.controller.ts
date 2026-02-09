@@ -11,10 +11,7 @@ import {
     UseGuards,
     UseInterceptors,
 } from '@nestjs/common'
-import {
-    CommonErrorResponse,
-    CommonSuccessResponse,
-} from '@src/common/response/common.response'
+import { CommonSuccessResponse } from '@src/common/response/common.response'
 import { JwtDto } from '@src/modules/user/dto/jwt.dto'
 import { UserCreateDto } from '@src/modules/user/dto/user.create.dto'
 import { UserDto } from '@src/modules/user/dto/user.dto'
@@ -36,6 +33,8 @@ import {
     downloadFileFromGoogleStorage,
     uploadFileToGoogleStorage,
 } from '@src/common/utils/google.cloud'
+import { CommonError } from '@src/common/error/common.error'
+import { ERROR_STATUS } from '@src/common/error/error.status'
 
 @ApiTags('user')
 @Controller('user')
@@ -93,7 +92,9 @@ export class UserController {
             return new CommonSuccessResponse(updloadedFileName)
         } catch (error) {
             console.error(error)
-            return new CommonErrorResponse(error)
+            return new CommonError(
+                ERROR_STATUS.GOOGLE_CLOUD_STORAGE_UPLOAD_ERROR,
+            )
         }
     }
 
@@ -110,7 +111,9 @@ export class UserController {
             res.send(file)
         } catch (error) {
             console.error(error)
-            return new CommonErrorResponse(error)
+            return new CommonError(
+                ERROR_STATUS.GOOGLE_CLOUD_STORAGE_DOWNLOAD_ERROR,
+            )
         }
     }
 }

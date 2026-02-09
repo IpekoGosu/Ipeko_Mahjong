@@ -1,8 +1,9 @@
 import { Storage } from '@google-cloud/storage'
+import { ENV } from '@src/common/utils/dotenv'
 import { randomUUID } from 'crypto'
 
 let googleStorage: Storage | null = null
-const bucketName = 'ipeko-mahjong'
+const bucketName = ENV.GOOGLE_CLOUD_STORAGE_BUCKET
 
 export function getGoogleStorage() {
     if (!googleStorage) {

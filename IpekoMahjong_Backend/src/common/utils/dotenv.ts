@@ -53,4 +53,10 @@ export const ENV = {
     GOOGLE_DATABASE_HOST: getEnv('GOOGLE_DATABASE_HOST', false),
     GOOGLE_DATABASE_USER: getEnv('GOOGLE_DATABASE_USER', false),
     GOOGLE_DATABASE_PASSWORD: getEnv('GOOGLE_DATABASE_PASSWORD', false),
+
+    GOOGLE_CLOUD_STORAGE_BUCKET: getEnv(
+        'GOOGLE_CLOUD_STORAGE_BUCKET',
+        false,
+        'ipeko-mahjong',
+    ),
 } as const
