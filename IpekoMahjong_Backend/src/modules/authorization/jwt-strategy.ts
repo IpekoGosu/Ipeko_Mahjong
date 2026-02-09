@@ -2,6 +2,7 @@
 import { Injectable } from '@nestjs/common'
 import { PassportStrategy } from '@nestjs/passport'
 import { Strategy, ExtractJwt } from 'passport-jwt'
+import { ENV } from '@src/common/utils/dotenv'
 
 interface RequestWithAuth {
     cookies?: Record<string, string>
@@ -41,7 +42,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
                 },
                 ExtractJwt.fromAuthHeaderAsBearerToken(),
             ]),
-            secretOrKey: process.env.JWT_SECRET_KEY as string,
+            secretOrKey: ENV.JWT_SECRET_KEY,
             ignoreExpiration: false,
         })
     }

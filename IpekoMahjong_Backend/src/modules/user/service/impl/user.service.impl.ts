@@ -11,6 +11,7 @@ import { UserRepository } from '@src/modules/user/repository/user.repository'
 import { UserService } from '@src/modules/user/service/user.service'
 import { Response } from 'express'
 import { PrismaService } from '@src/modules/prisma/prisma.service'
+import { ENV } from '@src/common/utils/dotenv'
 
 @Injectable()
 export class UserServiceImpl extends UserService {
@@ -64,12 +65,12 @@ export class UserServiceImpl extends UserService {
 
         res.cookie('access_token', accessToken, {
             httpOnly: true,
-            secure: !!(process.env.NODE_ENV === 'production'), // HTTPS에만 적용
+            secure: !!(ENV.NODE_ENV === 'production'), // HTTPS에만 적용
             maxAge: 1000 * 60 * 120,
         })
         res.cookie('refresh_token', refreshToken, {
             httpOnly: true,
-            secure: !!(process.env.NODE_ENV === 'production'),
+            secure: !!(ENV.NODE_ENV === 'production'),
             maxAge: 1000 * 60 * 60 * 24 * 14,
         })
 

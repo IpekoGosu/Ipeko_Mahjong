@@ -2,11 +2,9 @@ import { NestFactory } from '@nestjs/core'
 import { AppModule } from './app.module'
 import { WinstonLoggerService } from '@src/common/logger/winston.logger.service'
 import { ValidationPipe } from '@nestjs/common'
-import * as dotenv from 'dotenv'
 import cookieParser from 'cookie-parser'
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger'
-
-dotenv.config()
+import { ENV } from '@src/common/utils/dotenv'
 
 async function bootstrap() {
     const app = await NestFactory.create(AppModule)
@@ -37,6 +35,6 @@ async function bootstrap() {
     const document = SwaggerModule.createDocument(app, config)
     SwaggerModule.setup('api-docs', app, document)
 
-    await app.listen(process.env.PORT ?? 3000)
+    await app.listen(ENV.PORT)
 }
 void bootstrap()

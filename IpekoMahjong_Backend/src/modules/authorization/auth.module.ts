@@ -5,15 +5,13 @@ import { JwtAuthGuard } from '@src/modules/authorization/jwt-auth.guard'
 import { JwtStrategy } from '@src/modules/authorization/jwt-strategy'
 import { AuthService } from '@src/modules/authorization/service/auth.service'
 import { AuthServiceImpl } from '@src/modules/authorization/service/impl/auth.service.impl'
-import * as dotenv from 'dotenv'
-
-dotenv.config()
+import { ENV } from '@src/common/utils/dotenv'
 
 @Module({
     imports: [
         PassportModule,
         JwtModule.register({
-            secret: process.env.JWT_SECRET_KEY as string,
+            secret: ENV.JWT_SECRET_KEY,
         }),
     ],
     providers: [

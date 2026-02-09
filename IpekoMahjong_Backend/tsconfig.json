@@ -2,7 +2,7 @@
     "compilerOptions": {
         "module": "NodeNext",
         "moduleResolution": "nodenext",
-        "types": ["node", "multer"],
+        "types": ["node", "multer", "jest"],
         "esModuleInterop": true,
         "resolveJsonModule": true,
         "declaration": true,
