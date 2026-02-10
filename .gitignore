@@ -1,7 +1,10 @@
 # Dependencies
 /node_modules
+/.pnpm-store
 /IpekoMahjong_Backend/node_modules
+/IpekoMahjong_Backend/.pnpm-store
 /IpekoMahjong_Frontend/node_modules
+/IpekoMahjong_Frontend/.pnpm-store
 
 # Compiled output
 /dist
