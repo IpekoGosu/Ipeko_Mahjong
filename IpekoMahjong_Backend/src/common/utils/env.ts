@@ -1,8 +1,8 @@
 import * as dotenv from 'dotenv'
 import * as path from 'path'
 import { SecretManagerServiceClient } from '@google-cloud/secret-manager'
-import { CommonError } from '@src/common/error/common.error'
-import { ERROR_STATUS } from '@src/common/error/error.status'
+import { CommonError } from '../error/common.error'
+import { ERROR_STATUS } from '../error/error.status'
 
 // Load .env file initially for local development
 dotenv.config({ path: path.resolve(process.cwd(), '.env') })

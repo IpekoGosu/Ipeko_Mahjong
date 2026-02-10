@@ -1,5 +1,5 @@
 import { PrismaMariaDb } from '@prisma/adapter-mariadb'
-import { ENV } from '@src/common/utils/env'
+import { ENV } from './env'
 
 export interface DbConfig {
     host: string

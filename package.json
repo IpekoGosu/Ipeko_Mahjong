@@ -4,10 +4,11 @@
   "description": "Monorepo root for IpekoMahjong",
   "private": true,
   "scripts": {
-    "install:all": "npm install && cd IpekoMahjong_Backend && npm install && cd ../IpekoMahjong_Frontend && npm install",
-    "dev:backend": "cd IpekoMahjong_Backend && npm run dev",
-    "dev:frontend": "cd IpekoMahjong_Frontend && npm run dev",
-    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\" --names \"BACKEND,FRONTEND\" --prefix-colors \"blue,green\""
+    "install:all": "pnpm install && cd IpekoMahjong_Backend && pnpm install && cd ../IpekoMahjong_Frontend && pnpm install",
+    "build:all": "cd IpekoMahjong_Backend && pnpm build && cd ../IpekoMahjong_Frontend && pnpm build",
+    "dev:backend": "cd IpekoMahjong_Backend && pnpm dev",
+    "dev:frontend": "cd IpekoMahjong_Frontend && pnpm dev",
+    "dev": "concurrently \"pnpm dev:backend\" \"pnpm dev:frontend\" --names \"BACKEND,FRONTEND\" --prefix-colors \"blue,green\""
   },
   "devDependencies": {
     "@types/cookie-parser": "^1.4.10",
