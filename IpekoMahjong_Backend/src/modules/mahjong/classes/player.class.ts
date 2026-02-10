@@ -16,6 +16,8 @@ export class Player {
     public ippatsuEligible: boolean = false
     public riichiDeclarationTurn: number | null = null
     public isFuriten: boolean = false
+    public isTemporaryFuriten: boolean = false
+    public isRiichiFuriten: boolean = false
     public points: number = 25000
 
     constructor(id: string, isOya: boolean = false, isAi: boolean = false) {
@@ -34,6 +36,8 @@ export class Player {
         this.ippatsuEligible = false
         this.riichiDeclarationTurn = null
         this.isFuriten = false
+        this.isTemporaryFuriten = false
+        this.isRiichiFuriten = false
     }
 
     // ... (keep existing methods)

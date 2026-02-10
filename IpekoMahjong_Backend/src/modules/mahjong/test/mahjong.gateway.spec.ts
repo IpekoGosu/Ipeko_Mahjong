@@ -5,6 +5,12 @@ import { MahjongModule } from '../mahjong.module'
 import { AddressInfo } from 'net'
 import { Server } from 'http'
 import { JwtService } from '@nestjs/jwt'
+import * as dotenv from 'dotenv'
+import * as path from 'path'
+import { initializeEnv } from '@src/common/utils/env'
+
+// Load .env for tests
+dotenv.config({ path: path.resolve(process.cwd(), '.env') })
 
 describe('MahjongGateway', () => {
     let app: INestApplication
@@ -14,6 +20,8 @@ describe('MahjongGateway', () => {
     let token: string
 
     beforeAll(async () => {
+        await initializeEnv()
+
         const moduleFixture: TestingModule = await Test.createTestingModule({
             imports: [MahjongModule],
         }).compile()
