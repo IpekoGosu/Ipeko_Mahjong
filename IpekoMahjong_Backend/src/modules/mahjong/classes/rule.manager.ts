@@ -92,18 +92,6 @@ export class RuleManager {
     }
 
     static getAnkanOptions(player: Player): string[] {
-        if (player.isRiichi) return [] // Cannot Ankan in Riichi (unless special rule, but usually simplified to no for now or specific check)
-        // Actually, you CAN Ankan in Riichi if it doesn't change wait.
-        // For simplicity in Phase 3, let's disable Ankan in Riichi or implement full check.
-        // Let's allow it if not Riichi. If Riichi, we need complex check.
-        // Strict rule: Can Ankan in Riichi if:
-        // 1. Tile drawn is the one to be Ankan'd.
-        // 2. Hand structure doesn't change (wait doesn't change).
-        // For now, let's block Ankan in Riichi to be safe, or allow it blindly?
-        // Prompt says "Ankan does not count as disrupting menzen state", doesn't explicitly mention Riichi.
-        // Let's stick to non-Riichi for now, or check generic valid moves.
-        if (player.isRiichi) return []
-
         const hand = player.getHand()
         const counts: Record<string, number> = {}
         hand.forEach((t) => {
@@ -111,7 +99,99 @@ export class RuleManager {
             counts[s] = (counts[s] || 0) + 1
         })
 
-        return Object.keys(counts).filter((tile) => counts[tile] === 4)
+        const possibleAnkans = Object.keys(counts).filter((tile) => counts[tile] === 4)
+
+        if (player.isRiichi) {
+            // Rule: Can only Ankan if:
+            // 1. The Ankan involves the drawn tile (No "Sending Kan" / Okuri-kan).
+            // 2. The Ankan does not change the waits.
+            
+            if (!player.lastDrawnTile) return []
+            const drawnTileStr = player.lastDrawnTile.toString()
+            
+            return possibleAnkans.filter(tileStr => {
+                // 1. Must involve drawn tile
+                if (tileStr !== drawnTileStr) return false
+                
+                // 2. Check if waits change
+                // Current waits
+                const currentWaits = this.getWaits(player).sort()
+                
+                // Simulated waits after Ankan
+                // We need to simulate the hand state after Ankan.
+                // Player class has 'getHandStringForRiichi'.
+                // If we Ankan 'tileStr', we remove 4 tiles and add a 'closed kan' meld.
+                // We can construct the string manually.
+                
+                // Construct hand string for simulation
+                const remainingHand = hand.filter(t => t.toString() !== tileStr)
+                let testHandStr = this.convertTilesToRiichiString(remainingHand.map(t => t.toString()))
+                
+                // Add existing melds
+                const melds = player.getMelds()
+                melds.forEach((meld) => {
+                    const suit = meld.tiles[0].getSuit()
+                    const ranks = meld.tiles
+                        .map((t) => t.toString()[0])
+                        .sort()
+                        .join('')
+                    testHandStr += `+${ranks}${suit}`
+                })
+                
+                // Add NEW Ankan Meld
+                // Ankan in riichi lib format: "010m" (closed)? 
+                // Riichi lib format for closed kan: "1111m" treated as?
+                // Actually riichi lib detects "1111m" as 4 tiles. 
+                // But we need to specify it's a Kan (meld).
+                // In riichi string, "+1111m" might be open kan.
+                // How to specify Closed Kan?
+                // Usually Closed Kan is NOT separated with '+'.
+                // BUT if we don't separate it, it's just 4 tiles in hand.
+                // If 4 tiles in hand, can it be interpreted as Kan?
+                // Riichi lib might have specific syntax for Closed Kan.
+                // Often: (1111m) or similar.
+                // Looking at `riichi` docs/source or assuming standard:
+                // If we treat it as Melded for "Wait Calculation", it reduces hand size.
+                // A closed kan is 4 tiles that don't count towards the 13-tile limit (standard 13 + 1).
+                // It replaces 3 tiles effectively.
+                // If we just remove the 4 tiles from "hand" string, the hand has 10 tiles.
+                // We need to tell the calculator that we have a Kan.
+                // If `riichi` lib doesn't support explicit Closed Kan syntax easily, we might struggle.
+                // However, `riichi` lib usually treats `+1111m` as Meld.
+                // For Wait Calculation, Open vs Closed Kan doesn't matter for *Waits* (shapes), only for Yaku (Suuankou vs Taiaitou).
+                // So using `+1111m` (Meld) is safe for checking *Waits*.
+                
+                const rank = tileStr[0]
+                const suit = tileStr[1]
+                testHandStr += `+${rank}${rank}${rank}${rank}${suit}`
+                
+                try {
+                    const result = new Riichi(testHandStr).calc() as RiichiResult
+                    // Check waits
+                    let newWaits: string[] = []
+                    if (result.hairi?.now === 0 && result.hairi.wait) {
+                        newWaits.push(...Object.keys(result.hairi.wait))
+                    }
+                    if (result.hairi7and13?.now === 0 && result.hairi7and13.wait) {
+                        newWaits.push(...Object.keys(result.hairi7and13.wait))
+                    }
+                    newWaits = Array.from(new Set(newWaits)).sort()
+                    
+                    // Compare arrays
+                    if (currentWaits.length !== newWaits.length) return false
+                    for (let i = 0; i < currentWaits.length; i++) {
+                        if (currentWaits[i] !== newWaits[i]) return false
+                    }
+                    
+                    return true
+                } catch (e) {
+                    console.error('Error simulating Ankan waits', e)
+                    return false
+                }
+            })
+        }
+
+        return possibleAnkans
     }
 
     static getKakanOptions(player: Player): string[] {
@@ -194,6 +274,34 @@ export class RuleManager {
             )
             return []
         }
+    }
+
+    static countTerminalsAndHonors(player: Player): number {
+        const hand = player.getHand()
+        const uniqueTiles = new Set<string>()
+
+        hand.forEach((tile) => {
+            const rank = tile.getRank()
+            const suit = tile.getSuit()
+            
+            // Check if terminal or honor
+            if (suit === 'z' || rank === 1 || rank === 9) {
+                // Determine uniqueness based on suit and rank (ignore id, aka)
+                // Actually `tile.toString()` format is `1m`, `5z` etc.
+                // 0m, 0p, 0s are 5.
+                // 1m, 9m, 1p, 9p, 1s, 9s, 1z...7z
+                // 0 is not 1 or 9, so safe.
+                
+                // If 1m and 1m exist, we count only 1 unique.
+                // `tile.toString()` format: rank+suit. (e.g. 1m).
+                // Red 5 is 0m. Rank is 5. Not terminal.
+                // Wait, tile.toString() uses rank.
+                // If I have 1m and 1m, uniqueTiles set handles it.
+                uniqueTiles.add(`${rank}${suit}`)
+            }
+        })
+        
+        return uniqueTiles.size
     }
 
     static getActualDoraList(indicators: string[]): string[] {

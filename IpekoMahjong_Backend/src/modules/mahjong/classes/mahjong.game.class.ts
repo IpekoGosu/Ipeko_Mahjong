@@ -41,6 +41,15 @@ export class MahjongGame {
     private anyCallDeclared: boolean = false
     private rinshanFlag: boolean = false
     private pendingActions: Record<string, PossibleActions> = {}
+    private pendingDoraReveal: boolean = false
+    
+    // Double Ron Tracking
+    private potentialRonners: string[] = []
+    private receivedRonCommands: { playerId: string, tileString: string }[] = []
+    private processedRonners: string[] = [] // Track who has responded (Ron or Skip)
+
+    // Suufuu Renda Tracking
+    private firstTurnDiscards: { wind: string, count: number } | null = null
 
     // Hanchan State
     private bakaze: '1z' | '2z' | '3z' | '4z' = '1z' // 1z: East, 2z: South, 3z: West, 4z: North
@@ -119,6 +128,11 @@ export class MahjongGame {
         this.anyCallDeclared = false
         this.rinshanFlag = false
         this.pendingActions = {}
+        this.pendingDoraReveal = false
+        this.firstTurnDiscards = { wind: '', count: 0 } // Reset Suufuu Renda tracker
+        this.potentialRonners = []
+        this.receivedRonCommands = []
+        this.processedRonners = []
 
         // 5. Generate round-started events (Everyone has 13 tiles)
         const doraIndicators = this.getDora().map((t) => t.toString())
@@ -146,6 +160,10 @@ export class MahjongGame {
             to: 'player',
             playerId: p.getId(),
         }))
+        
+        // Check Kyuushu Kyuuhai for current player (Oya) immediately? 
+        // No, player declares it. Client should check and send 'abort' action if possible.
+        // For now, we wait for client action or check during turn.
 
         return {
             roomId,
@@ -157,6 +175,27 @@ export class MahjongGame {
     /** 첫 턴(오야의 첫 쯔모)을 시작합니다. */
     public startFirstTurn(roomId: string): GameUpdate {
         return this.drawTileForCurrentPlayer(roomId)
+    }
+    
+    /** Kyuushu Kyuuhai Declaration */
+    declareAbortiveDraw(roomId: string, playerId: string, type: 'kyuushu-kyuuhai'): GameUpdate {
+         const player = this.getPlayer(playerId)
+         if (!player) return { roomId, isGameOver: false, events: [] }
+         
+         if (type === 'kyuushu-kyuuhai') {
+             // Validate: First turn, no calls, 9+ terminals/honors
+             if (this.anyCallDeclared || player.getDiscards().length > 0) {
+                 return { roomId, isGameOver: false, events: [{ eventName: 'error', payload: { message: 'Too late for Kyuushu Kyuuhai'}, to: 'player', playerId }] }
+             }
+             
+             const terminals = RuleManager.countTerminalsAndHonors(player)
+             if (terminals < 9) {
+                  return { roomId, isGameOver: false, events: [{ eventName: 'error', payload: { message: 'Not enough terminals/honors'}, to: 'player', playerId }] }
+             }
+             
+             return this.endKyoku(roomId, { reason: 'ryuukyoku', abortReason: 'kyuushu-kyuuhai' })
+         }
+         return { roomId, isGameOver: false, events: [] }
     }
 
     /** 현재 턴인 플레이어가 타일을 버립니다. */
@@ -184,9 +223,51 @@ export class MahjongGame {
                 ],
             }
         }
+        
+        // Handle Pending Dora Reveal (Minkan/Kakan)
+        // Reveal BEFORE discard is processed/shown?
+        // Tenhou: "Shown after discarding or picking a new replacement tile".
+        // Usually, discard happens, THEN dora is flipped.
+        // If I discard, the discard is on the table.
+        // Then Dora is flipped.
+        // Then next player acts (or Call).
+        // If pendingDoraReveal is true, it means we came from Minkan/Kakan -> Rinshan -> Discard.
+        // So we should flip it now (after discard action but before turn change/calls).
+        
+        let doraRevealedEvent: GameUpdate['events'][0] | null = null;
+        if (this.pendingDoraReveal) {
+            this.wall.revealDora()
+            this.pendingDoraReveal = false
+            const doraIndicators = this.getDora().map((t) => t.toString())
+            const actualDora = RuleManager.getActualDoraList(doraIndicators)
+            doraRevealedEvent = {
+                eventName: 'dora-revealed',
+                payload: {
+                    dora: doraIndicators,
+                    actualDora: actualDora
+                },
+                to: 'all'
+            }
+        }
 
         // Handle Riichi Declaration
         if (isRiichi) {
+             // Rule: Must have 4+ tiles in wall (Tenhou rule)
+            if (this.wall.getRemainingTiles() < 4) {
+                 return {
+                    roomId,
+                    isGameOver: false,
+                    events: [
+                        {
+                            eventName: 'error',
+                            payload: { message: 'Cannot declare Riichi with less than 4 tiles remaining' },
+                            to: 'player',
+                            playerId,
+                        },
+                    ],
+                }
+            }
+
             const validRiichiDiscards = RuleManager.getRiichiDiscards(player)
             if (
                 player.isRiichi ||
@@ -265,6 +346,9 @@ export class MahjongGame {
                 ],
             }
         }
+        
+        // Reset Temporary Furiten on Discard
+        player.isTemporaryFuriten = false
 
         if (isRiichi) {
             player.isRiichi = true
@@ -276,10 +360,17 @@ export class MahjongGame {
             if (!this.anyCallDeclared && player.getDiscards().length === 1) {
                 player.isDoubleRiichi = true
             }
+            
+            // Check Suucha Riichi (Four Riichi)
+            if (this.players.every(p => p.isRiichi)) {
+                 return this.endKyoku(roomId, { reason: 'ryuukyoku', abortReason: 'suucha-riichi' })
+            }
         }
 
         // Update Furiten status
-        player.isFuriten = RuleManager.calculateFuriten(player)
+        // Furiten check: Waits in Discards (Standard) OR Temporary/Riichi Furiten
+        const standardFuriten = RuleManager.calculateFuriten(player)
+        player.isFuriten = standardFuriten || player.isTemporaryFuriten || player.isRiichiFuriten
 
         // Handle Ippatsu Expiration
         if (player.isRiichi && player.ippatsuEligible) {
@@ -293,6 +384,25 @@ export class MahjongGame {
         this.rinshanFlag = false
 
         this.activeDiscard = { playerId, tile: discardedTile }
+        
+        // Check Suufuu Renda (Four Same Winds)
+        // Must be first turn (turnCounter < 4), no calls.
+        if (!this.anyCallDeclared && this.turnCounter < 4) {
+             const wind = tileString[1] === 'z' ? tileString : null
+             if (wind) {
+                 if (this.firstTurnDiscards && this.firstTurnDiscards.wind === tileString) {
+                     this.firstTurnDiscards.count++
+                 } else if (this.turnCounter === 0) { // First discard
+                     this.firstTurnDiscards = { wind: tileString, count: 1 }
+                 } else {
+                     this.firstTurnDiscards = { wind: '', count: 0 } // Reset if sequence broken
+                 }
+                 
+                 if (this.firstTurnDiscards?.count === 4) {
+                     return this.endKyoku(roomId, { reason: 'ryuukyoku', abortReason: 'suufuu-renda' })
+                 }
+             }
+        }
 
         // 턴을 넘기기 전, 버린 패 정보를 생성
         const events: GameUpdate['events'] = [
@@ -314,6 +424,10 @@ export class MahjongGame {
                 playerId: player.getId(),
             },
         ]
+        
+        if (doraRevealedEvent) {
+            events.push(doraRevealedEvent)
+        }
 
         if (isRiichi) {
             events.push({
@@ -391,6 +505,11 @@ export class MahjongGame {
     ): Record<string, PossibleActions> {
         const discarder = this.getPlayer(discarderId)
         if (!discarder) return {}
+        
+        // Reset Double Ron trackers
+        this.potentialRonners = []
+        this.receivedRonCommands = []
+        this.processedRonners = []
 
         const discarderIndex = this.players.indexOf(discarder)
         const actions: Record<string, PossibleActions> = {}
@@ -421,9 +540,12 @@ export class MahjongGame {
                 }
 
                 const ronScore = RuleManager.calculateScore(player, context)
-                if (ronScore && !player.isFuriten) {
-                    possibleActions.ron = true
-                    hasAction = true
+                if (ronScore) {
+                     if (!player.isFuriten) {
+                        possibleActions.ron = true
+                        hasAction = true
+                        this.potentialRonners.push(player.getId())
+                     }
                 }
             } catch (e) {
                 console.error(
@@ -487,37 +609,63 @@ export class MahjongGame {
         const player = this.getPlayer(playerId)
         if (!player) throw new Error('Player not found')
 
-        // Action taken, clear pending actions
-        this.pendingActions = {}
-
+        // If Ron, special handling for Double Ron
         if (actionType === 'ron') {
-            const result = this.verifyRon(player, tileString)
-            if (result.isAgari) {
-                // Find loser (discarder)
-                // We don't track activeDiscard logic here perfectly if multiple Rons, but for single Ron:
-                const loserId = this.activeDiscard?.playerId
-                return this.endKyoku(roomId, {
-                    reason: 'ron',
-                    winnerId: playerId,
-                    loserId,
-                    score: result.score!,
-                })
+            if (this.potentialRonners.includes(playerId)) {
+                this.receivedRonCommands.push({ playerId, tileString })
+                this.processedRonners.push(playerId)
+                
+                // Check if we have received responses from all potential ronners
+                if (this.processedRonners.length === this.potentialRonners.length) {
+                    return this.processRons(roomId)
+                } else {
+                    // Wait for others
+                    return { roomId, isGameOver: false, events: [] } // No events, just wait. Or maybe "waiting-for-others" event?
+                }
             } else {
                 return {
                     roomId,
                     isGameOver: false,
-                    events: [
-                        {
-                            eventName: 'error',
-                            payload: { message: 'Invalid Ron' },
-                            to: 'player',
-                            playerId,
-                        },
-                    ],
+                    events: [{ eventName: 'error', payload: { message: 'Invalid Ron attempt' }, to: 'player', playerId }]
                 }
             }
         }
+        
+        // If other action (Chi/Pon/Kan)
+        // Check if any Ron is pending?
+        // Prioritize Ron.
+        // If potentialRonners is not empty, and this player is not one of them, we should wait?
+        // Rule: Ron > Pon/Kan > Chi.
+        // If a player declares Pon, but another player can Ron, the Ron takes precedence.
+        // We must ensure no one Rons before processing Pon.
+        // Current logic: `getPossibleActions` returns actions to clients.
+        // Clients send actions.
+        // If potentialRonners exist, we should probably wait for them to Skip or Ron before accepting Pon.
+        // BUT, `performAction` is called immediately when *any* player sends action.
+        // If Player A (Pon) sends action, but Player B (Ron) hasn't replied.
+        // We should reject/buffer Player A's action?
+        // For simplicity: If `potentialRonners.length > 0`, ONLY accept Ron or Skip (from potentialRonners).
+        // If Player A sends Pon, we ignore/error?
+        // Or better: The Gateway should handle priority.
+        // Since we are only Backend Class, we can assume `performAction` is called when it's valid to execute?
+        // No, we should enforce rules.
+        
+        if (this.potentialRonners.length > 0) {
+             // If there are potential Rons, we cannot process Chi/Pon/Kan yet.
+             // We must wait for all potential Ronners to either Ron or Skip.
+             // Unless... the player doing Pon IS a potential Ronner? (Unlikely to Pon on Ron-able tile, usually Ron).
+             // We return error or "wait".
+             // Let's return error "Wait for priority actions".
+             return {
+                 roomId,
+                 isGameOver: false,
+                 events: [{ eventName: 'error', payload: { message: 'Wait for Ron decisions' }, to: 'player', playerId }]
+             }
+        }
 
+        // Action taken, clear pending actions
+        this.pendingActions = {}
+        
         // Clear Ippatsu for all players
         this.players.forEach((p) => (p.ippatsuEligible = false))
         this.anyCallDeclared = true
@@ -562,6 +710,10 @@ export class MahjongGame {
                 tiles: meldTiles,
                 opened: false, // Closed Kan
             })
+            
+            // Ankan: Reveal Dora Immediately (Standard/Tenhou)
+            // this.wall.revealDora() // Moved to below (Step 3)
+            
         } else if (actionType === 'kakan') {
             // Kakan: Remove 1 tile from hand. Add to existing Pon.
             const rank =
@@ -607,6 +759,10 @@ export class MahjongGame {
             }
             meldTiles = updatedMeld.tiles // Complete set for display
             stolenFromId = undefined // Kakan is self-action on own meld (effectively)
+            
+            // Kakan: Reveal Dora AFTER Discard (Pending)
+            this.pendingDoraReveal = true
+            
         } else {
             // Standard Chi/Pon/Kan (Daiminkan)
             tilesToMove = [...consumedTiles]
@@ -645,9 +801,7 @@ export class MahjongGame {
                             .slice(0, needed)
                             .map((t) => t.toString())
                 } else if (actionType === 'chi') {
-                    // Chi requires specific sequences. This is complex to auto-detect without knowing which option was picked.
-                    // However, Chi from AI is not yet implemented, and human FE always sends consumedTiles.
-                    // For now, if empty, we might have an issue.
+                    // Chi requires specific sequences.
                 }
             }
 
@@ -680,10 +834,15 @@ export class MahjongGame {
                 opened: !!stolenFromId,
             }
             player.addMeld(meld)
+            
+            if (actionType === 'kan') { // Minkan
+                // Minkan: Reveal Dora AFTER Discard (Pending)
+                this.pendingDoraReveal = true
+            }
         }
 
         // Update Furiten status
-        player.isFuriten = RuleManager.calculateFuriten(player)
+        player.isFuriten = RuleManager.calculateFuriten(player) || player.isTemporaryFuriten || player.isRiichiFuriten
 
         const doraIndicators = this.getDora().map((t) => t.toString())
         const actualDora = RuleManager.getActualDoraList(doraIndicators)
@@ -729,7 +888,13 @@ export class MahjongGame {
             actionType === 'kakan'
         ) {
             this.rinshanFlag = true
-            this.wall.revealDora() // Reveal new Dora indicator
+            
+            // Dora Reveal Timing Logic
+            if (actionType === 'ankan') {
+                 this.wall.revealDora() // Immediate
+            }
+            // For Minkan/Kakan, we already set pendingDoraReveal = true
+            
             const replacementTile = this.wall.drawReplacement()
             if (replacementTile) {
                 player.draw(replacementTile)
@@ -770,6 +935,263 @@ export class MahjongGame {
             events,
         }
     }
+    
+    /** Process queued Rons (Double Ron) */
+    private processRons(roomId: string): GameUpdate {
+        // Sort receivedRonCommands by Turn Order (Headbump for Kyotaku/Honba)
+        // Order starts from player AFTER discarder.
+        const discarderId = this.activeDiscard?.playerId
+        const discarder = this.getPlayer(discarderId!)!
+        const discarderIndex = this.players.indexOf(discarder)
+        
+        const sortedRons = this.receivedRonCommands.sort((a, b) => {
+            const idxA = this.players.findIndex(p => p.getId() === a.playerId)
+            const idxB = this.players.findIndex(p => p.getId() === b.playerId)
+            
+            // Calculate distance from discarder
+            const distA = (idxA - discarderIndex + 4) % 4
+            const distB = (idxB - discarderIndex + 4) % 4
+            return distA - distB
+        })
+        
+        // Execute Rons
+        // We will execute them sequentially to accumulate score changes?
+        // But endKyoku logic handles "Round End".
+        // Double Ron: All Rons apply. Game Ends once.
+        // We need a custom "Multi-Ron" logic or call endKyoku with multiple winners.
+        // I modified endKyoku to take `winnerId`, `score`. It handles single winner.
+        // I need to update `endKyoku` to handle multiple winners or `processRons` does the score calculation and calls `endKyoku` with "final" result?
+        // `endKyoku` is responsible for Honba, Renchan, Next Round logic.
+        // Let's refactor `endKyoku` to accept `winners: { id: string, score: ScoreCalculation }[]`.
+        
+        const winners: { id: string, score: ScoreCalculation, context: WinContext }[] = []
+        
+        for (const ronCmd of sortedRons) {
+            const player = this.getPlayer(ronCmd.playerId)!
+            // Re-verify Ron (just in case)
+            const result = this.verifyRon(player, ronCmd.tileString)
+            if (result.isAgari && result.score) {
+                 winners.push({ id: player.getId(), score: result.score, context: {} as any }) // context not needed for endKyoku
+            }
+        }
+        
+        if (winners.length === 0) {
+             // Should not happen
+             return { roomId, isGameOver: false, events: [] }
+        }
+        
+        // Call updated endKyoku (Need to modify endKyoku signature)
+        // Wait, I can't change signature easily without breaking other calls?
+        // Overload or change it.
+        // I will change `endKyoku` to handle array of winners.
+        
+        return this.endKyokuMulti(roomId, {
+            reason: 'ron',
+            winners: winners.map(w => ({ winnerId: w.id, score: w.score })),
+            loserId: discarderId
+        })
+    }
+    
+    // New Multi-Winner EndKyoku (replacing/extending endKyoku)
+    private endKyokuMulti(
+        roomId: string,
+        result: {
+            reason: 'ron'
+            winners: { winnerId: string; score: ScoreCalculation }[]
+            loserId?: string
+        }
+    ): GameUpdate {
+         // Logic similar to endKyoku but iterates winners.
+         // Headbump logic for Kyotaku/Honba: First winner in list gets it.
+         // Assuming `result.winners` is sorted by turn order (Headbump).
+         
+         // Reuse endKyoku logic? 
+         // I'll copy-paste endKyoku and adapt for Multi-Ron.
+         // Single Ron is just Multi-Ron with 1 winner.
+         // Tsumo/Ryuukyoku are different.
+         
+         const startScores: Record<string, number> = {}
+         this.players.forEach((p) => (startScores[p.getId()] = p.points))
+ 
+         const events: GameUpdate['events'] = []
+         let nextOyaIndex = this.oyaIndex
+         let nextKyokuNum = this.kyokuNum
+         let nextBakaze = this.bakaze
+         let nextHonba = this.honba
+         let nextKyotaku = this.kyotaku // Will be 0 if claimed
+         let renchan = false
+         
+         const loser = this.getPlayer(result.loserId!)!
+         
+         result.winners.forEach((winnerInfo, idx) => {
+             const winner = this.getPlayer(winnerInfo.winnerId)!
+             
+             // Honba/Kyotaku: Only 1st winner gets it.
+             const isHeadbump = idx === 0
+             const honbaPoints = isHeadbump ? this.honba * 300 : 0
+             const kyotakuPoints = isHeadbump ? this.kyotaku * 1000 : 0
+             
+             // Reset Kyotaku if claimed
+             if (isHeadbump) nextKyotaku = 0
+             
+             const totalPoints = winnerInfo.score.ten + honbaPoints + kyotakuPoints
+             winner.points += totalPoints
+             loser.points -= (winnerInfo.score.ten + honbaPoints)
+             
+             // Renchan check: If ANY winner is Oya, Renchan.
+             if (winner.isOya) {
+                 renchan = true
+             }
+         })
+         
+         // If Renchan, Honba increases. Else 0.
+         if (renchan) {
+             nextHonba++
+         } else {
+             nextHonba = 0
+         }
+         
+         // Event generation (One score-update per winner? Or combined?)
+         // Existing `score-update` takes 1 winner. Send multiple events.
+         result.winners.forEach((winnerInfo, idx) => {
+             // Calculate points again for event payload consistency
+             const isHeadbump = idx === 0
+             const honbaPoints = isHeadbump ? this.honba * 300 : 0
+             const kyotakuPoints = isHeadbump ? this.kyotaku * 1000 : 0 // current kyotaku
+             const totalPoints = winnerInfo.score.ten + honbaPoints + kyotakuPoints
+             
+              events.push({
+                eventName: 'score-update',
+                payload: {
+                    winnerId: winnerInfo.winnerId,
+                    loserId: result.loserId,
+                    score: winnerInfo.score.ten,
+                    totalPoints: totalPoints,
+                    reason: 'ron',
+                },
+                to: 'all',
+            })
+         })
+         
+         // ... Proceed to Progression/Game Over logic (Shared)
+         // Refactoring: Extract Progression Logic?
+         // Or just copy-paste for now to ensure safety.
+         
+        // 2. Progression Logic (With Sudden Death and Agari-yame)
+        let isGameOver = false
+        const maxPoints = Math.max(...this.players.map((p) => p.points))
+        
+        if (this.players.some((p) => p.points < 0)) isGameOver = true
+
+        const isLastGame = (this.bakaze === '2z' && this.kyokuNum === 4) || (this.bakaze === '3z') 
+        const currentOya = this.players[this.oyaIndex]
+        const isTop = currentOya.points === maxPoints
+
+        if (!isGameOver) {
+            if (isLastGame && renchan) {
+                if (isTop && currentOya.points >= 30000) isGameOver = true
+            } else if (!renchan) {
+                 nextOyaIndex = (this.oyaIndex + 1) % 4
+                 nextKyokuNum++
+                 if (nextKyokuNum > 4) {
+                    nextKyokuNum = 1
+                    const windOrder: ('1z' | '2z' | '3z' | '4z')[] = ['1z', '2z', '3z', '4z']
+                    const currentIndex = windOrder.indexOf(this.bakaze)
+                    nextBakaze = windOrder[(currentIndex + 1) % windOrder.length]
+                 }
+                 if (nextBakaze === '3z') {
+                      if (maxPoints >= 30000) isGameOver = true
+                 } else if (nextBakaze === '4z') {
+                      isGameOver = true
+                 }
+            }
+        }
+        
+        if (!isGameOver && (this.bakaze === '3z')) {
+             if (maxPoints >= 30000) isGameOver = true
+        }
+
+        this.honba = nextHonba
+        this.kyotaku = nextKyotaku
+        this.oyaIndex = nextOyaIndex
+        this.kyokuNum = nextKyokuNum
+        this.bakaze = nextBakaze
+
+        const scoreDeltas: Record<string, number> = {}
+        this.players.forEach((p) => {
+            scoreDeltas[p.getId()] = p.points - startScores[p.getId()]
+        })
+
+        // Pick the "Primary" winner for the round-ended summary?
+        // Or send array?
+        // Existing `round-ended` payload expects `winScore`, `winnerId`.
+        // We should update `GameUpdate` interface to support multiple winners or sending arrays.
+        // But for backward compatibility (if FE expects one), we send the "First" (Headbump) winner info in root,
+        // and maybe add `allWinners` field.
+        
+        const firstWinner = result.winners[0]
+        
+        events.push({
+            eventName: 'round-ended',
+            payload: {
+                reason: result.reason,
+                scores: this.players.map((p) => ({
+                    id: p.getId(),
+                    points: p.points,
+                })),
+                scoreDeltas,
+                winScore: firstWinner.score, // Headbump winner score
+                winnerId: firstWinner.winnerId,
+                loserId: result.loserId,
+                allWinners: result.winners, // New field
+                nextState: {
+                    bakaze: this.bakaze,
+                    kyoku: this.kyokuNum,
+                    honba: this.honba,
+                    isGameOver: isGameOver,
+                },
+            },
+            to: 'all',
+        })
+        
+        if (isGameOver) {
+             const sortedPlayers = [...this.players].sort((a, b) => {
+                if (b.points !== a.points) return b.points - a.points
+                return this.players.indexOf(a) - this.players.indexOf(b)
+            })
+            const finalScores = sortedPlayers.map((p, idx) => {
+                 let uma = 0
+                 if (idx === 0) uma = 20000
+                 if (idx === 1) uma = 10000
+                 if (idx === 2) uma = -10000
+                 if (idx === 3) uma = -20000
+                 const finalPoint = (p.points - 30000) + uma
+                 if (idx === 0) {
+                     return { id: p.getId(), points: p.points, finalScore: finalPoint + 20000, rank: idx + 1 }
+                 }
+                 return { id: p.getId(), points: p.points, finalScore: finalPoint, rank: idx + 1 }
+            })
+
+            return {
+                roomId,
+                isGameOver: true,
+                events: [
+                    ...events,
+                    {
+                        eventName: 'game-over',
+                        payload: { scores: this.players.map((p) => p.points), finalRanking: finalScores },
+                        to: 'all',
+                    },
+                ],
+            }
+        }
+
+        return {
+            roomId,
+            isGameOver: false,
+            events,
+        }
+    }
 
     /** 다음 국으로 진행합니다. */
     nextRound(roomId: string): GameUpdate {
@@ -782,7 +1204,8 @@ export class MahjongGame {
             reason: 'ron' | 'tsumo' | 'ryuukyoku'
             winnerId?: string
             loserId?: string // Target for Ron
-            score?: ScoreCalculation
+            score?: ScoreCalculation,
+            abortReason?: string
         },
     ): GameUpdate {
         const startScores: Record<string, number> = {}
@@ -883,71 +1306,105 @@ export class MahjongGame {
                 to: 'all',
             })
         } else if (result.reason === 'ryuukyoku') {
-            // Check Tenpai
-            const tenpaiList = this.players.filter(
-                (p) => p.getHand().length <= 13 && RuleManager.isTenpai(p),
-            )
-            const notenList = this.players.filter(
-                (p) => !tenpaiList.includes(p),
-            )
-
-            if (tenpaiList.length > 0 && notenList.length > 0) {
-                const flow = 3000
-                const payReceive = flow / tenpaiList.length
-                const payGive = flow / notenList.length
-
-                tenpaiList.forEach((p) => (p.points += payReceive))
-                notenList.forEach((p) => (p.points -= payGive))
-            }
-
-            // Renchan logic
-            const oya = this.players[this.oyaIndex]
-            if (tenpaiList.includes(oya)) {
-                renchan = true
-                nextHonba++
-            } else {
-                nextHonba++ // Honba increases even if Oya passes in Ryuukyoku? Yes in Tenhou.
-                // Wait, if Oya is noten, Oya passes.
-            }
+             if (result.abortReason) {
+                 // Abortive draws generally act as Ryuukyoku.
+                 // Nine Terminals, Four Riichi, Four Winds, Four Kans: All Renchan.
+                 renchan = true
+                 nextHonba++
+             } else {
+                 // Normal Ryuukyoku
+                // Check Tenpai
+                const tenpaiList = this.players.filter(
+                    (p) => p.getHand().length <= 13 && RuleManager.isTenpai(p),
+                )
+                const notenList = this.players.filter(
+                    (p) => !tenpaiList.includes(p),
+                )
+    
+                if (tenpaiList.length > 0 && notenList.length > 0) {
+                    const flow = 3000
+                    const payReceive = flow / tenpaiList.length
+                    const payGive = flow / notenList.length
+    
+                    tenpaiList.forEach((p) => (p.points += payReceive))
+                    notenList.forEach((p) => (p.points -= payGive))
+                }
+    
+                // Renchan logic
+                const oya = this.players[this.oyaIndex]
+                if (tenpaiList.includes(oya)) {
+                    renchan = true
+                    nextHonba++
+                } else {
+                    nextHonba++ // Ryuukyoku always increases Honba
+                }
+             }
         }
 
-        // 2. Progression Logic
-        if (!renchan) {
-            nextOyaIndex = (this.oyaIndex + 1) % 4
-            nextKyokuNum++
-            if (nextKyokuNum > 4) {
-                nextKyokuNum = 1
-                const windOrder: ('1z' | '2z' | '3z' | '4z')[] = [
-                    '1z',
-                    '2z',
-                    '3z',
-                    '4z',
-                ]
-                const currentIndex = windOrder.indexOf(this.bakaze)
-                nextBakaze = windOrder[(currentIndex + 1) % windOrder.length]
-            }
-        }
-
-        // Check for Game Over
-        const maxPoints = Math.max(...this.players.map((p) => p.points))
+        // 2. Progression Logic (With Sudden Death and Agari-yame)
         let isGameOver = false
-
+        const maxPoints = Math.max(...this.players.map((p) => p.points))
+        
+        // Check for Bankruptcy (Dobon) - Negative Score
         if (this.players.some((p) => p.points < 0)) {
-            // Dobon (Bankruptcy)
             isGameOver = true
-        } else if (this.bakaze === '1z') {
-            // East round: game never ends unless bankruptcy
-            isGameOver = false
-        } else if (this.bakaze === '2z' && this.kyokuNum < 4) {
-            // South 1-3: game never ends unless bankruptcy
-            isGameOver = false
-        } else {
-            // South 4 or later (Encho-sen)
-            if (maxPoints >= 30000) {
-                // If it's S4 and Oya renchans, they must be in top to end (Agari-yame)
-                // For simplicity, we'll follow: if anyone is >= 30000 at the end of S4+, game ends.
-                isGameOver = true
+        }
+
+        // Agari-yame / Tenpai-yame Logic
+        // If it's the "Last Game" (South 4 in Hanchan)
+        // If Dealer Wins or Tenpai -> Renchan.
+        // If Dealer is Top (>= 30000) -> Game Ends.
+        const isLastGame = (this.bakaze === '2z' && this.kyokuNum === 4) || (this.bakaze === '3z') // S4 or West Round (Sudden Death)
+        const currentOya = this.players[this.oyaIndex]
+        const isTop = currentOya.points === maxPoints
+
+        // Only check Agari-yame if game isn't already over by dobon
+        if (!isGameOver) {
+            if (isLastGame && renchan) {
+                // Dealer Renchan in Last Game
+                if (isTop && currentOya.points >= 30000) {
+                     isGameOver = true // Agari-yame / Tenpai-yame
+                } else {
+                    // Continue Renchan (Even in Sudden Death, dealership takes precedence)
+                }
+            } else if (!renchan) {
+                 // Oya fallen. Move to next.
+                 nextOyaIndex = (this.oyaIndex + 1) % 4
+                 nextKyokuNum++
+                 if (nextKyokuNum > 4) {
+                    nextKyokuNum = 1
+                    const windOrder: ('1z' | '2z' | '3z' | '4z')[] = ['1z', '2z', '3z', '4z']
+                    const currentIndex = windOrder.indexOf(this.bakaze)
+                    nextBakaze = windOrder[(currentIndex + 1) % windOrder.length]
+                 }
+                 
+                 // Check if we enter West Round (Sudden Death) or End Game
+                 if (nextBakaze === '3z') {
+                      // Entering West Round (or already in it)
+                      // If anyone >= 30000, game ends.
+                      if (maxPoints >= 30000) {
+                          isGameOver = true
+                      } else {
+                          // Continue into West Round (Sudden Death)
+                          // But Sudden Death only goes up to West 4 (Tenhou: "In hanchan only goes until West Round ends")
+                          // Implies West 4 End -> Game Over regardless of score?
+                          // "Sudden death in East Round only goes until South Round ends, in hanchan only goes until West Round ends."
+                          // So if we just finished West 4 and moving to North 1 -> Game Over.
+                      }
+                 } else if (nextBakaze === '4z') {
+                      // Reached North Round -> Force Game Over
+                      isGameOver = true
+                 }
             }
+        }
+        
+        // Final Sudden Death Check (Instant Death on >= 30000)
+        // "Sudden death means that as soon as someone attains 30,000 points... the game ends."
+        // We check this at end of hand.
+        if (!isGameOver && (this.bakaze === '3z')) {
+             if (maxPoints >= 30000) {
+                 isGameOver = true
+             }
         }
 
         // Apply State
@@ -968,6 +1425,7 @@ export class MahjongGame {
             eventName: 'round-ended',
             payload: {
                 reason: result.reason,
+                abortReason: result.abortReason,
                 scores: this.players.map((p) => ({
                     id: p.getId(),
                     points: p.points,
@@ -987,6 +1445,72 @@ export class MahjongGame {
         })
 
         if (isGameOver) {
+            // Calculate Uma (10-20)
+            // Rank players
+            // 1st: +20, 2nd: +10, 3rd: -10, 4th: -20 (Simplified Tenhou Uma? No, Tenhou is +20, +10, -10, -20 usually? "10-20" usually means 10k, 20k or similar logic.)
+            // Tenhou "Uma 10-20" usually:
+            // 4th pays 20 to 1st.
+            // 3rd pays 10 to 2nd.
+            // Or: 1st +20, 2nd +10, 3rd -10, 4th -20. (Total 0)
+            // Plus Oka (Return 30000 - Start 25000 * 4 = 20000 bonus to top)
+            // "Players start with 25000 points and must return 30000 points"
+            // The 20k difference (Oka) goes to 1st.
+            
+            const sortedPlayers = [...this.players].sort((a, b) => {
+                if (b.points !== a.points) return b.points - a.points
+                // Tie-breaker: seat order (Initial Oya is usually index 0)
+                // We should store initial seat index.
+                // For now, stable sort if implementation preserves it, or simple id check.
+                // Correct tie-breaker: "tie is broken in favor of the person having the earlier dealership."
+                // Since this.players array order changes due to shuffle in startGame, we can't rely on index unless we stored original index.
+                // Assuming `this.players` order IS the seat order (East, South, West, North relative to initial East).
+                // Actually `startGame` shuffles `this.players`.
+                // So index 0 is first dealer.
+                return this.players.indexOf(a) - this.players.indexOf(b)
+            })
+            
+            // Apply Oka (+20000 to 1st)
+            // Apply Uma (+20k, +10k, -10k, -20k)
+            // Note: points are raw. 25000.
+            // Uma is usually applied to "final score" (score / 1000).
+            // Let's modify the raw points for display? Or just display raw points?
+            // Usually Game Over screen shows raw points + uma/oka adjustments.
+            // The prompt says "Rank bonus of 10-20".
+            // Let's apply it to final scores payload.
+            
+            const finalScores = sortedPlayers.map((p, idx) => {
+                 let uma = 0
+                 if (idx === 0) uma = 20000
+                 if (idx === 1) uma = 10000
+                 if (idx === 2) uma = -10000
+                 if (idx === 3) uma = -20000
+                 
+                 // Oka logic: (30000 - 25000) * 4 = 20000. 1st takes it.
+                 // Actually strictly: (Score - 30000) + Uma.
+                 // Sum of (Score - 30000) = (Sum Score) - 120000 = 100000 - 120000 = -20000.
+                 // 1st gets +20000 (Oka) -> Sum 0.
+                 
+                 // If we strictly follow "return 30000":
+                 // Adjusted = Score - 30000 + Uma
+                 // 1st gets the +20000 Oka effectively because others are paying for it in the -30000 calc.
+                 
+                 // Let's just return the raw points and let frontend handle "Final Score" display?
+                 // Or apply it here. Let's apply standard Tenhou logic:
+                 // Score = (Raw Points - 30000) / 1000 + Uma
+                 
+                 const finalPoint = (p.points - 30000) + uma
+                 if (idx === 0) {
+                     // Top adds the "Oka" implicitly because Sum of (p.points - 30000) is -20000.
+                     // Wait, (100000 - 120000) = -20000.
+                     // If we just add Uma (+20k, +10k...), total is -20000 + 0 = -20000.
+                     // We need to add Oka to Top.
+                     // Oka is usually explicitly added to Top.
+                     return { id: p.getId(), points: p.points, finalScore: finalPoint + 20000, rank: idx + 1 }
+                 }
+                 
+                 return { id: p.getId(), points: p.points, finalScore: finalPoint, rank: idx + 1 }
+            })
+
             return {
                 roomId,
                 isGameOver: true,
@@ -994,7 +1518,7 @@ export class MahjongGame {
                     ...events,
                     {
                         eventName: 'game-over',
-                        payload: { scores: this.players.map((p) => p.points) },
+                        payload: { scores: this.players.map((p) => p.points), finalRanking: finalScores },
                         to: 'all',
                     },
                 ],
@@ -1016,6 +1540,19 @@ export class MahjongGame {
         roomId: string,
         playerId: string,
     ): { shouldProceed: boolean; update?: GameUpdate } {
+        // If player had a Ron option but skipped, they are in Temporary Furiten
+        const pending = this.pendingActions[playerId]
+        if (pending && pending.ron) {
+             const player = this.getPlayer(playerId)
+             if (player) {
+                 player.isTemporaryFuriten = true
+                 // Also Riichi Furiten check
+                 if (player.isRiichi) {
+                     player.isRiichiFuriten = true
+                 }
+             }
+        }
+        
         delete this.pendingActions[playerId]
 
         if (Object.keys(this.pendingActions).length === 0) {
@@ -1049,9 +1586,20 @@ export class MahjongGame {
             // 유국 (Ryuukyoku)
             return this.endKyoku(roomId, { reason: 'ryuukyoku' })
         }
+        
+        // Reset Temporary Furiten on Draw (Tenhou: "Same-turn furiten removal is at discarding a tile" - wait, if I draw, it's my turn, I can't Ron anyway. But if I discard, I lift furiten.)
+        // But usually "Temporary Furiten" is "Until next turn".
+        // Code: player.isTemporaryFuriten = false (Will be reset on discard in discardTile)
+        // Actually, if I draw, I can Tsumo.
+        // If I pass a Ron, I am Furiten. Then I draw. Can I Tsumo? Yes.
+        // Then I discard. Furiten lifted.
+        // So resetting on Discard is correct. But what if I Ankan?
+        // If I Ankan, I draw again.
+        // Let's ensure it's reset on Discard.
 
         currentPlayer.draw(tile)
-        currentPlayer.isFuriten = RuleManager.calculateFuriten(currentPlayer)
+        // Furiten check update
+        currentPlayer.isFuriten = RuleManager.calculateFuriten(currentPlayer) || currentPlayer.isTemporaryFuriten || currentPlayer.isRiichiFuriten
 
         const ankanList = RuleManager.getAnkanOptions(currentPlayer)
         const kakanList = RuleManager.getKakanOptions(currentPlayer)
@@ -1100,7 +1648,7 @@ export class MahjongGame {
             events,
         }
     }
-
+    
     /**
      * AI를 위한 게임 관측 정보를 생성합니다.
      */
