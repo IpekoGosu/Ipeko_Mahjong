@@ -21,7 +21,7 @@ describe('MahjongGateway', () => {
 
     beforeAll(async () => {
         await initializeEnv()
-        
+
         const moduleFixture: TestingModule = await Test.createTestingModule({
             imports: [MahjongModule],
         }).compile()

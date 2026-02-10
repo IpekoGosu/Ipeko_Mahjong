@@ -99,34 +99,40 @@ export class RuleManager {
             counts[s] = (counts[s] || 0) + 1
         })
 
-        const possibleAnkans = Object.keys(counts).filter((tile) => counts[tile] === 4)
+        const possibleAnkans = Object.keys(counts).filter(
+            (tile) => counts[tile] === 4,
+        )
 
         if (player.isRiichi) {
             // Rule: Can only Ankan if:
             // 1. The Ankan involves the drawn tile (No "Sending Kan" / Okuri-kan).
             // 2. The Ankan does not change the waits.
-            
+
             if (!player.lastDrawnTile) return []
             const drawnTileStr = player.lastDrawnTile.toString()
-            
-            return possibleAnkans.filter(tileStr => {
+
+            return possibleAnkans.filter((tileStr) => {
                 // 1. Must involve drawn tile
                 if (tileStr !== drawnTileStr) return false
-                
+
                 // 2. Check if waits change
                 // Current waits
                 const currentWaits = this.getWaits(player).sort()
-                
+
                 // Simulated waits after Ankan
                 // We need to simulate the hand state after Ankan.
                 // Player class has 'getHandStringForRiichi'.
                 // If we Ankan 'tileStr', we remove 4 tiles and add a 'closed kan' meld.
                 // We can construct the string manually.
-                
+
                 // Construct hand string for simulation
-                const remainingHand = hand.filter(t => t.toString() !== tileStr)
-                let testHandStr = this.convertTilesToRiichiString(remainingHand.map(t => t.toString()))
-                
+                const remainingHand = hand.filter(
+                    (t) => t.toString() !== tileStr,
+                )
+                let testHandStr = this.convertTilesToRiichiString(
+                    remainingHand.map((t) => t.toString()),
+                )
+
                 // Add existing melds
                 const melds = player.getMelds()
                 melds.forEach((meld) => {
@@ -137,11 +143,11 @@ export class RuleManager {
                         .join('')
                     testHandStr += `+${ranks}${suit}`
                 })
-                
+
                 // Add NEW Ankan Meld
-                // Ankan in riichi lib format: "010m" (closed)? 
+                // Ankan in riichi lib format: "010m" (closed)?
                 // Riichi lib format for closed kan: "1111m" treated as?
-                // Actually riichi lib detects "1111m" as 4 tiles. 
+                // Actually riichi lib detects "1111m" as 4 tiles.
                 // But we need to specify it's a Kan (meld).
                 // In riichi string, "+1111m" might be open kan.
                 // How to specify Closed Kan?
@@ -160,29 +166,34 @@ export class RuleManager {
                 // However, `riichi` lib usually treats `+1111m` as Meld.
                 // For Wait Calculation, Open vs Closed Kan doesn't matter for *Waits* (shapes), only for Yaku (Suuankou vs Taiaitou).
                 // So using `+1111m` (Meld) is safe for checking *Waits*.
-                
+
                 const rank = tileStr[0]
                 const suit = tileStr[1]
                 testHandStr += `+${rank}${rank}${rank}${rank}${suit}`
-                
+
                 try {
-                    const result = new Riichi(testHandStr).calc() as RiichiResult
+                    const result = new Riichi(
+                        testHandStr,
+                    ).calc() as RiichiResult
                     // Check waits
                     let newWaits: string[] = []
                     if (result.hairi?.now === 0 && result.hairi.wait) {
                         newWaits.push(...Object.keys(result.hairi.wait))
                     }
-                    if (result.hairi7and13?.now === 0 && result.hairi7and13.wait) {
+                    if (
+                        result.hairi7and13?.now === 0 &&
+                        result.hairi7and13.wait
+                    ) {
                         newWaits.push(...Object.keys(result.hairi7and13.wait))
                     }
                     newWaits = Array.from(new Set(newWaits)).sort()
-                    
+
                     // Compare arrays
                     if (currentWaits.length !== newWaits.length) return false
                     for (let i = 0; i < currentWaits.length; i++) {
                         if (currentWaits[i] !== newWaits[i]) return false
                     }
-                    
+
                     return true
                 } catch (e) {
                     console.error('Error simulating Ankan waits', e)
@@ -283,7 +294,7 @@ export class RuleManager {
         hand.forEach((tile) => {
             const rank = tile.getRank()
             const suit = tile.getSuit()
-            
+
             // Check if terminal or honor
             if (suit === 'z' || rank === 1 || rank === 9) {
                 // Determine uniqueness based on suit and rank (ignore id, aka)
@@ -291,7 +302,7 @@ export class RuleManager {
                 // 0m, 0p, 0s are 5.
                 // 1m, 9m, 1p, 9p, 1s, 9s, 1z...7z
                 // 0 is not 1 or 9, so safe.
-                
+
                 // If 1m and 1m exist, we count only 1 unique.
                 // `tile.toString()` format: rank+suit. (e.g. 1m).
                 // Red 5 is 0m. Rank is 5. Not terminal.
@@ -300,7 +311,7 @@ export class RuleManager {
                 uniqueTiles.add(`${rank}${suit}`)
             }
         })
-        
+
         return uniqueTiles.size
     }
 
@@ -409,7 +420,9 @@ export class RuleManager {
 
         // Add Uradora if Riichi
         if (context.isRiichi && context.uradora) {
-            const uradoraList = context.uradora.map((u) => this.getActualDora(u))
+            const uradoraList = context.uradora.map((u) =>
+                this.getActualDora(u),
+            )
             riichi.dora = [...riichi.dora, ...uradoraList]
         }
 
