@@ -1,3 +1,4 @@
+import { ScoreCalculation } from '../interfaces/mahjong.types'
 import { MahjongGame } from '../classes/mahjong.game.class'
 import { Player } from '../classes/player.class'
 
@@ -43,7 +44,19 @@ describe('Mahjong Scoring Logic', () => {
         // endKyoku is private. We can use (game as any) for testing.
 
         // Scenario 1: Ko wins from Oya
-        ;(game as any).endKyoku('test-room', {
+        ;(
+            game as unknown as {
+                endKyoku: (
+                    roomId: string,
+                    result: {
+                        reason: 'ron' | 'tsumo' | 'ryuukyoku'
+                        winnerId?: string
+                        loserId?: string
+                        score?: ScoreCalculation
+                    },
+                ) => void
+            }
+        ).endKyoku('test-room', {
             reason: 'ron',
             winnerId: ko.getId(),
             loserId: oya.getId(),
@@ -72,7 +85,19 @@ describe('Mahjong Scoring Logic', () => {
             text: '',
         }
 
-        ;(game as any).endKyoku('test-room', {
+        ;(
+            game as unknown as {
+                endKyoku: (
+                    roomId: string,
+                    result: {
+                        reason: 'ron' | 'tsumo' | 'ryuukyoku'
+                        winnerId?: string
+                        loserId?: string
+                        score?: ScoreCalculation
+                    },
+                ) => void
+            }
+        ).endKyoku('test-room', {
             reason: 'ron',
             winnerId: winner.getId(),
             loserId: loser.getId(),
@@ -100,7 +125,19 @@ describe('Mahjong Scoring Logic', () => {
             text: '',
         }
 
-        ;(game as any).endKyoku('test-room', {
+        ;(
+            game as unknown as {
+                endKyoku: (
+                    roomId: string,
+                    result: {
+                        reason: 'ron' | 'tsumo' | 'ryuukyoku'
+                        winnerId?: string
+                        loserId?: string
+                        score?: ScoreCalculation
+                    },
+                ) => void
+            }
+        ).endKyoku('test-room', {
             reason: 'ron',
             winnerId: oya.getId(),
             loserId: ko.getId(),
@@ -129,7 +166,19 @@ describe('Mahjong Scoring Logic', () => {
             text: '',
         }
 
-        ;(game as any).endKyoku('test-room', {
+        ;(
+            game as unknown as {
+                endKyoku: (
+                    roomId: string,
+                    result: {
+                        reason: 'ron' | 'tsumo' | 'ryuukyoku'
+                        winnerId?: string
+                        loserId?: string
+                        score?: ScoreCalculation
+                    },
+                ) => void
+            }
+        ).endKyoku('test-room', {
             reason: 'tsumo',
             winnerId: winner.getId(),
             score: scoreResult,
@@ -159,7 +208,19 @@ describe('Mahjong Scoring Logic', () => {
             text: '',
         }
 
-        ;(game as any).endKyoku('test-room', {
+        ;(
+            game as unknown as {
+                endKyoku: (
+                    roomId: string,
+                    result: {
+                        reason: 'ron' | 'tsumo' | 'ryuukyoku'
+                        winnerId?: string
+                        loserId?: string
+                        score?: ScoreCalculation
+                    },
+                ) => void
+            }
+        ).endKyoku('test-room', {
             reason: 'tsumo',
             winnerId: oya.getId(),
             score: scoreResult,

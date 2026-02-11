@@ -1126,16 +1126,11 @@ export class MahjongGame {
             //   If Loser is Oya: Loser pays score.oya[0]
             //   If Loser is Ko: Loser pays score.ko[0] (or score.ten)
 
-            let basePoints = 0
-            if (winner.isOya) {
-                basePoints = winnerInfo.score.ten
-            } else {
-                if (loser.isOya) {
-                    basePoints = winnerInfo.score.oya[0]
-                } else {
-                    basePoints = winnerInfo.score.ko[0]
-                }
-            }
+            const basePoints = this._calculateRonBasePoints(
+                winner,
+                loser,
+                winnerInfo.score,
+            )
 
             const totalPoints = basePoints + honbaPoints + kyotakuPoints
             winner.points += totalPoints
@@ -1165,16 +1160,11 @@ export class MahjongGame {
             const kyotakuPoints = isHeadbump ? this.kyotaku * 1000 : 0 // current kyotaku
 
             // Re-calculate base points (could be refactored to reuse)
-            let basePoints = 0
-            if (winner.isOya) {
-                basePoints = winnerInfo.score.ten
-            } else {
-                if (loser.isOya) {
-                    basePoints = winnerInfo.score.oya[0]
-                } else {
-                    basePoints = winnerInfo.score.ko[0]
-                }
-            }
+            const basePoints = this._calculateRonBasePoints(
+                winner,
+                loser,
+                winnerInfo.score,
+            )
 
             const totalPoints = basePoints + honbaPoints + kyotakuPoints
 
@@ -1329,16 +1319,11 @@ export class MahjongGame {
 
             // Basic Score Update (Winner gets score + sticks + honba bonus)
             // Determine base score points (Ron Payment)
-            let basePoints = 0
-            if (winner.isOya) {
-                basePoints = result.score.ten
-            } else {
-                if (loser.isOya) {
-                    basePoints = result.score.oya[0]
-                } else {
-                    basePoints = result.score.ko[0]
-                }
-            }
+            const basePoints = this._calculateRonBasePoints(
+                winner,
+                loser,
+                result.score,
+            )
 
             // Honba bonus: 300 pts per honba
             const honbaPoints = this.honba * 300
@@ -1607,6 +1592,20 @@ export class MahjongGame {
     // #endregion
 
     // #region Private Helper Methods
+
+    /**
+     * Calculates the base points for a Ron (win from discard).
+     */
+    private _calculateRonBasePoints(
+        winner: Player,
+        loser: Player,
+        score: ScoreCalculation,
+    ): number {
+        if (winner.isOya) {
+            return score.ten
+        }
+        return loser.isOya ? score.oya[0] : score.ko[0]
+    }
 
     /**
      * 게임 종료 시 최종 순위와 점수를 계산하고 이벤트를 생성합니다.
