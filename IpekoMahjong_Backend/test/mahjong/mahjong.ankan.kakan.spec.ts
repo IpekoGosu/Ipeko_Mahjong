@@ -1,8 +1,8 @@
-import { MahjongGame } from '../classes/mahjong.game.class'
-import { Tile } from '../classes/tile.class'
-import { RuleManager } from '../classes/rule.manager'
-import { Player } from '../classes/player.class'
-import { Meld } from '../interfaces/mahjong.types'
+import { MahjongGame } from '@src/modules/mahjong/classes/mahjong.game.class'
+import { Tile } from '@src/modules/mahjong/classes/tile.class'
+import { RuleManager } from '@src/modules/mahjong/classes/rule.manager'
+import { Player } from '@src/modules/mahjong/classes/player.class'
+import { Meld } from '@src/modules/mahjong/interfaces/mahjong.types'
 
 describe('Ankan and Kakan Logic', () => {
     let game: MahjongGame

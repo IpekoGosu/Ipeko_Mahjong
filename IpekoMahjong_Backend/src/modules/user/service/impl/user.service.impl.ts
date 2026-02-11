@@ -9,9 +9,7 @@ import { UserLoginDto } from '@src/modules/user/dto/user.login.dto'
 import { hashPassword, matchPassword } from '@src/common/utils/bcrypt.hash'
 import { UserRepository } from '@src/modules/user/repository/user.repository'
 import { UserService } from '@src/modules/user/service/user.service'
-import { Response } from 'express'
 import { PrismaService } from '@src/modules/prisma/prisma.service'
-import { ENV } from '@src/common/utils/env'
 
 @Injectable()
 export class UserServiceImpl extends UserService {
@@ -37,7 +35,7 @@ export class UserServiceImpl extends UserService {
         return UserDto.fromUserEntityToDto(createUserResult)
     }
 
-    async login(userLoginDto: UserLoginDto, res: Response) {
+    async login(userLoginDto: UserLoginDto) {
         // 1. password match with db user
         const dbUser = await this.prisma.$transaction(async (tx) => {
             return await this.userRepository.findByEmail(userLoginDto.email, tx)
@@ -57,20 +55,9 @@ export class UserServiceImpl extends UserService {
 
         const userDto = UserDto.fromUserEntityToDto(dbUser)
 
-        // 2. create jwts and cookies
+        // 2. create jwts
         const accessToken = this.authService.createAccessToken(userDto)
         const refreshToken = this.authService.createRefreshToken(userDto)
-
-        res.cookie('access_token', accessToken, {
-            httpOnly: true,
-            secure: !!(ENV.NODE_ENV === 'production'), // HTTPS에만 적용
-            maxAge: 1000 * 60 * 120,
-        })
-        res.cookie('refresh_token', refreshToken, {
-            httpOnly: true,
-            secure: !!(ENV.NODE_ENV === 'production'),
-            maxAge: 1000 * 60 * 60 * 24 * 14,
-        })
 
         const jwt = new JwtDto(accessToken, refreshToken)
         return { jwt, user: userDto }

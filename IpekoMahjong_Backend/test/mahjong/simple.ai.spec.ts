@@ -1,5 +1,5 @@
-import { SimpleAI } from '../ai/simple.ai'
-import { GameObservation } from '../ai/mahjong-ai.interface'
+import { SimpleAI } from '@src/modules/mahjong/ai/simple.ai'
+import { GameObservation } from '@src/modules/mahjong/ai/mahjong-ai.interface'
 
 describe('SimpleAI', () => {
     let ai: SimpleAI
@@ -40,7 +40,7 @@ describe('SimpleAI', () => {
         const discard = await ai.decideDiscard(obs)
         const duration = Date.now() - start
 
-        expect(duration).toBeGreaterThanOrEqual(1000)
+        expect(duration).toBeLessThan(500)
         expect(discard).toBeDefined()
         expect(obs.myHand).toContain(discard)
     }, 5000) // Increase timeout for this test
@@ -62,7 +62,7 @@ describe('SimpleAI', () => {
         const action = await ai.decideAction(obs, '1m', { pon: true })
         const duration = Date.now() - start
 
-        expect(duration).toBeGreaterThanOrEqual(1000)
+        expect(duration).toBeLessThan(500)
         expect(action).toBe('skip')
     }, 5000)
 })

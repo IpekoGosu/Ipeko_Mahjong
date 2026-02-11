@@ -37,7 +37,7 @@ export class MahjongGateway {
 
     async handleConnection(client: Socket) {
         try {
-            const token = extractJwt(client as unknown as RequestWithAuth)
+            const token = extractJwt(client as RequestWithAuth)
 
             if (!token) {
                 this.logger.warn(
@@ -421,10 +421,16 @@ export class MahjongGateway {
                 }
             }
             // 15초 대기 (아무도 선택하지 않으면 다음 턴)
-            this.scheduleNextTurn(roomId, 15000)
+            this.scheduleNextTurn(
+                roomId,
+                process.env.NODE_ENV === 'test' ? 100 : 15000,
+            )
         } else {
             // 행동할 수 있는 사람이 없으면 바로(혹은 짧은 딜레이 후) 다음 턴
-            this.scheduleNextTurn(roomId, 1000)
+            this.scheduleNextTurn(
+                roomId,
+                process.env.NODE_ENV === 'test' ? 10 : 1000,
+            )
         }
     }
 
@@ -492,7 +498,7 @@ export class MahjongGateway {
         })
 
         if (update.isGameOver) {
-            console.log(
+            this.logger.log(
                 `Game over in room ${update.roomId}. Reason: ${update.reason}`,
             )
             this.gameRoomService.removeRoom(update.roomId)
@@ -525,14 +531,13 @@ export class MahjongGateway {
                     await this.handlePostUpdateActions(roomId, gameUpdate)
                 } catch (error) {
                     if (error instanceof Error) {
-                        console.error(
-                            `Error in scheduled next turn for room ${roomId}:`,
-                            error,
+                        this.logger.error(
+                            `Error in scheduled next turn for room ${roomId}: ${error.message}`,
+                            error.stack,
                         )
                     } else {
-                        console.error(
-                            `Unknown error in scheduled next turn for room ${roomId}:`,
-                            String(error),
+                        this.logger.error(
+                            `Unknown error in scheduled next turn for room ${roomId}: ${String(error)}`,
                         )
                     }
                 }

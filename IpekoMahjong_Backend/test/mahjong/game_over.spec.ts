@@ -1,4 +1,7 @@
-import { MahjongGame, GameUpdate } from '../classes/mahjong.game.class'
+import {
+    MahjongGame,
+    GameUpdate,
+} from '@src/modules/mahjong/classes/mahjong.game.class'
 
 interface FinalRankingItem {
     id: string
@@ -7,8 +10,21 @@ interface FinalRankingItem {
     rank: number
 }
 
+class TestMahjongGame extends MahjongGame {
+    public getInitialPlayerOrder(): string[] {
+        return this.initialPlayerOrder
+    }
+
+    public triggerHandleGameOver(
+        roomId: string,
+        events: GameUpdate['events'],
+    ): GameUpdate {
+        return this.handleGameOver(roomId, events)
+    }
+}
+
 describe('MahjongGame - Game Over and Ranking', () => {
-    let game: MahjongGame
+    let game: TestMahjongGame
     const roomId = 'test-room'
 
     beforeEach(() => {
@@ -18,7 +34,7 @@ describe('MahjongGame - Game Over and Ranking', () => {
             { id: 'p3', isAi: false },
             { id: 'p4', isAi: false },
         ]
-        game = new MahjongGame(playerInfos)
+        game = new TestMahjongGame(playerInfos)
         game.startGame(roomId)
     })
 
@@ -29,9 +45,7 @@ describe('MahjongGame - Game Over and Ranking', () => {
         // Whoever was earlier in the initial seat order should be ranked higher.
 
         // We can check initialPlayerOrder
-        const initialOrder = (
-            game as unknown as { initialPlayerOrder: string[] }
-        ).initialPlayerOrder
+        const initialOrder = game.getInitialPlayerOrder()
 
         // Set everyone to 25000 initially (default)
         players.forEach((p) => (p.points = 25000))
@@ -54,18 +68,8 @@ describe('MahjongGame - Game Over and Ranking', () => {
         // Trigger game over by making someone go below 0 (dobon)
         getPlayerById(fourthId).points = -1000
 
-        // Mock a Ron to trigger endKyoku (multi or single)
-        // Actually we can just call the private handleGameOver if we use any,
-        // or trigger it through endKyoku.
-
-        const update = (
-            game as unknown as {
-                handleGameOver: (
-                    roomId: string,
-                    events: unknown[],
-                ) => GameUpdate
-            }
-        ).handleGameOver(roomId, [])
+        // Trigger game over through the helper method
+        const update = game.triggerHandleGameOver(roomId, [])
 
         const gameOverEvent = update.events.find(
             (e) => e.eventName === 'game-over',

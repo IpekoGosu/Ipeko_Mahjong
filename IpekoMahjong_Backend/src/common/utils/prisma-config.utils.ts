@@ -9,6 +9,7 @@ export interface DbConfig {
     database: string
     ssl?: { rejectUnauthorized: boolean }
     isCloud: boolean
+    connectionLimit: number
 }
 
 export function getDbConfig(): DbConfig {
@@ -24,6 +25,7 @@ export function getDbConfig(): DbConfig {
         database: ENV.DATABASE_NAME,
         ssl: isCloud ? { rejectUnauthorized: false } : undefined,
         isCloud,
+        connectionLimit: 10,
     }
 }
 

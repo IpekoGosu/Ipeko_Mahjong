@@ -1,6 +1,9 @@
-import { MahjongGame, GameUpdate } from '../classes/mahjong.game.class'
-import { Tile } from '../classes/tile.class'
-import { Suit } from '../interfaces/mahjong.types'
+import {
+    MahjongGame,
+    GameUpdate,
+} from '@src/modules/mahjong/classes/mahjong.game.class'
+import { Tile } from '@src/modules/mahjong/classes/tile.class'
+import { Suit } from '@src/modules/mahjong/interfaces/mahjong.types'
 
 describe('Suufuu Renda (Four Winds Discard)', () => {
     let game: MahjongGame

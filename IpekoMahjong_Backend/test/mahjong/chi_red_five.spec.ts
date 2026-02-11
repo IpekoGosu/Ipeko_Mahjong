@@ -1,6 +1,6 @@
-import { MahjongGame } from '../classes/mahjong.game.class'
-import { Player } from '../classes/player.class'
-import { Tile } from '../classes/tile.class'
+import { MahjongGame } from '@src/modules/mahjong/classes/mahjong.game.class'
+import { Player } from '@src/modules/mahjong/classes/player.class'
+import { Tile } from '@src/modules/mahjong/classes/tile.class'
 
 describe('Chi Logic with Red Fives', () => {
     let game: MahjongGame

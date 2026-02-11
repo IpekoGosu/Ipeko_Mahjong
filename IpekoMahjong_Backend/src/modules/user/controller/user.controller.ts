@@ -17,7 +17,7 @@ import { UserCreateDto } from '@src/modules/user/dto/user.create.dto'
 import { UserDto } from '@src/modules/user/dto/user.dto'
 import { UserLoginDto } from '@src/modules/user/dto/user.login.dto'
 import { UserService } from '@src/modules/user/service/user.service'
-import { Response } from 'express'
+import type * as express from 'express'
 import {
     ApiBody,
     ApiConsumes,
@@ -35,6 +35,7 @@ import {
 } from '@src/common/utils/google.cloud'
 import { CommonError } from '@src/common/error/common.error'
 import { ERROR_STATUS } from '@src/common/error/error.status'
+import { ENV } from '@src/common/utils/env'
 
 @ApiTags('user')
 @Controller('user')
@@ -54,9 +55,24 @@ export class UserController {
     @ApiOperation({ summary: 'User login' })
     @ApiSuccessResponse(JwtDto)
     @HttpCode(HttpStatus.OK)
-    async login(@Body() userLogDto: UserLoginDto, @Res() res: Response) {
-        const data = await this.userService.login(userLogDto, res)
-        res.send(new CommonSuccessResponse(data))
+    async login(
+        @Body() userLogDto: UserLoginDto,
+        @Res({ passthrough: true }) res: express.Response,
+    ) {
+        const data = await this.userService.login(userLogDto)
+
+        res.cookie('access_token', data.jwt.accessToken, {
+            httpOnly: true,
+            secure: !!(ENV.NODE_ENV === 'production'),
+            maxAge: 1000 * 60 * 120,
+        })
+        res.cookie('refresh_token', data.jwt.refreshToken, {
+            httpOnly: true,
+            secure: !!(ENV.NODE_ENV === 'production'),
+            maxAge: 1000 * 60 * 60 * 24 * 14,
+        })
+
+        return new CommonSuccessResponse(data)
     }
 
     @Get('me')
@@ -99,7 +115,10 @@ export class UserController {
 
     @Get('test')
     @ApiQuery({ name: 'fileName', type: 'string' })
-    async test2(@Query('fileName') fileName: string, @Res() res: Response) {
+    async test2(
+        @Query('fileName') fileName: string,
+        @Res() res: express.Response,
+    ) {
         try {
             const file = await downloadFileFromGoogleStorage(fileName)
             res.setHeader('Content-Type', 'application/octet-stream')

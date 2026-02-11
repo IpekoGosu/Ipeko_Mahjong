@@ -2,7 +2,14 @@ import { GameObservation, MahjongAI } from './mahjong-ai.interface'
 import { PossibleActions } from '../interfaces/mahjong.types'
 
 export class SimpleAI implements MahjongAI {
+    private readonly delay: number
+
+    constructor() {
+        this.delay = process.env.NODE_ENV === 'test' ? 0 : 1000
+    }
+
     private sleep(ms: number) {
+        if (ms <= 0) return Promise.resolve()
         return new Promise((resolve) => setTimeout(resolve, ms))
     }
 
@@ -10,7 +17,7 @@ export class SimpleAI implements MahjongAI {
      * Decides which tile to discard to minimize Shanten.
      */
     async decideDiscard(obs: GameObservation): Promise<string> {
-        await this.sleep(1000)
+        await this.sleep(this.delay)
 
         const handTiles = [...obs.myHand]
         return handTiles[handTiles.length - 1]
@@ -24,7 +31,7 @@ export class SimpleAI implements MahjongAI {
         _discardedTile: string,
         _possibleActions: PossibleActions,
     ): Promise<'chi' | 'pon' | 'kan' | 'ron' | 'skip'> {
-        await this.sleep(1000)
+        await this.sleep(this.delay)
         return 'skip'
     }
 

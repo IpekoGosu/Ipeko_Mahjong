@@ -1,14 +1,32 @@
-import { MahjongGame } from '../classes/mahjong.game.class'
-import { Tile } from '../classes/tile.class'
+import { MahjongGame } from '@src/modules/mahjong/classes/mahjong.game.class'
+import { Tile } from '@src/modules/mahjong/classes/tile.class'
+import { Player } from '@src/modules/mahjong/classes/player.class'
+import { SimpleAI } from '@src/modules/mahjong/ai/simple.ai'
+
+class TestPlayer extends Player {
+    public setHand(tiles: Tile[]) {
+        this.hand = tiles
+    }
+}
+
+class TestMahjongGame extends MahjongGame {
+    protected createPlayer(info: { id: string; isAi: boolean }): Player {
+        const player = new TestPlayer(info.id, false, info.isAi)
+        if (info.isAi) {
+            player.ai = new SimpleAI()
+        }
+        return player
+    }
+}
 
 describe('MahjongGame Naki (Call) System', () => {
-    let game: MahjongGame
+    let game: TestMahjongGame
     const roomId = 'test-room'
 
     beforeEach(() => {
         // Player 0: Human
         // Player 1, 2, 3: AI
-        game = new MahjongGame([
+        game = new TestMahjongGame([
             { id: 'human', isAi: false },
             { id: 'ai1', isAi: true },
             { id: 'ai2', isAi: true },
@@ -23,7 +41,7 @@ describe('MahjongGame Naki (Call) System', () => {
         const human = game.getPlayer('human')
         expect(human).toBeDefined()
         if (!human) return // Force human hand to have two 1m (Man)
-        ;(human as unknown as { hand: Tile[] }).hand = [
+        ;(human as TestPlayer).setHand([
             new Tile('m', 1, false, 0),
             new Tile('m', 1, false, 1),
             new Tile('p', 1, false, 2),
@@ -37,7 +55,7 @@ describe('MahjongGame Naki (Call) System', () => {
             new Tile('z', 2, false, 10),
             new Tile('z', 2, false, 11),
             new Tile('z', 3, false, 12),
-        ]
+        ])
 
         // AI1 discards 1m
         const actions = game.getPossibleActions('ai1', '1m')
@@ -55,7 +73,7 @@ describe('MahjongGame Naki (Call) System', () => {
         if (!human)
             return // Set up Tenpai on 1z (East) - Shanpon wait with 2z
             // Hand: 111m 234m 567m 11z 22z
-        ;(human as unknown as { hand: Tile[] }).hand = [
+        ;(human as TestPlayer).setHand([
             new Tile('m', 1, false, 0),
             new Tile('m', 1, false, 1),
             new Tile('m', 1, false, 2),
@@ -69,7 +87,7 @@ describe('MahjongGame Naki (Call) System', () => {
             new Tile('z', 1, false, 10),
             new Tile('z', 2, false, 11),
             new Tile('z', 2, false, 12),
-        ]
+        ])
 
         // AI1 discards 1z (East)
         const actions = game.getPossibleActions('ai1', '1z')

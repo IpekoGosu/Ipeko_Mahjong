@@ -1,6 +1,7 @@
-import { Injectable } from '@nestjs/common'
+import { Injectable, OnModuleDestroy } from '@nestjs/common'
 import { MahjongGame } from '../../classes/mahjong.game.class'
 import { GameRoomService } from '../game-room.service'
+import { WinstonLoggerService } from '@src/common/logger/winston.logger.service'
 
 // 인터페이스는 구현 파일 내에서 직접 export하여 순환 참조를 방지합니다.
 export interface GameRoom {
@@ -11,8 +12,25 @@ export interface GameRoom {
 }
 
 @Injectable()
-export class GameRoomServiceImpl extends GameRoomService {
+export class GameRoomServiceImpl
+    extends GameRoomService
+    implements OnModuleDestroy
+{
     private readonly rooms = new Map<string, GameRoom>()
+
+    constructor(private readonly logger: WinstonLoggerService) {
+        super()
+    }
+
+    onModuleDestroy() {
+        for (const room of this.rooms.values()) {
+            if (room.timer) {
+                clearTimeout(room.timer)
+                room.timer = undefined
+            }
+        }
+        this.rooms.clear()
+    }
 
     createRoom(humanPlayerSocketId: string): GameRoom {
         const roomId = this.generateRoomId()
@@ -32,7 +50,7 @@ export class GameRoomServiceImpl extends GameRoomService {
         }
 
         this.rooms.set(roomId, room)
-        console.log(`Room created: ${roomId}`)
+        this.logger.log(`Room created: ${roomId}`)
         return room
     }
 
@@ -41,8 +59,13 @@ export class GameRoomServiceImpl extends GameRoomService {
     }
 
     removeRoom(roomId: string): void {
+        const room = this.rooms.get(roomId)
+        if (room?.timer) {
+            clearTimeout(room.timer)
+            room.timer = undefined
+        }
         this.rooms.delete(roomId)
-        console.log(`Room removed: ${roomId}`)
+        this.logger.log(`Room removed: ${roomId}`)
     }
 
     findRoomByPlayerId(socketId: string): GameRoom | undefined {

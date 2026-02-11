@@ -10,6 +10,7 @@ import {
 import { SimpleAI } from '../ai/simple.ai'
 import { GameObservation } from '../ai/mahjong-ai.interface'
 import { RuleManager, WinContext } from './rule.manager'
+import { Logger } from '@nestjs/common'
 
 /**
  * 게임 내에서 발생하는 모든 상태 변화를 담는 객체.
@@ -33,6 +34,7 @@ export interface GameUpdate {
  * 메서드는 게임 상태 변화에 대한 요약본인 GameUpdate 객체를 반환합니다.
  */
 export class MahjongGame {
+    private readonly logger = new Logger(MahjongGame.name)
     private wall: Wall
     private players: Player[]
     private currentTurnIndex: number
@@ -51,7 +53,7 @@ export class MahjongGame {
     // Suufuu Renda Tracking
     private firstTurnDiscards: { wind: string; count: number } | null = null
 
-    private initialPlayerOrder: string[] = [] // For tie-breaking
+    protected initialPlayerOrder: string[] = [] // For tie-breaking
 
     // Hanchan State
     private bakaze: '1z' | '2z' | '3z' | '4z' = '1z' // 1z: East, 2z: South, 3z: West, 4z: North
@@ -64,22 +66,24 @@ export class MahjongGame {
         this.wall = new Wall()
         // Wall shuffling moved to startKyoku
 
-        this.players = playerInfos.map((info) => {
-            const player = new Player(info.id, false, info.isAi) // isOya set later
-            if (info.isAi) {
-                player.ai = new SimpleAI()
-            }
-            return player
-        })
+        this.players = playerInfos.map((info) => this.createPlayer(info))
         // dealInitialHands removed from constructor
         this.currentTurnIndex = 0
+    }
+
+    protected createPlayer(info: { id: string; isAi: boolean }): Player {
+        const player = new Player(info.id, false, info.isAi) // isOya set later
+        if (info.isAi) {
+            player.ai = new SimpleAI()
+        }
+        return player
     }
 
     // #region Public Methods - Game Flow Control
 
     /** 게임을 시작하고 첫 국(Kyoku)의 정보를 반환합니다. */
     startGame(roomId: string): GameUpdate {
-        console.log('Starting game')
+        this.logger.log('Starting game')
 
         // Randomize seating (Oya selection)
         // Fisher-Yates shuffle
@@ -106,7 +110,7 @@ export class MahjongGame {
 
     /** 새로운 국(Kyoku)을 시작하고 초기 상태(13장)를 반환합니다. */
     private startKyoku(roomId: string): GameUpdate {
-        console.log(
+        this.logger.log(
             `Starting Kyoku: ${this.bakaze}-${this.kyokuNum}, Honba: ${this.honba}`,
         )
 
@@ -241,7 +245,7 @@ export class MahjongGame {
         tileString: string,
         isRiichi: boolean = false,
     ): GameUpdate {
-        console.log(`Discarding tile: ${tileString}, isRiichi: ${isRiichi}`)
+        this.logger.log(`Discarding tile: ${tileString}, isRiichi: ${isRiichi}`)
         const player = this.getPlayer(playerId)
         const currentPlayer = this.getCurrentTurnPlayer()
 
@@ -607,7 +611,7 @@ export class MahjongGame {
                     }
                 }
             } catch (e) {
-                console.error(
+                this.logger.error(
                     `Error checking Ron for player ${player.getId()}:`,
                     e,
                 )
@@ -1084,7 +1088,7 @@ export class MahjongGame {
     }
 
     // New Multi-Winner EndKyoku (replacing/extending endKyoku)
-    private endKyokuMulti(
+    protected endKyokuMulti(
         roomId: string,
         result: {
             reason: 'ron'
@@ -1286,7 +1290,7 @@ export class MahjongGame {
         return this.startKyoku(roomId)
     }
 
-    private endKyoku(
+    protected endKyoku(
         roomId: string,
         result: {
             reason: 'ron' | 'tsumo' | 'ryuukyoku'
@@ -1610,7 +1614,7 @@ export class MahjongGame {
     /**
      * 게임 종료 시 최종 순위와 점수를 계산하고 이벤트를 생성합니다.
      */
-    private handleGameOver(
+    protected handleGameOver(
         roomId: string,
         events: GameUpdate['events'],
     ): GameUpdate {
@@ -1665,15 +1669,15 @@ export class MahjongGame {
 
     /** 턴을 다음 플레이어로 넘깁니다. */
     private advanceTurn(): void {
-        console.log('Advancing turn')
-        console.log(`Current turn index: ${this.currentTurnIndex}`)
+        this.logger.log('Advancing turn')
+        this.logger.log(`Current turn index: ${this.currentTurnIndex}`)
         this.currentTurnIndex =
             (this.currentTurnIndex + 1) % this.players.length
         this.turnCounter++
     }
 
     /** 현재 턴의 플레이어를 위해 타일을 뽑고, AI라면 자동으로 버립니다. */
-    private drawTileForCurrentPlayer(roomId: string): GameUpdate {
+    protected drawTileForCurrentPlayer(roomId: string): GameUpdate {
         const currentPlayer = this.getCurrentTurnPlayer()
         const tile = this.wall.draw()
 

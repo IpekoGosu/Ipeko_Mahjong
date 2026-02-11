@@ -3,6 +3,7 @@ import * as path from 'path'
 import { SecretManagerServiceClient } from '@google-cloud/secret-manager'
 import { CommonError } from '../error/common.error'
 import { ERROR_STATUS } from '../error/error.status'
+import { Logger } from '@nestjs/common'
 
 // Load .env file initially for local development
 dotenv.config({ path: path.resolve(process.cwd(), '.env') })
@@ -56,9 +57,9 @@ export async function initializeEnv() {
                 Object.assign(process.env, secrets)
             }
         } catch (error) {
-            console.error(
+            new Logger('ENV').error(
                 'Failed to load secrets from Google Secret Manager:',
-                error instanceof Error ? error.message : String(error),
+                error instanceof Error ? error.stack : String(error),
             )
             if (process.env.NODE_ENV === 'production') throw error
         }

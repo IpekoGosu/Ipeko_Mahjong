@@ -1,15 +1,17 @@
 import { Tile } from './tile.class'
 import { Meld } from '../interfaces/mahjong.types'
 import { MahjongAI } from '../ai/mahjong-ai.interface'
+import { Logger } from '@nestjs/common'
 
 export class Player {
+    private readonly logger = new Logger(Player.name)
     private readonly id: string
     public isOya: boolean
     readonly isAi: boolean
     public ai?: MahjongAI
-    private hand: Tile[] = []
-    private discards: Tile[] = []
-    private melds: Meld[] = []
+    protected hand: Tile[] = []
+    protected discards: Tile[] = []
+    protected melds: Meld[] = []
     public lastDrawnTile: Tile | null = null
     public isRiichi: boolean = false
     public isDoubleRiichi: boolean = false
@@ -78,7 +80,9 @@ export class Player {
         )
 
         if (tileIndex === -1) {
-            console.error(`Player ${this.id} does not have tile ${tileString}`)
+            this.logger.error(
+                `Player ${this.id} does not have tile ${tileString}`,
+            )
             return null // Tile not in hand
         }
 
