@@ -1096,11 +1096,6 @@ export class MahjongGame {
         // Headbump logic for Kyotaku/Honba: First winner in list gets it.
         // Assuming `result.winners` is sorted by turn order (Headbump).
 
-        // Reuse endKyoku logic?
-        // I'll copy-paste endKyoku and adapt for Multi-Ron.
-        // Single Ron is just Multi-Ron with 1 winner.
-        // Tsumo/Ryuukyoku are different.
-
         const startScores: Record<string, number> = {}
         this.players.forEach((p) => (startScores[p.getId()] = p.points))
 
@@ -1125,10 +1120,21 @@ export class MahjongGame {
             // Reset Kyotaku if claimed
             if (isHeadbump) nextKyotaku = 0
 
-            const totalPoints =
-                winnerInfo.score.ten + honbaPoints + kyotakuPoints
+            // Determine base score points (Ron Payment)
+            // If Winner is Oya: Loser pays score.ten (or score.oya[0])
+            // If Winner is Ko:
+            //   If Loser is Oya: Loser pays score.oya[0]
+            //   If Loser is Ko: Loser pays score.ko[0] (or score.ten)
+
+            const basePoints = this._calculateRonBasePoints(
+                winner,
+                loser,
+                winnerInfo.score,
+            )
+
+            const totalPoints = basePoints + honbaPoints + kyotakuPoints
             winner.points += totalPoints
-            loser.points -= winnerInfo.score.ten + honbaPoints
+            loser.points -= basePoints + honbaPoints
 
             // Renchan check: If ANY winner is Oya, Renchan.
             if (winner.isOya) {
@@ -1146,19 +1152,28 @@ export class MahjongGame {
         // Event generation (One score-update per winner? Or combined?)
         // Existing `score-update` takes 1 winner. Send multiple events.
         result.winners.forEach((winnerInfo, idx) => {
+            const winner = this.getPlayer(winnerInfo.winnerId)!
+
             // Calculate points again for event payload consistency
             const isHeadbump = idx === 0
             const honbaPoints = isHeadbump ? this.honba * 300 : 0
             const kyotakuPoints = isHeadbump ? this.kyotaku * 1000 : 0 // current kyotaku
-            const totalPoints =
-                winnerInfo.score.ten + honbaPoints + kyotakuPoints
+
+            // Re-calculate base points (could be refactored to reuse)
+            const basePoints = this._calculateRonBasePoints(
+                winner,
+                loser,
+                winnerInfo.score,
+            )
+
+            const totalPoints = basePoints + honbaPoints + kyotakuPoints
 
             events.push({
                 eventName: 'score-update',
                 payload: {
                     winnerId: winnerInfo.winnerId,
                     loserId: result.loserId,
-                    score: winnerInfo.score.ten,
+                    score: basePoints, // Send actual points exchanged (excluding sticks/honba)
                     totalPoints: totalPoints,
                     reason: 'ron',
                 },
@@ -1303,13 +1318,19 @@ export class MahjongGame {
             const loser = this.getPlayer(result.loserId)!
 
             // Basic Score Update (Winner gets score + sticks + honba bonus)
+            // Determine base score points (Ron Payment)
+            const basePoints = this._calculateRonBasePoints(
+                winner,
+                loser,
+                result.score,
+            )
+
             // Honba bonus: 300 pts per honba
             const honbaPoints = this.honba * 300
-            const totalPoints =
-                result.score.ten + honbaPoints + this.kyotaku * 1000
+            const totalPoints = basePoints + honbaPoints + this.kyotaku * 1000
 
             winner.points += totalPoints
-            loser.points -= result.score.ten + honbaPoints
+            loser.points -= basePoints + honbaPoints
 
             // Reset Kyotaku as it's claimed
             nextKyotaku = 0
@@ -1327,7 +1348,7 @@ export class MahjongGame {
                 payload: {
                     winnerId: winner.getId(),
                     loserId: loser.getId(),
-                    score: result.score.ten,
+                    score: basePoints,
                     totalPoints: totalPoints,
                     reason: 'ron',
                 },
@@ -1355,12 +1376,12 @@ export class MahjongGame {
                 renchan = true
                 nextHonba++
             } else {
-                // Ko wins: Oya pays `result.score.oya[0]`, other Ko pay `result.score.ko[0]`
+                // Ko wins: Oya pays `result.score.ko[0]`, other Ko pay `result.score.ko[1]`
                 const oya = this.players.find((p) => p.isOya)!
                 const kos = otherPlayers.filter((p) => !p.isOya)
 
-                const oyaPayment = result.score.oya[0] + 100 * this.honba
-                const koPayment = result.score.ko[0] + 100 * this.honba
+                const oyaPayment = result.score.ko[0] + 100 * this.honba
+                const koPayment = result.score.ko[1] + 100 * this.honba
 
                 oya.points -= oyaPayment
                 kos.forEach((p) => (p.points -= koPayment))
@@ -1571,6 +1592,20 @@ export class MahjongGame {
     // #endregion
 
     // #region Private Helper Methods
+
+    /**
+     * Calculates the base points for a Ron (win from discard).
+     */
+    private _calculateRonBasePoints(
+        winner: Player,
+        loser: Player,
+        score: ScoreCalculation,
+    ): number {
+        if (winner.isOya) {
+            return score.ten
+        }
+        return loser.isOya ? score.oya[0] : score.ko[0]
+    }
 
     /**
      * 게임 종료 시 최종 순위와 점수를 계산하고 이벤트를 생성합니다.
