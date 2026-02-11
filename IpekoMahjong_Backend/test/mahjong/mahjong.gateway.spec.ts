@@ -117,27 +117,21 @@ describe('MahjongGateway', () => {
             }) => {
                 myRoomId = data.roomId
                 myPlayerId = data.yourPlayerId
-                // console.log(`[TEST] Game started. Room: ${myRoomId}, Me: ${myPlayerId}`)
             },
         )
 
         client.on('turn-changed', (data: { playerId: string }) => {
-            // console.log(`[TEST] Turn changed to: ${data.playerId}`)
             if (data.playerId === myPlayerId) {
                 myTurnCount++
-                // console.log(`[TEST] My turn count: ${myTurnCount}`)
                 if (myTurnCount === 2 && !doneCalled) {
                     doneCalled = true
-                    // console.log(`[TEST] Success! Reached my second turn.`)
                     done()
                 }
             }
         })
 
         client.on('new-tile-drawn', (data: { tile: string }) => {
-            // console.log(`[TEST] New tile drawn: ${data.tile}`)
             // Always discard when drawing a tile to keep the game moving
-            // console.log(`[TEST] Discarding ${data.tile} for me`)
             client.emit('discard-tile', {
                 roomId: myRoomId,
                 tile: data.tile,
@@ -147,7 +141,6 @@ describe('MahjongGateway', () => {
         client.on(
             'update-discard',
             (data: { playerId: string; tile: string }) => {
-                // console.log(`[TEST] Discard: ${data.tile} by ${data.playerId}`)
             },
         )
     }, 20000)

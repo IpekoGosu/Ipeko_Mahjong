@@ -8,7 +8,13 @@ export class PrismaService
     implements OnModuleInit, OnModuleDestroy
 {
     constructor() {
-        super({ adapter: getPrismaAdapter() })
+        super({
+            adapter: getPrismaAdapter(),
+            transactionOptions: {
+                maxWait: 2000,
+                timeout: 20000,
+            },
+        })
     }
 
     async onModuleInit() {

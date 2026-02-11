@@ -51,15 +51,12 @@ export class WinstonLoggerService implements LoggerService {
     }
 
     log(message: string) {
-        const nodeEnv = process.env.NODE_ENV || ENV.NODE_ENV || 'development'
-        if (nodeEnv !== 'test' && nodeEnv !== 'production') {
-            this.logger.info(message)
-        }
+        this.logger.info(message)
     }
 
     // NestJS LoggerService doesn't have info, but we keep it for direct calls
     info(message: string) {
-        this.log(message)
+        this.logger.info(message)
     }
 
     error(message: string, trace?: string) {

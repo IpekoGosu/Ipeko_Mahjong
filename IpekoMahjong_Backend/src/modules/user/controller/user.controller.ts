@@ -35,6 +35,7 @@ import {
 } from '@src/common/utils/google.cloud'
 import { CommonError } from '@src/common/error/common.error'
 import { ERROR_STATUS } from '@src/common/error/error.status'
+import { ENV } from '@src/common/utils/env'
 
 @ApiTags('user')
 @Controller('user')
@@ -56,10 +57,22 @@ export class UserController {
     @HttpCode(HttpStatus.OK)
     async login(
         @Body() userLogDto: UserLoginDto,
-        @Res() res: express.Response,
+        @Res({ passthrough: true }) res: express.Response,
     ) {
-        const data = await this.userService.login(userLogDto, res)
-        res.send(new CommonSuccessResponse(data))
+        const data = await this.userService.login(userLogDto)
+
+        res.cookie('access_token', data.jwt.accessToken, {
+            httpOnly: true,
+            secure: !!(ENV.NODE_ENV === 'production'),
+            maxAge: 1000 * 60 * 120,
+        })
+        res.cookie('refresh_token', data.jwt.refreshToken, {
+            httpOnly: true,
+            secure: !!(ENV.NODE_ENV === 'production'),
+            maxAge: 1000 * 60 * 60 * 24 * 14,
+        })
+
+        return new CommonSuccessResponse(data)
     }
 
     @Get('me')
