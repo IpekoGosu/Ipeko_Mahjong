@@ -1,14 +1,28 @@
-import { ScoreCalculation } from '../interfaces/mahjong.types'
-import { MahjongGame } from '../classes/mahjong.game.class'
-import { Player } from '../classes/player.class'
+import { MahjongGame } from '@src/modules/mahjong/classes/mahjong.game.class'
+import { Player } from '@src/modules/mahjong/classes/player.class'
+import { ScoreCalculation } from '@src/modules/mahjong/interfaces/mahjong.types'
+
+class TestMahjongGame extends MahjongGame {
+    public triggerEndKyoku(
+        roomId: string,
+        result: {
+            reason: 'ron' | 'tsumo' | 'ryuukyoku'
+            winnerId?: string
+            loserId?: string
+            score?: ScoreCalculation
+        },
+    ) {
+        return this.endKyoku(roomId, result)
+    }
+}
 
 describe('Mahjong Scoring Logic', () => {
-    let game: MahjongGame
+    let game: TestMahjongGame
     let players: Player[]
 
     beforeEach(() => {
         // 4 players
-        game = new MahjongGame([
+        game = new TestMahjongGame([
             { id: 'p1', isAi: false },
             { id: 'p2', isAi: true },
             { id: 'p3', isAi: true },
@@ -28,7 +42,7 @@ describe('Mahjong Scoring Logic', () => {
 
         // Mock a Ron score result for 40 fu 1 han
         // From my debug script: Ko Ron 40fu 1han => oya pays 2000, ko pays 1300.
-        const scoreResult = {
+        const scoreResult: ScoreCalculation = {
             han: 1,
             fu: 40,
             ten: 1300,
@@ -40,23 +54,8 @@ describe('Mahjong Scoring Logic', () => {
             text: '',
         }
 
-        // We use private methods for testing if needed, or trigger via public ones.
-        // endKyoku is private. We can use (game as any) for testing.
-
         // Scenario 1: Ko wins from Oya
-        ;(
-            game as unknown as {
-                endKyoku: (
-                    roomId: string,
-                    result: {
-                        reason: 'ron' | 'tsumo' | 'ryuukyoku'
-                        winnerId?: string
-                        loserId?: string
-                        score?: ScoreCalculation
-                    },
-                ) => void
-            }
-        ).endKyoku('test-room', {
+        game.triggerEndKyoku('test-room', {
             reason: 'ron',
             winnerId: ko.getId(),
             loserId: oya.getId(),
@@ -73,7 +72,7 @@ describe('Mahjong Scoring Logic', () => {
         const winner = kos[0]
         const loser = kos[1]
 
-        const scoreResult = {
+        const scoreResult: ScoreCalculation = {
             han: 1,
             fu: 40,
             ten: 1300,
@@ -85,19 +84,7 @@ describe('Mahjong Scoring Logic', () => {
             text: '',
         }
 
-        ;(
-            game as unknown as {
-                endKyoku: (
-                    roomId: string,
-                    result: {
-                        reason: 'ron' | 'tsumo' | 'ryuukyoku'
-                        winnerId?: string
-                        loserId?: string
-                        score?: ScoreCalculation
-                    },
-                ) => void
-            }
-        ).endKyoku('test-room', {
+        game.triggerEndKyoku('test-room', {
             reason: 'ron',
             winnerId: winner.getId(),
             loserId: loser.getId(),
@@ -113,7 +100,7 @@ describe('Mahjong Scoring Logic', () => {
         const ko = players.find((p) => !p.isOya)!
 
         // Oya Ron 40fu 1han => 2000
-        const scoreResult = {
+        const scoreResult: ScoreCalculation = {
             han: 1,
             fu: 40,
             ten: 2000,
@@ -125,19 +112,7 @@ describe('Mahjong Scoring Logic', () => {
             text: '',
         }
 
-        ;(
-            game as unknown as {
-                endKyoku: (
-                    roomId: string,
-                    result: {
-                        reason: 'ron' | 'tsumo' | 'ryuukyoku'
-                        winnerId?: string
-                        loserId?: string
-                        score?: ScoreCalculation
-                    },
-                ) => void
-            }
-        ).endKyoku('test-room', {
+        game.triggerEndKyoku('test-room', {
             reason: 'ron',
             winnerId: oya.getId(),
             loserId: ko.getId(),
@@ -154,7 +129,7 @@ describe('Mahjong Scoring Logic', () => {
         const otherKos = players.filter((p) => !p.isOya && p !== winner)
 
         // 40 fu 2 han Ko Tsumo => (1300, 700)
-        const scoreResult = {
+        const scoreResult: ScoreCalculation = {
             han: 2,
             fu: 40,
             ten: 2700,
@@ -166,19 +141,7 @@ describe('Mahjong Scoring Logic', () => {
             text: '',
         }
 
-        ;(
-            game as unknown as {
-                endKyoku: (
-                    roomId: string,
-                    result: {
-                        reason: 'ron' | 'tsumo' | 'ryuukyoku'
-                        winnerId?: string
-                        loserId?: string
-                        score?: ScoreCalculation
-                    },
-                ) => void
-            }
-        ).endKyoku('test-room', {
+        game.triggerEndKyoku('test-room', {
             reason: 'tsumo',
             winnerId: winner.getId(),
             score: scoreResult,
@@ -196,7 +159,7 @@ describe('Mahjong Scoring Logic', () => {
         const kos = players.filter((p) => !p.isOya)
 
         // 40 fu 2 han Oya Tsumo => (1300all)
-        const scoreResult = {
+        const scoreResult: ScoreCalculation = {
             han: 2,
             fu: 40,
             ten: 3900,
@@ -208,19 +171,7 @@ describe('Mahjong Scoring Logic', () => {
             text: '',
         }
 
-        ;(
-            game as unknown as {
-                endKyoku: (
-                    roomId: string,
-                    result: {
-                        reason: 'ron' | 'tsumo' | 'ryuukyoku'
-                        winnerId?: string
-                        loserId?: string
-                        score?: ScoreCalculation
-                    },
-                ) => void
-            }
-        ).endKyoku('test-room', {
+        game.triggerEndKyoku('test-room', {
             reason: 'tsumo',
             winnerId: oya.getId(),
             score: scoreResult,

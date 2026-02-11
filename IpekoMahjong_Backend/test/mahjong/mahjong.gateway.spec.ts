@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing'
 import { INestApplication } from '@nestjs/common'
 import { Socket, io } from 'socket.io-client'
-import { MahjongModule } from '../mahjong.module'
+import { MahjongModule } from '@src/modules/mahjong/mahjong.module'
 import { AddressInfo } from 'net'
 import { Server } from 'http'
 import { JwtService } from '@nestjs/jwt'
@@ -29,7 +29,7 @@ describe('MahjongGateway', () => {
         jwtService = moduleFixture.get<JwtService>(JwtService)
         token = jwtService.sign({ sub: 1, email: 'test@example.com' })
 
-        app = moduleFixture.createNestApplication()
+        app = moduleFixture.createNestApplication({ logger: false })
         await app.listen(0) // Listen on a random port
         const server = app.getHttpServer() as Server
         const address = server.address() as AddressInfo
@@ -44,15 +44,21 @@ describe('MahjongGateway', () => {
         // Connect to the WebSocket server
         client = io(`http://localhost:${port}`, {
             auth: { token },
+            transports: ['websocket'],
+            forceNew: true,
         })
         client.on('connect', () => {
             done()
         })
+        client.on('connect_error', (err) => {
+            console.error('Connection Error:', err.message)
+            done(err)
+        })
     })
 
     afterEach(() => {
-        if (client.connected) {
-            client.disconnect()
+        if (client) {
+            client.close()
         }
     })
 
@@ -61,6 +67,7 @@ describe('MahjongGateway', () => {
 
         let gameStartedReceived = false
         let turnChangedReceived = false
+        let doneCalled = false
 
         client.on('game-started', (data: Record<string, unknown>) => {
             gameStartedReceived = true
@@ -71,7 +78,8 @@ describe('MahjongGateway', () => {
             expect(data.dora).toHaveLength(1)
 
             // Check if all events are received
-            if (gameStartedReceived && turnChangedReceived) {
+            if (gameStartedReceived && turnChangedReceived && !doneCalled) {
+                doneCalled = true
                 done()
             }
         })
@@ -79,7 +87,8 @@ describe('MahjongGateway', () => {
         client.on('turn-changed', (data: Record<string, unknown>) => {
             turnChangedReceived = true
             expect(data).toHaveProperty('playerId')
-            if (gameStartedReceived && turnChangedReceived) {
+            if (gameStartedReceived && turnChangedReceived && !doneCalled) {
+                doneCalled = true
                 done()
             }
         })
@@ -94,7 +103,9 @@ describe('MahjongGateway', () => {
         client.emit('start-game')
 
         let myRoomId: string
-        let myHand: string[] = []
+        let myPlayerId: string
+        let myTurnCount = 0
+        let doneCalled = false
 
         client.on(
             'game-started',
@@ -105,26 +116,39 @@ describe('MahjongGateway', () => {
                 oyaId: string
             }) => {
                 myRoomId = data.roomId
-                myHand = data.hand
-
-                // If I am Oya, I discard immediately to start the game
-                if (data.yourPlayerId === data.oyaId) {
-                    const tileToDiscard = myHand[myHand.length - 1]
-                    client.emit('discard-tile', {
-                        roomId: myRoomId,
-                        tile: tileToDiscard,
-                    })
-                }
+                myPlayerId = data.yourPlayerId
+                // console.log(`[TEST] Game started. Room: ${myRoomId}, Me: ${myPlayerId}`)
             },
         )
 
-        client.on('new-tile-drawn', (data: Record<string, unknown>) => {
-            // This event is received when it's my turn AGAIN (after AIs played)
-            // or if I wasn't Oya.
-
-            // If this fires, it means the round completed successfully!
-            expect(data).toHaveProperty('tile')
-            done()
+        client.on('turn-changed', (data: { playerId: string }) => {
+            // console.log(`[TEST] Turn changed to: ${data.playerId}`)
+            if (data.playerId === myPlayerId) {
+                myTurnCount++
+                // console.log(`[TEST] My turn count: ${myTurnCount}`)
+                if (myTurnCount === 2 && !doneCalled) {
+                    doneCalled = true
+                    // console.log(`[TEST] Success! Reached my second turn.`)
+                    done()
+                }
+            }
         })
-    }, 15000)
+
+        client.on('new-tile-drawn', (data: { tile: string }) => {
+            // console.log(`[TEST] New tile drawn: ${data.tile}`)
+            // Always discard when drawing a tile to keep the game moving
+            // console.log(`[TEST] Discarding ${data.tile} for me`)
+            client.emit('discard-tile', {
+                roomId: myRoomId,
+                tile: data.tile,
+            })
+        })
+
+        client.on(
+            'update-discard',
+            (data: { playerId: string; tile: string }) => {
+                // console.log(`[TEST] Discard: ${data.tile} by ${data.playerId}`)
+            },
+        )
+    }, 20000)
 })

@@ -1,8 +1,14 @@
-import { Wall } from '../classes/wall.class'
-import { Player } from '../classes/player.class'
-import { Tile } from '../classes/tile.class'
+import { Wall } from '@src/modules/mahjong/classes/wall.class'
+import { Player } from '@src/modules/mahjong/classes/player.class'
+import { Tile } from '@src/modules/mahjong/classes/tile.class'
 import Riichi from 'riichi'
-import { RiichiResult } from '../interfaces/mahjong.types'
+import { RiichiResult } from '@src/modules/mahjong/interfaces/mahjong.types'
+
+class TestWall extends Wall {
+    public getTiles() {
+        return this.tiles
+    }
+}
 
 describe('Wall', () => {
     let wall: Wall
@@ -16,17 +22,19 @@ describe('Wall', () => {
     })
 
     it('should shuffle the tiles', () => {
-        const wall1 = new Wall()
-        const wall2 = new Wall()
+        const wall1 = new TestWall()
+        const wall2 = new TestWall()
 
         // Of course, there is a small chance that the order is the same
         wall2.shuffle()
 
-        // Note: private property access for testing purposes
-        const wall1Tiles = (wall1 as unknown as { tiles: Tile[] }).tiles
+        // Note: using protected property via subclass
+        const wall1Tiles = wall1
+            .getTiles()
             .map((t) => t.id)
             .join('')
-        const wall2Tiles = (wall2 as unknown as { tiles: Tile[] }).tiles
+        const wall2Tiles = wall2
+            .getTiles()
             .map((t) => t.id)
             .join('')
 

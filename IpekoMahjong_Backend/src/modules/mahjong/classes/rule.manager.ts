@@ -4,16 +4,7 @@ import {
 } from '@src/modules/mahjong/interfaces/mahjong.types'
 import { Player } from './player.class'
 import Riichi from 'riichi'
-
-interface RiichiInstance {
-    isTsumo: boolean
-    isOya: boolean
-    bakaze: number
-    jikaze: number
-    dora: string[]
-    extra: string
-    calc(): RiichiResult
-}
+import { Logger } from '@nestjs/common'
 
 export interface WinContext {
     bakaze: string // '1z', '2z', etc.
@@ -34,6 +25,7 @@ export interface WinContext {
 }
 
 export class RuleManager {
+    private static readonly logger = new Logger(RuleManager.name)
     static getActualDora(indicator: string): string {
         const rank = parseInt(indicator[0])
         const suit = indicator[1]
@@ -81,7 +73,7 @@ export class RuleManager {
                     validDiscards.push(tileStr)
                 }
             } catch (e) {
-                console.error(
+                RuleManager.logger.error(
                     `Error calculating shanten for tile ${tileStr}:`,
                     e,
                 )
@@ -196,7 +188,7 @@ export class RuleManager {
 
                     return true
                 } catch (e) {
-                    console.error('Error simulating Ankan waits', e)
+                    RuleManager.logger.error('Error simulating Ankan waits', e)
                     return false
                 }
             })
@@ -279,7 +271,7 @@ export class RuleManager {
             }
             return Array.from(new Set(waits))
         } catch (e) {
-            console.error(
+            RuleManager.logger.error(
                 `Error getting waits for player ${player.getId()}:`,
                 e,
             )
@@ -344,7 +336,7 @@ export class RuleManager {
                 (result.hairi7and13?.now ?? 100) === 0
             )
         } catch (e) {
-            console.error(
+            RuleManager.logger.error(
                 `Error checking Tenpai for player ${player.getId()}:`,
                 e,
             )
@@ -397,33 +389,10 @@ export class RuleManager {
         // This sets isTsumo = false in the library constructor automatically
         if (!context.isTsumo) {
             if (!context.winningTile) {
-                console.error('Winning tile required for Ron')
+                RuleManager.logger.error('Winning tile required for Ron')
                 return null
             }
             handStr += `+${context.winningTile}`
-        }
-
-        const riichi = new Riichi(handStr) as unknown as RiichiInstance
-
-        // 2. Set Options
-        riichi.isTsumo = context.isTsumo
-        riichi.isOya = player.isOya
-
-        // Winds
-        // 1z=East(1), 2z=South(2), etc.
-        riichi.bakaze = parseInt(context.bakaze[0])
-        // Seat wind
-        riichi.jikaze = parseInt(context.seatWind[0])
-
-        // Dora (Convert indicators to actual tiles)
-        riichi.dora = context.dora.map((d) => this.getActualDora(d))
-
-        // Add Uradora if Riichi
-        if (context.isRiichi && context.uradora) {
-            const uradoraList = context.uradora.map((u) =>
-                this.getActualDora(u),
-            )
-            riichi.dora = [...riichi.dora, ...uradoraList]
         }
 
         // 3. Construct Extra String (Situational Yaku)
@@ -435,10 +404,28 @@ export class RuleManager {
         if (context.isRinshan || context.isChankan) extra += 'k'
         if (context.isTenhou || context.isChiihou) extra += 't'
 
-        riichi.extra = extra
+        const riichi = new Riichi(handStr)
+        const dora = context.dora.map((d) => this.getActualDora(d))
+
+        // Add Uradora if Riichi
+        if (context.isRiichi && context.uradora) {
+            const uradoraList = context.uradora.map((u) =>
+                this.getActualDora(u),
+            )
+            dora.push(...uradoraList)
+        }
+
+        Object.assign(riichi, {
+            isTsumo: context.isTsumo,
+            isOya: player.isOya,
+            bakaze: parseInt(context.bakaze[0]),
+            jikaze: parseInt(context.seatWind[0]),
+            dora,
+            extra,
+        })
 
         // 4. Calculate
-        const result = riichi.calc()
+        const result = (riichi as { calc(): RiichiResult }).calc()
 
         // 5. Validate
         if (!result.isAgari) {

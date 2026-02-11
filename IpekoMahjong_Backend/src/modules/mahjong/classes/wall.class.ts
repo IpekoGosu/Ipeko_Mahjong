@@ -2,8 +2,8 @@ import { Tile } from './tile.class'
 import { Suit } from '../interfaces/mahjong.types'
 
 export class Wall {
-    private tiles: Tile[] = []
-    private deadWall: Tile[] = []
+    protected tiles: Tile[] = []
+    protected deadWall: Tile[] = []
     private dora: Tile[] = []
 
     constructor() {

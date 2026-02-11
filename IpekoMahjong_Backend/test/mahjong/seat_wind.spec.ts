@@ -1,6 +1,6 @@
-import { MahjongGame } from '../classes/mahjong.game.class'
-import { Tile } from '../classes/tile.class'
-import { Suit } from '../interfaces/mahjong.types'
+import { MahjongGame } from '@src/modules/mahjong/classes/mahjong.game.class'
+import { Tile } from '@src/modules/mahjong/classes/tile.class'
+import { Suit } from '@src/modules/mahjong/interfaces/mahjong.types'
 
 describe('Seat Wind Calculation', () => {
     let game: MahjongGame
