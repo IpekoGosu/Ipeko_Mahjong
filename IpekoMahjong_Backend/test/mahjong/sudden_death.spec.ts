@@ -1,4 +1,4 @@
-import { MahjongGame } from '@src/modules/mahjong/classes/mahjong.game.class'
+import { MahjongGame } from '@src/modules/mahjong/classes/AbstractMahjongGame'
 import { ScoreCalculation } from '@src/modules/mahjong/interfaces/mahjong.types'
 import { RoundManager4p } from '@src/modules/mahjong/classes/managers/RoundManager.4p'
 import { TurnManager } from '@src/modules/mahjong/classes/managers/TurnManager'
@@ -16,6 +16,9 @@ class TestMahjongGame extends MahjongGame {
     }
     public setOyaIndex(val: number) {
         this.roundManager.oyaIndex = val
+        this.getPlayers().forEach((p, idx) => {
+            p.isOya = idx === val
+        })
     }
     public callEndKyoku(
         roomId: string,
@@ -74,8 +77,8 @@ describe('MahjongGame - Indefinite Sudden Death', () => {
 
         const result = game.callEndKyoku(roomId, {
             reason: 'ron',
-            winners: [{ winnerId: 'p1', score: mockScore }],
-            loserId: 'p2',
+            winners: [{ winnerId: players[0].getId(), score: mockScore }],
+            loserId: players[1].getId(),
         })
 
         expect(result.isGameOver).toBe(false)
@@ -107,8 +110,8 @@ describe('MahjongGame - Indefinite Sudden Death', () => {
 
         const result = game.callEndKyoku(roomId, {
             reason: 'ron',
-            winners: [{ winnerId: 'p1', score: mockScore }],
-            loserId: 'p2',
+            winners: [{ winnerId: players[0].getId(), score: mockScore }],
+            loserId: players[1].getId(),
         })
 
         expect(result.isGameOver).toBe(false)
@@ -139,8 +142,8 @@ describe('MahjongGame - Indefinite Sudden Death', () => {
 
         const result = game.callEndKyoku(roomId, {
             reason: 'ron',
-            winners: [{ winnerId: 'p1', score: mockScore }],
-            loserId: 'p2',
+            winners: [{ winnerId: players[0].getId(), score: mockScore }],
+            loserId: players[1].getId(),
         })
 
         expect(result.isGameOver).toBe(false)
@@ -173,8 +176,8 @@ describe('MahjongGame - Indefinite Sudden Death', () => {
 
         const result = game.callEndKyoku(roomId, {
             reason: 'ron',
-            winners: [{ winnerId: 'p3', score: mockScore }],
-            loserId: 'p2',
+            winners: [{ winnerId: pWinner.getId(), score: mockScore }],
+            loserId: players[1].getId(),
         })
 
         expect(result.isGameOver).toBe(true)
@@ -207,7 +210,7 @@ describe('MahjongGame - Indefinite Sudden Death', () => {
         const result = game.callEndKyoku(roomId, {
             reason: 'ron',
             winners: [{ winnerId: oya.getId(), score: mockScore }],
-            loserId: 'p2',
+            loserId: players[1].getId(),
         })
 
         expect(result.isGameOver).toBe(true) // Agari-yame

@@ -169,11 +169,7 @@ export class RoundManager4p extends AbstractRoundManager {
                 }
 
                 if (!this.isSuddenDeath) {
-                    if (
-                        this.bakaze === '2z' &&
-                        this.kyokuNum === 4 &&
-                        !renchan
-                    ) {
+                    if (this.bakaze === '2z' && this.kyokuNum === 4) {
                         if (maxPoints >= 30000) isGameOver = true
                         else this.isSuddenDeath = true
                     }
@@ -254,6 +250,7 @@ export class RoundManager4p extends AbstractRoundManager {
             roomId,
             isGameOver: false,
             events,
+            reason: result.reason,
         }
     }
 

@@ -1,6 +1,6 @@
 import { SimpleAI } from '@src/modules/mahjong/ai/simple.ai'
 import { GameObservation } from '@src/modules/mahjong/ai/mahjong-ai.interface'
-import { MahjongGame } from '@src/modules/mahjong/classes/mahjong.game.class'
+import { MahjongGame } from '@src/modules/mahjong/classes/AbstractMahjongGame'
 import { RoundManager4p } from '@src/modules/mahjong/classes/managers/RoundManager.4p'
 import { TurnManager } from '@src/modules/mahjong/classes/managers/TurnManager'
 import { ActionManager4p } from '@src/modules/mahjong/classes/managers/ActionManager.4p'

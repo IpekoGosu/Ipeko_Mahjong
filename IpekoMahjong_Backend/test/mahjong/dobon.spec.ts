@@ -1,4 +1,4 @@
-import { MahjongGame } from '@src/modules/mahjong/classes/mahjong.game.class'
+import { MahjongGame } from '@src/modules/mahjong/classes/AbstractMahjongGame'
 import { ScoreCalculation } from '@src/modules/mahjong/interfaces/mahjong.types'
 import { RuleManager } from '@src/modules/mahjong/classes/rule.manager'
 import { RoundManager4p } from '@src/modules/mahjong/classes/managers/RoundManager.4p'
@@ -78,8 +78,8 @@ describe('MahjongGame - Dobon (Bankruptcy) Rules', () => {
 
         const result = game.callEndKyoku(roomId, {
             reason: 'ron',
-            winners: [{ winnerId: 'p3', score: mockScore }],
-            loserId: 'p2',
+            winners: [{ winnerId: p3.getId(), score: mockScore }],
+            loserId: p2.getId(),
         })
 
         expect(result.isGameOver).toBe(true)
@@ -101,7 +101,7 @@ describe('MahjongGame - Dobon (Bankruptcy) Rules', () => {
 
         // Mock Tenpai check to make p2 noten and others tenpai
         jest.spyOn(RuleManager, 'isTenpai').mockImplementation((p) => {
-            return p.getId() !== 'p2'
+            return p.getId() !== p2.getId()
         })
 
         const result = game.callEndKyoku(roomId, {
@@ -138,8 +138,8 @@ describe('MahjongGame - Dobon (Bankruptcy) Rules', () => {
 
         const result = game.callEndKyoku(roomId, {
             reason: 'ron',
-            winners: [{ winnerId: 'p3', score: mockScore }],
-            loserId: 'p2',
+            winners: [{ winnerId: p3.getId(), score: mockScore }],
+            loserId: players[1].getId(),
         })
 
         expect(result.isGameOver).toBe(false)
@@ -174,10 +174,10 @@ describe('MahjongGame - Dobon (Bankruptcy) Rules', () => {
         const result = game.callEndKyokuMulti(roomId, {
             reason: 'ron',
             winners: [
-                { winnerId: 'p3', score: mockScore },
-                { winnerId: 'p4', score: mockScore },
+                { winnerId: p3.getId(), score: mockScore },
+                { winnerId: p4.getId(), score: mockScore },
             ],
-            loserId: 'p2',
+            loserId: p2.getId(),
         })
 
         expect(result.isGameOver).toBe(true)
@@ -197,6 +197,7 @@ describe('MahjongGame - Dobon (Bankruptcy) Rules', () => {
         const players = game.getPlayers()
         const p1 = players[0] // Oya
         const p2 = players[1] // Ko
+        const p3 = players[2] // Winner
 
         p2.points = 200 // Will dobon if pays 300
         game.setKyotaku(1) // 1000 points on table
@@ -215,12 +216,12 @@ describe('MahjongGame - Dobon (Bankruptcy) Rules', () => {
 
         const result = game.callEndKyoku(roomId, {
             reason: 'tsumo',
-            winnerId: 'p3',
+            winnerId: p3.getId(),
             score: mockScore,
         })
 
         expect(result.isGameOver).toBe(true)
-        // Oya (p1) gets kyotaku 1000
-        expect(p1.points).toBe(26000)
+        // Oya (p1) gets kyotaku 1000, but paid 500 for Tsumo. Net +500.
+        expect(p1.points).toBe(25500)
     })
 })

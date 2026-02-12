@@ -221,6 +221,7 @@ export class RoundManagerSanma extends AbstractRoundManager {
             points: p.points,
             rank: idx + 1,
         }))
+        // TODO implement Sanma specific uma and oka
         return {
             roomId,
             isGameOver: true,

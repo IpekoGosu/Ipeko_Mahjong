@@ -301,7 +301,7 @@ export abstract class AbstractMahjongGame {
         tileString: string,
         isRiichi: boolean = false,
     ): GameUpdate {
-        this.logger.log(`Discarding tile: ${tileString}, isRiichi: ${isRiichi}`)
+        // console.log(`[DiscardTile] Player: ${playerId}, Tile: ${tileString}`)
         const player = this.getPlayer(playerId)
         const currentPlayer = this.getCurrentTurnPlayer()
 
@@ -319,6 +319,7 @@ export abstract class AbstractMahjongGame {
                 ],
             }
         }
+        // ... (rest of function)
 
         let doraRevealedEvent: GameUpdate['events'][0] | null = null
         if (this.pendingDoraReveal) {
@@ -507,6 +508,8 @@ export abstract class AbstractMahjongGame {
                     this.turnManager.firstTurnDiscards = null // Sequence broken
                 }
             }
+
+            // console.log(`[Suufuu Check] New Count: ${this.turnManager.firstTurnDiscards?.count}`)
 
             if (this.turnManager.firstTurnDiscards?.count === 4) {
                 return this.endKyoku(roomId, {

@@ -480,12 +480,29 @@ function App() {
         const targetTile = state.actionRequest?.tile
         if (!targetTile && type !== 'skip') return
 
-        // Filter out the target tile from consumedTiles if present,
-        // because we only want to specify which tiles to remove from hand.
-        // Although Player.removeTiles is safe, it's cleaner to send only hand tiles.
-        const consumedTiles = tiles
+        // Filter out the target tile from consumedTiles if present
+        let consumedTiles = tiles
             ? tiles.filter((t) => t !== targetTile)
             : undefined
+
+        // Auto-select tiles for Pon/Kan if not provided
+        if (!consumedTiles && (type === 'pon' || type === 'kan')) {
+            if (!targetTile) return
+
+            const isSameTileType = (t1: string, t2: string) => {
+                const s1 = t1[1]
+                const s2 = t2[1]
+                if (s1 !== s2) return false
+                const r1 = t1[0] === '0' ? '5' : t1[0]
+                const r2 = t2[0] === '0' ? '5' : t2[0]
+                return r1 === r2
+            }
+            
+            const needed = type === 'pon' ? 2 : 3
+            consumedTiles = state.myHand
+                .filter((t) => isSameTileType(t, targetTile))
+                .slice(0, needed)
+        }
 
         socketRef.current?.emit('select-action', {
             roomId: state.roomId,
@@ -527,23 +544,6 @@ function App() {
     const rightPlayer = getPlayerByOffset(1) // 하가 (Next)
     const oppositePlayer = getPlayerByOffset(2) // 대면
     const leftPlayer = getPlayerByOffset(3) // 상가 (Prev)
-
-    // Helper to determine which tile in a meld should be rotated
-    const getRotatedTileIndex = (playerId: string, stolenFromId?: string, tileCount: number = 3) => {
-        if (!stolenFromId) return -1
-        const playerIdx = state.players.findIndex((p) => p.id === playerId)
-        const stolenFromIdx = state.players.findIndex(
-            (p) => p.id === stolenFromId,
-        )
-        if (playerIdx === -1 || stolenFromIdx === -1) return -1
-
-        // 1: Left player, 2: Opposite, 3: Right
-        const relativePos = (playerIdx - stolenFromIdx + 4) % 4
-        if (relativePos === 1) return 0 // Left player -> 1st tile
-        if (relativePos === 2) return 1 // Opposite player -> Middle tile (approximated for Kan)
-        if (relativePos === 3) return tileCount - 1 // Right player -> Last tile
-        return -1
-    }
 
     const getWindName = (wind: string, short = false) => {
         switch (wind) {
@@ -597,11 +597,44 @@ function App() {
         return (
             <div className="flex gap-2 ml-4">
                 {p.melds.map((meld, i) => {
-                    const rotatedIdx = getRotatedTileIndex(p.id, meld.stolenFrom, meld.tiles.length)
+                    // Determine relative position of the stolen tile source
+                    let relativePos = -1
+                    if (meld.stolenFrom) {
+                        const playerIdx = state.players.findIndex((pl) => pl.id === p.id)
+                        const stolenFromIdx = state.players.findIndex((pl) => pl.id === meld.stolenFrom)
+                        if (playerIdx !== -1 && stolenFromIdx !== -1) {
+                             // 1: Left, 2: Opposite, 3: Right
+                             relativePos = (playerIdx - stolenFromIdx + 4) % 4
+                        }
+                    }
+
+                    // Prepare tiles for display
+                    // Backend sends [consumed..., stolen]
+                    let displayTiles = [...meld.tiles]
+                    let rotatedIndex = -1
+
+                    if (relativePos !== -1 && displayTiles.length > 0) {
+                        const stolenTile = displayTiles.pop()! // Remove from end
+                        
+                        if (relativePos === 1) { // Left (Kamicha)
+                            displayTiles.unshift(stolenTile) // Place at start
+                            rotatedIndex = 0
+                        } else if (relativePos === 2) { // Opposite (Toimen)
+                            displayTiles.splice(1, 0, stolenTile) // Place at index 1
+                            rotatedIndex = 1
+                        } else if (relativePos === 3) { // Right (Shimocha)
+                            displayTiles.push(stolenTile) // Place at end
+                            rotatedIndex = displayTiles.length - 1
+                        } else {
+                            // Fallback
+                            displayTiles.push(stolenTile)
+                        }
+                    }
+
                     return (
-                        <div key={i} className="flex bg-black/40 p-1 rounded gap-0.5 shadow-lg backdrop-blur-sm">
-                            {meld.tiles.map((t, j) => {
-                                const isRotated = j === rotatedIdx
+                        <div key={i} className="flex bg-black/40 p-1 rounded gap-0.5 shadow-lg backdrop-blur-sm items-center h-[42px]">
+                            {displayTiles.map((t, j) => {
+                                const isRotated = j === rotatedIndex
                                 return (
                                     <MahjongTile
                                         key={j}

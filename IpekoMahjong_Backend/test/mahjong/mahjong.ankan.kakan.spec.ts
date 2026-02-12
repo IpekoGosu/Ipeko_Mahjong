@@ -1,4 +1,4 @@
-import { MahjongGame } from '@src/modules/mahjong/classes/mahjong.game.class'
+import { MahjongGame } from '@src/modules/mahjong/classes/AbstractMahjongGame'
 import { Tile } from '@src/modules/mahjong/classes/tile.class'
 import { RuleManager } from '@src/modules/mahjong/classes/rule.manager'
 import { Player } from '@src/modules/mahjong/classes/player.class'
@@ -24,7 +24,7 @@ describe('Ankan and Kakan Logic', () => {
             new ActionManager4p(),
         )
         game.startGame('room1')
-        player = game.getPlayer('p1')!
+        player = game.getCurrentTurnPlayer()
         player.resetKyokuState()
     })
 
@@ -69,7 +69,7 @@ describe('Ankan and Kakan Logic', () => {
         player.draw(new Tile('s', 2, false, 3))
         player.draw(new Tile('z', 1, false, 4))
 
-        game.performAction('room1', 'p1', 'ankan', '2s')
+        game.performAction('room1', player.getId(), 'ankan', '2s')
 
         // Check meld
         expect(player.getMelds().length).toBe(1)
@@ -99,7 +99,7 @@ describe('Ankan and Kakan Logic', () => {
         player.draw(new Tile('z', 5, false, 3))
         player.draw(new Tile('m', 1, false, 4))
 
-        game.performAction('room1', 'p1', 'kakan', '5z')
+        game.performAction('room1', player.getId(), 'kakan', '5z')
 
         // Check meld updated
         expect(player.getMelds().length).toBe(1)

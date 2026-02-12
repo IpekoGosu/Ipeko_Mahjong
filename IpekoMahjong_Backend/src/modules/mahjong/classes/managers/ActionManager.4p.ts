@@ -6,7 +6,6 @@ import {
     GameUpdate,
     ScoreCalculation,
     MeldType,
-    Suit,
 } from '../../interfaces/mahjong.types'
 import { RuleManager, WinContext } from '../rule.manager'
 import { AbstractRoundManager } from './AbstractRoundManager'
@@ -295,7 +294,7 @@ export class ActionManager4p extends AbstractActionManager {
             }
             stolenFromId = this.activeDiscard.playerId
             const stolenTile = this.activeDiscard.tile
-            
+
             const removedTiles = player.removeTiles(consumedTiles)
             if (removedTiles.length !== consumedTiles.length) {
                 return {
@@ -331,7 +330,7 @@ export class ActionManager4p extends AbstractActionManager {
                     playerId,
                     type: actionType,
                     tiles: meldTiles.map((t) => t.toString()),
-                    stolenFromId,
+                    stolenFrom: stolenFromId,
                     consumedTiles: tilesToMove,
                 },
                 to: 'all',

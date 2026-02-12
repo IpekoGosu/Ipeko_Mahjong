@@ -1,4 +1,4 @@
-import { AbstractMahjongGame } from './mahjong.game.class'
+import { AbstractMahjongGame } from './AbstractMahjongGame'
 import { RoundManagerSanma } from './managers/RoundManager.Sanma'
 import { TurnManager } from './managers/TurnManager'
 import { ActionManagerSanma } from './managers/ActionManager.Sanma'

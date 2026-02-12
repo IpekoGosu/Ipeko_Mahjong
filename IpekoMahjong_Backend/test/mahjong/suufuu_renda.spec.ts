@@ -1,15 +1,43 @@
-import { MahjongGame } from '@src/modules/mahjong/classes/mahjong.game.class'
+import { MahjongGame } from '@src/modules/mahjong/classes/AbstractMahjongGame'
 import { RoundManager4p } from '@src/modules/mahjong/classes/managers/RoundManager.4p'
 import { TurnManager } from '@src/modules/mahjong/classes/managers/TurnManager'
 import { ActionManager4p } from '@src/modules/mahjong/classes/managers/ActionManager.4p'
+import { Tile } from '@src/modules/mahjong/classes/tile.class'
+import { Player } from '@src/modules/mahjong/classes/player.class'
+import { SimpleAI } from '@src/modules/mahjong/ai/simple.ai'
+
+class TestPlayer extends Player {
+    public forceSetHandLast(tile: Tile) {
+        this.hand.pop()
+        this.hand.push(tile)
+    }
+}
+
+class TestMahjongGame extends MahjongGame {
+    protected createPlayer(info: { id: string; isAi: boolean }): Player {
+        const player = new TestPlayer(info.id, false, info.isAi)
+        if (info.isAi) {
+            player.ai = new SimpleAI()
+        }
+        return player
+    }
+
+    private getTestPlayer(id: string): TestPlayer {
+        return this.getPlayer(id) as TestPlayer
+    }
+
+    public setLastDrawnTile(playerId: string, tile: Tile) {
+        this.getTestPlayer(playerId).forceSetHandLast(tile)
+    }
+}
 
 describe('Suufuu Renda (Four Winds Discard)', () => {
-    let game: MahjongGame
+    let game: TestMahjongGame
     let roomId: string
 
     beforeEach(() => {
         roomId = 'test-room'
-        game = new MahjongGame(
+        game = new TestMahjongGame(
             [
                 { id: 'p1', isAi: false },
                 { id: 'p2', isAi: false },
@@ -24,24 +52,30 @@ describe('Suufuu Renda (Four Winds Discard)', () => {
     })
 
     it('should trigger Suufuu Renda when all 4 players discard the same wind in the first turn', () => {
-        // We need to bypass the random wall and force discards.
-        // turnCounter is used to check first turn.
-        // TurnManager handles currentTurnIndex.
+        game.startFirstTurn(roomId)
 
-        const p1 = game.getPlayer('p1')!
-        const p2 = game.getPlayer('p2')!
-        const p3 = game.getPlayer('p3')!
-        const p4 = game.getPlayer('p4')!
+        // Turn 0
+        let currentPlayerId = game.getCurrentTurnPlayer().getId()
+        game.setLastDrawnTile(currentPlayerId, new Tile('z', 1, false, 0))
+        game.discardTile(roomId, currentPlayerId, '1z')
+        game.proceedToNextTurn(roomId)
 
-        // Force East wind discards
-        // turn 0: p1 discards 1z
-        game.discardTile(roomId, p1.getId(), '1z')
-        // turn 1: p2 discards 1z
-        game.discardTile(roomId, p2.getId(), '1z')
-        // turn 2: p3 discards 1z
-        game.discardTile(roomId, p3.getId(), '1z')
-        // turn 3: p4 discards 1z
-        const result = game.discardTile(roomId, p4.getId(), '1z')
+        // Turn 1
+        currentPlayerId = game.getCurrentTurnPlayer().getId()
+        game.setLastDrawnTile(currentPlayerId, new Tile('z', 1, false, 1))
+        game.discardTile(roomId, currentPlayerId, '1z')
+        game.proceedToNextTurn(roomId)
+
+        // Turn 2
+        currentPlayerId = game.getCurrentTurnPlayer().getId()
+        game.setLastDrawnTile(currentPlayerId, new Tile('z', 1, false, 2))
+        game.discardTile(roomId, currentPlayerId, '1z')
+        game.proceedToNextTurn(roomId)
+
+        // Turn 3
+        currentPlayerId = game.getCurrentTurnPlayer().getId()
+        game.setLastDrawnTile(currentPlayerId, new Tile('z', 1, false, 3))
+        const result = game.discardTile(roomId, currentPlayerId, '1z')
 
         expect(result.reason).toBe('ryuukyoku')
         const endEvent = result.events.find(
@@ -51,35 +85,53 @@ describe('Suufuu Renda (Four Winds Discard)', () => {
     })
 
     it('should NOT trigger Suufuu Renda if the wind sequence is broken', () => {
-        const p1 = game.getPlayer('p1')!
-        const p2 = game.getPlayer('p2')!
+        game.startFirstTurn(roomId)
 
-        game.discardTile(roomId, p1.getId(), '1z')
-        const result = game.discardTile(roomId, p2.getId(), '2z') // Different wind
+        let currentPlayerId = game.getCurrentTurnPlayer().getId()
+        game.setLastDrawnTile(currentPlayerId, new Tile('z', 1, false, 0))
+        game.discardTile(roomId, currentPlayerId, '1z')
+        game.proceedToNextTurn(roomId)
+
+        currentPlayerId = game.getCurrentTurnPlayer().getId()
+        game.setLastDrawnTile(currentPlayerId, new Tile('z', 2, false, 0))
+        const result = game.discardTile(roomId, currentPlayerId, '2z')
 
         expect(result.reason).not.toBe('ryuukyoku')
     })
 
     it('should NOT trigger Suufuu Renda if first player does not discard a wind', () => {
-        const p1 = game.getPlayer('p1')!
-        const result = game.discardTile(roomId, p1.getId(), '1m') // Not a wind
+        game.startFirstTurn(roomId)
+
+        const currentPlayerId = game.getCurrentTurnPlayer().getId()
+        game.setLastDrawnTile(currentPlayerId, new Tile('m', 1, false, 0))
+        const result = game.discardTile(roomId, currentPlayerId, '1m')
         expect(result.reason).not.toBe('ryuukyoku')
     })
 
     it('should NOT trigger Suufuu Renda if a call is made', () => {
-        // Suufuu Renda only happens if no one has made a call.
-        // anyCallDeclared is checked in discardTile.
+        game.startFirstTurn(roomId)
+
+        // Simulate a call happened (mocking property on ActionManager)
         game.actionManager.anyCallDeclared = true
 
-        const p1 = game.getPlayer('p1')!
-        const p2 = game.getPlayer('p2')!
-        const p3 = game.getPlayer('p3')!
-        const p4 = game.getPlayer('p4')!
+        let currentPlayerId = game.getCurrentTurnPlayer().getId()
+        game.setLastDrawnTile(currentPlayerId, new Tile('z', 1, false, 0))
+        game.discardTile(roomId, currentPlayerId, '1z')
+        game.proceedToNextTurn(roomId)
 
-        game.discardTile(roomId, p1.getId(), '1z')
-        game.discardTile(roomId, p2.getId(), '1z')
-        game.discardTile(roomId, p3.getId(), '1z')
-        const result = game.discardTile(roomId, p4.getId(), '1z')
+        currentPlayerId = game.getCurrentTurnPlayer().getId()
+        game.setLastDrawnTile(currentPlayerId, new Tile('z', 1, false, 1))
+        game.discardTile(roomId, currentPlayerId, '1z')
+        game.proceedToNextTurn(roomId)
+
+        currentPlayerId = game.getCurrentTurnPlayer().getId()
+        game.setLastDrawnTile(currentPlayerId, new Tile('z', 1, false, 2))
+        game.discardTile(roomId, currentPlayerId, '1z')
+        game.proceedToNextTurn(roomId)
+
+        currentPlayerId = game.getCurrentTurnPlayer().getId()
+        game.setLastDrawnTile(currentPlayerId, new Tile('z', 1, false, 3))
+        const result = game.discardTile(roomId, currentPlayerId, '1z')
 
         expect(result.reason).not.toBe('ryuukyoku')
     })

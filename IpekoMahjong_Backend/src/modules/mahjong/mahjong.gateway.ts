@@ -7,7 +7,7 @@ import {
 } from '@nestjs/websockets'
 import { Server, Socket } from 'socket.io'
 import { GameRoomService } from './service/game-room.service'
-import { GameUpdate } from './classes/mahjong.game.class'
+import { GameUpdate } from './classes/AbstractMahjongGame'
 import { WinstonLoggerService } from '@src/common/logger/winston.logger.service'
 import { RuleManager } from './classes/rule.manager'
 import { SimpleAI } from './ai/simple.ai'
