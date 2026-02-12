@@ -1,0 +1,310 @@
+import { Player } from '../player.class'
+import { ScoreCalculation, GameUpdate } from '../../interfaces/mahjong.types'
+import { RuleManager } from '../rule.manager'
+import { AbstractRoundManager } from './AbstractRoundManager'
+import { Injectable, Scope } from '@nestjs/common'
+
+@Injectable({ scope: Scope.TRANSIENT })
+export class RoundManager4p extends AbstractRoundManager {
+    public readonly playerCount = 4
+
+    public endRound(
+        roomId: string,
+        players: Player[],
+        result: {
+            reason: 'ron' | 'tsumo' | 'ryuukyoku'
+            winners?: { winnerId: string; score: ScoreCalculation }[]
+            winnerId?: string
+            loserId?: string
+            score?: ScoreCalculation
+            abortReason?: string
+        },
+    ): GameUpdate {
+        const startScores: Record<string, number> = {}
+        players.forEach((p) => (startScores[p.getId()] = p.points))
+
+        const events: GameUpdate['events'] = []
+        let nextOyaIndex = this.oyaIndex
+        let nextKyokuNum = this.kyokuNum
+        let nextBakaze = this.bakaze
+        let nextHonba = this.honba
+        let nextKyotaku = this.kyotaku
+        let renchan = false
+        let isGameOver = false
+
+        let stickClaimer: Player | null = null
+
+        if (result.reason === 'ron' && result.winners && result.loserId) {
+            const loser = players.find((p) => p.getId() === result.loserId)!
+
+            for (const [idx, winnerInfo] of result.winners.entries()) {
+                const winner = players.find(
+                    (p) => p.getId() === winnerInfo.winnerId,
+                )!
+                const isHeadbump = idx === 0
+                const honbaPoints = isHeadbump ? this.honba * 300 : 0
+
+                const basePoints = this.calculateRonBasePoints(
+                    winner,
+                    loser,
+                    winnerInfo.score,
+                )
+                const totalPoints = basePoints + honbaPoints
+
+                winner.points += totalPoints
+                loser.points -= basePoints + honbaPoints
+
+                if (isHeadbump) stickClaimer = winner
+                if (winner.isOya) renchan = true
+
+                const kyotakuPoints = isHeadbump ? this.kyotaku * 1000 : 0
+                events.push({
+                    eventName: 'score-update',
+                    payload: {
+                        winnerId: winnerInfo.winnerId,
+                        loserId: result.loserId,
+                        score: basePoints,
+                        totalPoints: basePoints + honbaPoints + kyotakuPoints,
+                        reason: 'ron',
+                    },
+                    to: 'all',
+                })
+            }
+
+            if (renchan) nextHonba++
+            else nextHonba = 0
+        } else if (
+            result.reason === 'tsumo' &&
+            result.winnerId &&
+            result.score
+        ) {
+            const winner = players.find((p) => p.getId() === result.winnerId)!
+            const honbaPoints = this.honba * 300
+            const totalPoints = result.score.ten + honbaPoints
+
+            winner.points += totalPoints
+            stickClaimer = winner
+
+            const otherPlayers = players.filter((p) => p !== winner)
+            if (winner.isOya) {
+                const payment = result.score.oya[0] + 100 * this.honba
+                otherPlayers.forEach((p) => (p.points -= payment))
+                renchan = true
+                nextHonba++
+            } else {
+                const oya = players.find((p) => p.isOya)!
+                const kos = otherPlayers.filter((p) => !p.isOya)
+                const oyaPayment = result.score.ko[0] + 100 * this.honba
+                const koPayment = result.score.ko[1] + 100 * this.honba
+                oya.points -= oyaPayment
+                kos.forEach((p) => (p.points -= koPayment))
+                nextHonba = 0
+            }
+
+            events.push({
+                eventName: 'score-update',
+                payload: {
+                    winnerId: result.winnerId,
+                    score: result.score.ten,
+                    totalPoints:
+                        totalPoints + (isGameOver ? 0 : this.kyotaku * 1000),
+                    reason: 'tsumo',
+                },
+                to: 'all',
+            })
+        } else if (result.reason === 'ryuukyoku') {
+            if (result.abortReason) {
+                renchan = true
+                nextHonba++
+            } else {
+                const tenpaiList = players.filter(
+                    (p) => p.getHand().length <= 13 && RuleManager.isTenpai(p),
+                )
+                const notenList = players.filter((p) => !tenpaiList.includes(p))
+
+                if (tenpaiList.length > 0 && notenList.length > 0) {
+                    const flow = 3000
+                    const payReceive = flow / tenpaiList.length
+                    const payGive = flow / notenList.length
+
+                    tenpaiList.forEach((p) => (p.points += payReceive))
+                    notenList.forEach((p) => (p.points -= payGive))
+                }
+
+                const oya = players[this.oyaIndex]
+                if (tenpaiList.includes(oya)) {
+                    renchan = true
+                    nextHonba++
+                } else {
+                    nextHonba++
+                }
+            }
+        }
+
+        if (players.some((p) => p.points < 0)) isGameOver = true
+
+        const maxPoints = Math.max(...players.map((p) => p.points))
+        const isLastGame =
+            (this.bakaze === '2z' && this.kyokuNum === 4) || this.isSuddenDeath
+        const currentOya = players[this.oyaIndex]
+        const isTop = currentOya.points === maxPoints
+
+        if (!isGameOver) {
+            if (isLastGame && renchan) {
+                if (isTop && currentOya.points >= 30000) isGameOver = true
+            } else if (!renchan) {
+                nextOyaIndex = (this.oyaIndex + 1) % 4
+                nextKyokuNum++
+                if (nextKyokuNum > 4) {
+                    nextKyokuNum = 1
+                    const windOrder: ('1z' | '2z' | '3z' | '4z')[] = [
+                        '1z',
+                        '2z',
+                        '3z',
+                        '4z',
+                    ]
+                    const currentIndex = windOrder.indexOf(this.bakaze)
+                    nextBakaze =
+                        windOrder[(currentIndex + 1) % windOrder.length]
+                }
+
+                if (!this.isSuddenDeath) {
+                    if (this.bakaze === '2z' && this.kyokuNum === 4) {
+                        if (maxPoints >= 30000) isGameOver = true
+                        else this.isSuddenDeath = true
+                    }
+                } else {
+                    if (maxPoints >= 30000) isGameOver = true
+                }
+            }
+        }
+
+        if (!isGameOver && this.isSuddenDeath) {
+            if (maxPoints >= 30000) isGameOver = true
+        }
+
+        if (isGameOver) {
+            if (this.kyotaku > 0) {
+                const oya = players[this.oyaIndex]
+                oya.points += this.kyotaku * 1000
+                nextKyotaku = 0
+            }
+        } else if (stickClaimer) {
+            stickClaimer.points += this.kyotaku * 1000
+            nextKyotaku = 0
+        }
+
+        this.honba = nextHonba
+        this.kyotaku = nextKyotaku
+        this.oyaIndex = nextOyaIndex
+        this.kyokuNum = nextKyokuNum
+        this.bakaze = nextBakaze
+
+        const scoreDeltas: Record<string, number> = {}
+        players.forEach((p) => {
+            scoreDeltas[p.getId()] = p.points - startScores[p.getId()]
+        })
+
+        let winScore = result.score
+        if (
+            result.reason === 'ron' &&
+            result.winners &&
+            result.winners.length > 0
+        ) {
+            winScore = result.winners[0].score
+        }
+
+        events.push({
+            eventName: 'round-ended',
+            payload: {
+                reason: result.reason,
+                abortReason: result.abortReason,
+                scores: players.map((p) => ({
+                    id: p.getId(),
+                    points: p.points,
+                })),
+                scoreDeltas,
+                winScore: winScore,
+                winnerId:
+                    result.winnerId ||
+                    (result.winners && result.winners.length > 0
+                        ? result.winners[0].winnerId
+                        : undefined),
+                loserId: result.loserId,
+                allWinners: result.winners,
+                nextState: {
+                    bakaze: this.bakaze,
+                    kyoku: this.kyokuNum,
+                    honba: this.honba,
+                    isGameOver: isGameOver,
+                },
+            },
+            to: 'all',
+        })
+
+        if (isGameOver) {
+            return this.handleGameOver(roomId, players, events)
+        }
+
+        return {
+            roomId,
+            isGameOver: false,
+            events,
+            reason: result.reason,
+        }
+    }
+
+    protected calculateRonBasePoints(
+        winner: Player,
+        loser: Player,
+        score: ScoreCalculation,
+    ): number {
+        if (winner.isOya) return score.ten
+        return loser.isOya ? score.oya[0] : score.ko[0]
+    }
+
+    public handleGameOver(
+        roomId: string,
+        players: Player[],
+        events: GameUpdate['events'],
+    ): GameUpdate {
+        const sortedPlayers = [...players].sort((a, b) => {
+            if (b.points !== a.points) return b.points - a.points
+            const idxA = this.initialPlayerOrder.indexOf(a.getId())
+            const idxB = this.initialPlayerOrder.indexOf(b.getId())
+            return idxA - idxB
+        })
+
+        const finalScores = sortedPlayers.map((p, idx) => {
+            let uma = 0
+            if (idx === 0) uma = 20000
+            if (idx === 1) uma = 10000
+            if (idx === 2) uma = -10000
+            if (idx === 3) uma = -20000
+
+            const finalPoint = p.points - 30000 + uma
+            return {
+                id: p.getId(),
+                points: p.points,
+                finalScore: idx === 0 ? finalPoint + 20000 : finalPoint,
+                rank: idx + 1,
+            }
+        })
+
+        return {
+            roomId,
+            isGameOver: true,
+            events: [
+                ...events,
+                {
+                    eventName: 'game-over',
+                    payload: {
+                        scores: players.map((p) => p.points),
+                        finalRanking: finalScores,
+                    },
+                    to: 'all',
+                },
+            ],
+        }
+    }
+}

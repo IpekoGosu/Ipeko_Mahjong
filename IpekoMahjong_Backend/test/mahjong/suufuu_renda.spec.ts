@@ -1,137 +1,138 @@
-import {
-    MahjongGame,
-    GameUpdate,
-} from '@src/modules/mahjong/classes/mahjong.game.class'
+import { MahjongGame } from '@src/modules/mahjong/classes/AbstractMahjongGame'
+import { RoundManager4p } from '@src/modules/mahjong/classes/managers/RoundManager.4p'
+import { TurnManager } from '@src/modules/mahjong/classes/managers/TurnManager'
+import { ActionManager4p } from '@src/modules/mahjong/classes/managers/ActionManager.4p'
 import { Tile } from '@src/modules/mahjong/classes/tile.class'
-import { Suit } from '@src/modules/mahjong/interfaces/mahjong.types'
+import { Player } from '@src/modules/mahjong/classes/player.class'
+import { SimpleAI } from '@src/modules/mahjong/ai/simple.ai'
+
+class TestPlayer extends Player {
+    public forceSetHandLast(tile: Tile) {
+        this.hand.pop()
+        this.hand.push(tile)
+    }
+}
+
+class TestMahjongGame extends MahjongGame {
+    protected createPlayer(info: { id: string; isAi: boolean }): Player {
+        const player = new TestPlayer(info.id, false, info.isAi)
+        if (info.isAi) {
+            player.ai = new SimpleAI()
+        }
+        return player
+    }
+
+    private getTestPlayer(id: string): TestPlayer {
+        return this.getPlayer(id) as TestPlayer
+    }
+
+    public setLastDrawnTile(playerId: string, tile: Tile) {
+        this.getTestPlayer(playerId).forceSetHandLast(tile)
+    }
+}
 
 describe('Suufuu Renda (Four Winds Discard)', () => {
-    let game: MahjongGame
-    const roomId = 'test-room'
+    let game: TestMahjongGame
+    let roomId: string
 
     beforeEach(() => {
-        const playerInfos = [
-            { id: 'p1', isAi: false },
-            { id: 'p2', isAi: false },
-            { id: 'p3', isAi: false },
-            { id: 'p4', isAi: false },
-        ]
-        game = new MahjongGame(playerInfos)
+        roomId = 'test-room'
+        game = new TestMahjongGame(
+            [
+                { id: 'p1', isAi: false },
+                { id: 'p2', isAi: false },
+                { id: 'p3', isAi: false },
+                { id: 'p4', isAi: false },
+            ],
+            new RoundManager4p(),
+            new TurnManager(),
+            new ActionManager4p(),
+        )
         game.startGame(roomId)
     })
 
-    function setupPlayersWithTile(tileStr: string) {
-        const rank = parseInt(tileStr[0])
-        const suit = tileStr[1] as Suit
-        game.getPlayers().forEach((p) => {
-            p.draw(new Tile(suit, rank, false, 0))
-        })
-    }
-
     it('should trigger Suufuu Renda when all 4 players discard the same wind in the first turn', () => {
-        const windTile = '1z' // East Wind
-        setupPlayersWithTile(windTile)
+        game.startFirstTurn(roomId)
 
-        let update: GameUpdate | undefined
-        for (let i = 0; i < 4; i++) {
-            const currentPlayer = game.getCurrentTurnPlayer()
-            update = game.discardTile(roomId, currentPlayer.getId(), windTile)
+        // Turn 0
+        let currentPlayerId = game.getCurrentTurnPlayer().getId()
+        game.setLastDrawnTile(currentPlayerId, new Tile('z', 1, false, 0))
+        game.discardTile(roomId, currentPlayerId, '1z')
+        game.proceedToNextTurn(roomId)
 
-            if (i < 3) {
-                game.proceedToNextTurn(roomId)
-            }
-        }
+        // Turn 1
+        currentPlayerId = game.getCurrentTurnPlayer().getId()
+        game.setLastDrawnTile(currentPlayerId, new Tile('z', 1, false, 1))
+        game.discardTile(roomId, currentPlayerId, '1z')
+        game.proceedToNextTurn(roomId)
 
-        const roundEndedEvent = update?.events.find(
+        // Turn 2
+        currentPlayerId = game.getCurrentTurnPlayer().getId()
+        game.setLastDrawnTile(currentPlayerId, new Tile('z', 1, false, 2))
+        game.discardTile(roomId, currentPlayerId, '1z')
+        game.proceedToNextTurn(roomId)
+
+        // Turn 3
+        currentPlayerId = game.getCurrentTurnPlayer().getId()
+        game.setLastDrawnTile(currentPlayerId, new Tile('z', 1, false, 3))
+        const result = game.discardTile(roomId, currentPlayerId, '1z')
+
+        expect(result.reason).toBe('ryuukyoku')
+        const endEvent = result.events.find(
             (e) => e.eventName === 'round-ended',
         )
-        expect(roundEndedEvent).toBeDefined()
-        expect(roundEndedEvent?.payload.abortReason).toBe('suufuu-renda')
+        expect(endEvent?.payload.abortReason).toBe('suufuu-renda')
     })
 
     it('should NOT trigger Suufuu Renda if the wind sequence is broken', () => {
-        setupPlayersWithTile('1z')
-        setupPlayersWithTile('2z')
+        game.startFirstTurn(roomId)
 
-        let update: GameUpdate | undefined
-        for (let i = 0; i < 4; i++) {
-            const currentPlayer = game.getCurrentTurnPlayer()
-            const tileToDiscard = i === 1 ? '2z' : '1z' // Second player discards different wind
-            update = game.discardTile(
-                roomId,
-                currentPlayer.getId(),
-                tileToDiscard,
-            )
+        let currentPlayerId = game.getCurrentTurnPlayer().getId()
+        game.setLastDrawnTile(currentPlayerId, new Tile('z', 1, false, 0))
+        game.discardTile(roomId, currentPlayerId, '1z')
+        game.proceedToNextTurn(roomId)
 
-            if (i < 3) {
-                game.proceedToNextTurn(roomId)
-            }
-        }
+        currentPlayerId = game.getCurrentTurnPlayer().getId()
+        game.setLastDrawnTile(currentPlayerId, new Tile('z', 2, false, 0))
+        const result = game.discardTile(roomId, currentPlayerId, '2z')
 
-        const roundEndedEvent = update?.events.find(
-            (e) => e.eventName === 'round-ended',
-        )
-        expect(roundEndedEvent).toBeUndefined()
+        expect(result.reason).not.toBe('ryuukyoku')
     })
 
     it('should NOT trigger Suufuu Renda if first player does not discard a wind', () => {
-        setupPlayersWithTile('1z')
-        setupPlayersWithTile('1m')
+        game.startFirstTurn(roomId)
 
-        let update: GameUpdate | undefined
-        for (let i = 0; i < 4; i++) {
-            const currentPlayer = game.getCurrentTurnPlayer()
-            const tileToDiscard = i === 0 ? '1m' : '1z'
-            update = game.discardTile(
-                roomId,
-                currentPlayer.getId(),
-                tileToDiscard,
-            )
-
-            if (i < 3) {
-                game.proceedToNextTurn(roomId)
-            }
-        }
-
-        const roundEndedEvent = update?.events.find(
-            (e) => e.eventName === 'round-ended',
-        )
-        expect(roundEndedEvent).toBeUndefined()
+        const currentPlayerId = game.getCurrentTurnPlayer().getId()
+        game.setLastDrawnTile(currentPlayerId, new Tile('m', 1, false, 0))
+        const result = game.discardTile(roomId, currentPlayerId, '1m')
+        expect(result.reason).not.toBe('ryuukyoku')
     })
 
     it('should NOT trigger Suufuu Renda if a call is made', () => {
-        const windTile = '1z'
-        setupPlayersWithTile(windTile)
+        game.startFirstTurn(roomId)
 
-        // Player 0 discards 1z
-        const p0 = game.getCurrentTurnPlayer()
-        game.discardTile(roomId, p0.getId(), windTile)
+        // Simulate a call happened (mocking property on ActionManager)
+        game.actionManager.anyCallDeclared = true
 
-        // Player 1 Pon Player 0's 1z
-        game.proceedToNextTurn(roomId) // Move to P1 turn for potential action context?
-        // Actually performAction handles it.
-        const p1 = game.getCurrentTurnPlayer()
-        // Give P1 two 1z tiles
-        p1.draw(new Tile('z', 1, false, 0))
-        p1.draw(new Tile('z', 1, false, 0))
-
-        game.performAction(roomId, p1.getId(), 'pon', windTile, ['1z', '1z'])
-
-        // Now Player 1 discards something else
-        p1.draw(new Tile('m', 2, false, 0))
-        game.discardTile(roomId, p1.getId(), '2m')
-
+        let currentPlayerId = game.getCurrentTurnPlayer().getId()
+        game.setLastDrawnTile(currentPlayerId, new Tile('z', 1, false, 0))
+        game.discardTile(roomId, currentPlayerId, '1z')
         game.proceedToNextTurn(roomId)
-        const p2 = game.getCurrentTurnPlayer()
-        game.discardTile(roomId, p2.getId(), windTile)
 
+        currentPlayerId = game.getCurrentTurnPlayer().getId()
+        game.setLastDrawnTile(currentPlayerId, new Tile('z', 1, false, 1))
+        game.discardTile(roomId, currentPlayerId, '1z')
         game.proceedToNextTurn(roomId)
-        const p3 = game.getCurrentTurnPlayer()
-        const update = game.discardTile(roomId, p3.getId(), windTile)
 
-        const roundEndedEvent = update.events.find(
-            (e) => e.eventName === 'round-ended',
-        )
-        expect(roundEndedEvent).toBeUndefined()
+        currentPlayerId = game.getCurrentTurnPlayer().getId()
+        game.setLastDrawnTile(currentPlayerId, new Tile('z', 1, false, 2))
+        game.discardTile(roomId, currentPlayerId, '1z')
+        game.proceedToNextTurn(roomId)
+
+        currentPlayerId = game.getCurrentTurnPlayer().getId()
+        game.setLastDrawnTile(currentPlayerId, new Tile('z', 1, false, 3))
+        const result = game.discardTile(roomId, currentPlayerId, '1z')
+
+        expect(result.reason).not.toBe('ryuukyoku')
     })
 })

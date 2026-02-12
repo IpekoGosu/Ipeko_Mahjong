@@ -9,7 +9,7 @@ export abstract class GameRoomService {
      * 새로운 게임 룸을 생성합니다.
      * @param humanPlayerSocketId 게임을 시작한 플레이어의 소켓 ID
      */
-    abstract createRoom(humanPlayerSocketId: string): GameRoom
+    abstract createRoom(humanPlayerSocketId: string): Promise<GameRoom>
 
     /**
      * ID로 게임 룸을 찾습니다.

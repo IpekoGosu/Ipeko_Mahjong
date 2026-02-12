@@ -1,98 +1,80 @@
 import {
     MahjongGame,
     GameUpdate,
-} from '@src/modules/mahjong/classes/mahjong.game.class'
+} from '@src/modules/mahjong/classes/AbstractMahjongGame'
+import { RoundManager4p } from '@src/modules/mahjong/classes/managers/RoundManager.4p'
+import { TurnManager } from '@src/modules/mahjong/classes/managers/TurnManager'
+import { ActionManager4p } from '@src/modules/mahjong/classes/managers/ActionManager.4p'
 
-interface FinalRankingItem {
+interface FinalRankingEntry {
     id: string
     points: number
-    finalScore: number
     rank: number
 }
 
-class TestMahjongGame extends MahjongGame {
-    public getInitialPlayerOrder(): string[] {
-        return this.initialPlayerOrder
-    }
-
-    public triggerHandleGameOver(
-        roomId: string,
-        events: GameUpdate['events'],
-    ): GameUpdate {
-        return this.handleGameOver(roomId, events)
-    }
-}
-
 describe('MahjongGame - Game Over and Ranking', () => {
-    let game: TestMahjongGame
-    const roomId = 'test-room'
+    let game: MahjongGame
+    let roomId: string
 
     beforeEach(() => {
-        const playerInfos = [
-            { id: 'p1', isAi: false },
-            { id: 'p2', isAi: false },
-            { id: 'p3', isAi: false },
-            { id: 'p4', isAi: false },
-        ]
-        game = new TestMahjongGame(playerInfos)
+        roomId = 'test-room'
+        // Create game with specific IDs to test tie-breaking
+        // Seating order will be randomized in startGame, but we'll use IDs to track.
+        game = new MahjongGame(
+            [
+                { id: 'p1', isAi: false },
+                { id: 'p2', isAi: true },
+                { id: 'p3', isAi: true },
+                { id: 'p4', isAi: true },
+            ],
+            new RoundManager4p(),
+            new TurnManager(),
+            new ActionManager4p(),
+        )
         game.startGame(roomId)
     })
 
     it('should correctly rank players based on points and handle tie-breaking with initial seat order', () => {
         const players = game.getPlayers()
-        // Force specific points for testing
-        // Let's say p1 and p2 tie with 30000 points.
-        // Whoever was earlier in the initial seat order should be ranked higher.
+        // Force points
+        players[0].points = 35000 // Top
+        players[1].points = 25000 // Tied
+        players[2].points = 25000 // Tied
+        players[3].points = 15000 // Last
 
-        // We can check initialPlayerOrder
-        const initialOrder = game.getInitialPlayerOrder()
+        // p2 and p3 are tied. Tie-breaker is initial seat order.
+        // RoundManager uses initialPlayerOrder to tie-break.
+        // We need to see who comes first in initialPlayerOrder.
+        const order = game.roundManager.initialPlayerOrder
+        const p2Idx = order.indexOf(players[1].getId())
+        const p3Idx = order.indexOf(players[2].getId())
 
-        // Set everyone to 25000 initially (default)
-        players.forEach((p) => (p.points = 25000))
+        const expectedRank2 =
+            p2Idx < p3Idx ? players[1].getId() : players[2].getId()
+        const expectedRank3 =
+            p2Idx < p3Idx ? players[2].getId() : players[1].getId()
 
-        // p1: 30000, p2: 30000, p3: 20000, p4: 20000
-        // Find them by ID to be sure
-        const getPlayerById = (id: string) =>
-            players.find((p) => p.getId() === id)!
+        // Trigger game over via dobon (simplest way)
+        players[3].points = -500
 
-        const firstId = initialOrder[0]
-        const secondId = initialOrder[1]
-        const thirdId = initialOrder[2]
-        const fourthId = initialOrder[3]
-
-        getPlayerById(firstId).points = 30000
-        getPlayerById(secondId).points = 30000
-        getPlayerById(thirdId).points = 20000
-        getPlayerById(fourthId).points = 20000
-
-        // Trigger game over by making someone go below 0 (dobon)
-        getPlayerById(fourthId).points = -1000
-
-        // Trigger game over through the helper method
-        const update = game.triggerHandleGameOver(roomId, [])
-
-        const gameOverEvent = update.events.find(
-            (e) => e.eventName === 'game-over',
+        const result: GameUpdate = game.roundManager.handleGameOver(
+            roomId,
+            players,
+            [],
         )
-        expect(gameOverEvent).toBeDefined()
 
-        const ranking = gameOverEvent?.payload
-            .finalRanking as FinalRankingItem[]
+        expect(result.isGameOver).toBe(true)
+        const ranking = result.events.find((e) => e.eventName === 'game-over')
+            ?.payload.finalRanking as FinalRankingEntry[]
 
-        // First should be firstId
-        expect(ranking[0].id).toBe(firstId)
+        expect(ranking[0].id).toBe(players[0].getId())
+        expect(ranking[1].id).toBe(expectedRank2)
+        expect(ranking[2].id).toBe(expectedRank3)
+        expect(ranking[3].id).toBe(players[3].getId())
+
         expect(ranking[0].rank).toBe(1)
-
-        // Second should be secondId (tie-broken by seat)
-        expect(ranking[1].id).toBe(secondId)
         expect(ranking[1].rank).toBe(2)
-
-        // Third should be thirdId
-        expect(ranking[2].id).toBe(thirdId)
         expect(ranking[2].rank).toBe(3)
-
-        // Fourth should be fourthId
-        expect(ranking[3].id).toBe(fourthId)
         expect(ranking[3].rank).toBe(4)
     })
 })
