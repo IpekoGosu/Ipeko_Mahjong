@@ -6,15 +6,11 @@ import { WallSanma } from './Wall.Sanma'
 import { AbstractWall } from './AbstractWall'
 
 export class SanmaMahjongGame extends AbstractMahjongGame {
-    public roundManager: RoundManagerSanma
-    public turnManager: TurnManager
-    public actionManager: ActionManagerSanma
-
     constructor(
         playerInfos: { id: string; isAi: boolean }[],
-        roundManager: RoundManagerSanma,
-        turnManager: TurnManager,
-        actionManager: ActionManagerSanma,
+        public override roundManager: RoundManagerSanma,
+        public override turnManager: TurnManager,
+        public override actionManager: ActionManagerSanma,
     ) {
         super(playerInfos, roundManager, turnManager, actionManager)
     }

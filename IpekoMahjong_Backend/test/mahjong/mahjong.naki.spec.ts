@@ -34,7 +34,7 @@ describe('MahjongGame Naki (Call) System', () => {
             'p2',
             '1m',
             game.getPlayers(),
-            game.roundManager.createWallStub() as any, // We only need the core logic
+            game.getWall(),
             game.roundManager,
         )
 

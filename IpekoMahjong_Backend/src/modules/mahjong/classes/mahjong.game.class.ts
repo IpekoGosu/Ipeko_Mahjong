@@ -36,9 +36,9 @@ export abstract class AbstractMahjongGame {
     protected wall: AbstractWall
     protected players: Player[]
 
-    public abstract roundManager: AbstractRoundManager
-    public abstract turnManager: TurnManager
-    public abstract actionManager: AbstractActionManager
+    public roundManager: AbstractRoundManager
+    public turnManager: TurnManager
+    public actionManager: AbstractActionManager
 
     // Delegated State
     protected get currentTurnIndex() {
@@ -805,6 +805,10 @@ export abstract class AbstractMahjongGame {
 
     getPlayers(): Player[] {
         return this.players
+    }
+
+    getWall(): AbstractWall {
+        return this.wall
     }
 
     getPlayer(id: string): Player | undefined {

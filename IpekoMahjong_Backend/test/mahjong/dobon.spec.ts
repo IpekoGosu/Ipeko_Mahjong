@@ -1,8 +1,4 @@
-import {
-    MahjongGame,
-    GameUpdate,
-} from '@src/modules/mahjong/classes/mahjong.game.class'
-import { Player } from '@src/modules/mahjong/classes/player.class'
+import { MahjongGame } from '@src/modules/mahjong/classes/mahjong.game.class'
 import { ScoreCalculation } from '@src/modules/mahjong/interfaces/mahjong.types'
 import { RuleManager } from '@src/modules/mahjong/classes/rule.manager'
 import { RoundManager4p } from '@src/modules/mahjong/classes/managers/RoundManager.4p'
@@ -201,7 +197,6 @@ describe('MahjongGame - Dobon (Bankruptcy) Rules', () => {
         const players = game.getPlayers()
         const p1 = players[0] // Oya
         const p2 = players[1] // Ko
-        const p3 = players[2] // Ko (Winner)
 
         p2.points = 200 // Will dobon if pays 300
         game.setKyotaku(1) // 1000 points on table

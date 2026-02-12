@@ -3,6 +3,10 @@ import { Player } from '@src/modules/mahjong/classes/player.class'
 import { Tile } from '@src/modules/mahjong/classes/tile.class'
 import Riichi from 'riichi'
 import { RiichiResult } from '@src/modules/mahjong/interfaces/mahjong.types'
+import { MahjongGame } from '@src/modules/mahjong/classes/MahjongGame.4p'
+import { RoundManager4p } from '@src/modules/mahjong/classes/managers/RoundManager.4p'
+import { TurnManager } from '@src/modules/mahjong/classes/managers/TurnManager'
+import { ActionManager4p } from '@src/modules/mahjong/classes/managers/ActionManager.4p'
 
 class TestWall extends Wall {
     public getTiles() {
@@ -47,6 +51,12 @@ describe('Player', () => {
 
     beforeEach(() => {
         player = new Player('p1')
+        new MahjongGame(
+            [{ id: 'p1', isAi: false }],
+            new RoundManager4p(),
+            new TurnManager(),
+            new ActionManager4p(),
+        )
     })
 
     it('should draw a tile and sort the hand', () => {

@@ -6,15 +6,11 @@ import { Wall4p } from './Wall.4p'
 import { AbstractWall } from './AbstractWall'
 
 export class MahjongGame extends AbstractMahjongGame {
-    public roundManager: RoundManager4p
-    public turnManager: TurnManager
-    public actionManager: ActionManager4p
-
     constructor(
         playerInfos: { id: string; isAi: boolean }[],
-        roundManager: RoundManager4p,
-        turnManager: TurnManager,
-        actionManager: ActionManager4p,
+        public override roundManager: RoundManager4p,
+        public override turnManager: TurnManager,
+        public override actionManager: ActionManager4p,
     ) {
         super(playerInfos, roundManager, turnManager, actionManager)
     }

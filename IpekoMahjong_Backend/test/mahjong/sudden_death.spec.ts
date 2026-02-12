@@ -1,8 +1,4 @@
-import {
-    MahjongGame,
-    GameUpdate,
-} from '@src/modules/mahjong/classes/mahjong.game.class'
-import { Player } from '@src/modules/mahjong/classes/player.class'
+import { MahjongGame } from '@src/modules/mahjong/classes/mahjong.game.class'
 import { ScoreCalculation } from '@src/modules/mahjong/interfaces/mahjong.types'
 import { RoundManager4p } from '@src/modules/mahjong/classes/managers/RoundManager.4p'
 import { TurnManager } from '@src/modules/mahjong/classes/managers/TurnManager'
@@ -159,10 +155,10 @@ describe('MahjongGame - Indefinite Sudden Death', () => {
 
         const players = game.getPlayers()
         players.forEach((p) => (p.points = 25000))
-        const p3 = players[2]
-        p3.points = 29500
+        const pWinner = players[2]
+        pWinner.points = 29500
 
-        // p3 wins Ron (1000 pts) -> 30500
+        // pWinner wins Ron (1000 pts) -> 30500
         const mockScore: ScoreCalculation = {
             han: 1,
             fu: 30,
@@ -182,7 +178,7 @@ describe('MahjongGame - Indefinite Sudden Death', () => {
         })
 
         expect(result.isGameOver).toBe(true)
-        expect(p3.points).toBeGreaterThanOrEqual(30000)
+        expect(pWinner.points).toBeGreaterThanOrEqual(30000)
     })
 
     it('should allow Agari-yame for Oya in sudden death if they are top and reach 30000', () => {

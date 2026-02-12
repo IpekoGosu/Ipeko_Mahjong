@@ -1,6 +1,9 @@
 import { MahjongGame } from '@src/modules/mahjong/classes/mahjong.game.class'
 import { Player } from '@src/modules/mahjong/classes/player.class'
 import { ScoreCalculation } from '@src/modules/mahjong/interfaces/mahjong.types'
+import { RoundManager4p } from '@src/modules/mahjong/classes/managers/RoundManager.4p'
+import { TurnManager } from '@src/modules/mahjong/classes/managers/TurnManager'
+import { ActionManager4p } from '@src/modules/mahjong/classes/managers/ActionManager.4p'
 
 class TestMahjongGame extends MahjongGame {
     public triggerEndKyoku(
@@ -24,12 +27,17 @@ describe('Mahjong Scoring Logic', () => {
 
     beforeEach(() => {
         // 4 players
-        game = new TestMahjongGame([
-            { id: 'p1', isAi: false },
-            { id: 'p2', isAi: true },
-            { id: 'p3', isAi: true },
-            { id: 'p4', isAi: true },
-        ])
+        game = new TestMahjongGame(
+            [
+                { id: 'p1', isAi: false },
+                { id: 'p2', isAi: true },
+                { id: 'p3', isAi: true },
+                { id: 'p4', isAi: true },
+            ],
+            new RoundManager4p(),
+            new TurnManager(),
+            new ActionManager4p(),
+        )
         // Seating is randomized in startGame, but we can force it or inspect it.
         game.startGame('test-room')
         players = game.getPlayers()

@@ -2,10 +2,15 @@ import {
     MahjongGame,
     GameUpdate,
 } from '@src/modules/mahjong/classes/mahjong.game.class'
-import { Player } from '@src/modules/mahjong/classes/player.class'
 import { RoundManager4p } from '@src/modules/mahjong/classes/managers/RoundManager.4p'
 import { TurnManager } from '@src/modules/mahjong/classes/managers/TurnManager'
 import { ActionManager4p } from '@src/modules/mahjong/classes/managers/ActionManager.4p'
+
+interface FinalRankingEntry {
+    id: string
+    points: number
+    rank: number
+}
 
 describe('MahjongGame - Game Over and Ranking', () => {
     let game: MahjongGame
@@ -44,8 +49,10 @@ describe('MahjongGame - Game Over and Ranking', () => {
         const p2Idx = order.indexOf(players[1].getId())
         const p3Idx = order.indexOf(players[2].getId())
 
-        const expectedRank2 = p2Idx < p3Idx ? players[1].getId() : players[2].getId()
-        const expectedRank3 = p2Idx < p3Idx ? players[2].getId() : players[1].getId()
+        const expectedRank2 =
+            p2Idx < p3Idx ? players[1].getId() : players[2].getId()
+        const expectedRank3 =
+            p2Idx < p3Idx ? players[2].getId() : players[1].getId()
 
         // Trigger game over via dobon (simplest way)
         players[3].points = -500
@@ -58,7 +65,7 @@ describe('MahjongGame - Game Over and Ranking', () => {
 
         expect(result.isGameOver).toBe(true)
         const ranking = result.events.find((e) => e.eventName === 'game-over')
-            ?.payload.finalRanking as any[]
+            ?.payload.finalRanking as FinalRankingEntry[]
 
         expect(ranking[0].id).toBe(players[0].getId())
         expect(ranking[1].id).toBe(expectedRank2)

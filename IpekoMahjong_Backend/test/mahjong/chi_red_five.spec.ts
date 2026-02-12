@@ -1,16 +1,24 @@
 import { MahjongGame } from '@src/modules/mahjong/classes/mahjong.game.class'
 import { Player } from '@src/modules/mahjong/classes/player.class'
 import { Tile } from '@src/modules/mahjong/classes/tile.class'
+import { RoundManager4p } from '@src/modules/mahjong/classes/managers/RoundManager.4p'
+import { TurnManager } from '@src/modules/mahjong/classes/managers/TurnManager'
+import { ActionManager4p } from '@src/modules/mahjong/classes/managers/ActionManager.4p'
 
 describe('Chi Logic with Red Fives', () => {
     let game: MahjongGame
     let player: Player
 
     beforeEach(() => {
-        game = new MahjongGame([
-            { id: 'p1', isAi: false },
-            { id: 'p2', isAi: false },
-        ])
+        game = new MahjongGame(
+            [
+                { id: 'p1', isAi: false },
+                { id: 'p2', isAi: false },
+            ],
+            new RoundManager4p(),
+            new TurnManager(),
+            new ActionManager4p(),
+        )
         player = game.getPlayer('p1')!
         // Clear hand for setup
         const hand = player.getHand()

@@ -1,8 +1,4 @@
-import {
-    MahjongGame,
-    GameUpdate,
-} from '@src/modules/mahjong/classes/mahjong.game.class'
-import { Player } from '@src/modules/mahjong/classes/player.class'
+import { MahjongGame } from '@src/modules/mahjong/classes/mahjong.game.class'
 import { RoundManager4p } from '@src/modules/mahjong/classes/managers/RoundManager.4p'
 import { TurnManager } from '@src/modules/mahjong/classes/managers/TurnManager'
 import { ActionManager4p } from '@src/modules/mahjong/classes/managers/ActionManager.4p'
@@ -48,7 +44,9 @@ describe('Suufuu Renda (Four Winds Discard)', () => {
         const result = game.discardTile(roomId, p4.getId(), '1z')
 
         expect(result.reason).toBe('ryuukyoku')
-        const endEvent = result.events.find((e) => e.eventName === 'round-ended')
+        const endEvent = result.events.find(
+            (e) => e.eventName === 'round-ended',
+        )
         expect(endEvent?.payload.abortReason).toBe('suufuu-renda')
     })
 
