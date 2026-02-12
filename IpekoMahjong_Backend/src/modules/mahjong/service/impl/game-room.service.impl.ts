@@ -2,6 +2,7 @@ import { Injectable, OnModuleDestroy } from '@nestjs/common'
 import { MahjongGame } from '../../classes/mahjong.game.class'
 import { GameRoomService } from '../game-room.service'
 import { WinstonLoggerService } from '@src/common/logger/winston.logger.service'
+import { MahjongFactory } from '../../mahjong.factory'
 
 // 인터페이스는 구현 파일 내에서 직접 export하여 순환 참조를 방지합니다.
 export interface GameRoom {
@@ -18,7 +19,10 @@ export class GameRoomServiceImpl
 {
     private readonly rooms = new Map<string, GameRoom>()
 
-    constructor(private readonly logger: WinstonLoggerService) {
+    constructor(
+        private readonly logger: WinstonLoggerService,
+        private readonly mahjongFactory: MahjongFactory,
+    ) {
         super()
     }
 
@@ -32,7 +36,7 @@ export class GameRoomServiceImpl
         this.rooms.clear()
     }
 
-    createRoom(humanPlayerSocketId: string): GameRoom {
+    async createRoom(humanPlayerSocketId: string): Promise<GameRoom> {
         const roomId = this.generateRoomId()
         const playerIds = [
             { id: humanPlayerSocketId, isAi: false },
@@ -41,7 +45,7 @@ export class GameRoomServiceImpl
             { id: 'ai-3', isAi: true },
         ]
 
-        const mahjongGame = new MahjongGame(playerIds)
+        const mahjongGame = await this.mahjongFactory.create4pGame(playerIds)
 
         const room: GameRoom = {
             roomId,

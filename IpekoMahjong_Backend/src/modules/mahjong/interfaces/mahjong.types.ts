@@ -2,7 +2,7 @@ import { Tile } from '../classes/tile.class'
 
 export type Suit = 'm' | 'p' | 's' | 'z'
 
-export type MeldType = 'chi' | 'pon' | 'kan' | 'chakan'
+export type MeldType = 'chi' | 'pon' | 'kan' | 'chakan' | 'ankan' | 'kakan'
 
 export interface Meld {
     type: MeldType
@@ -45,4 +45,16 @@ export interface RiichiResult {
     hairi?: { now: number; wait: Record<string, number> }
     hairi7and13?: { now: number; wait: Record<string, number> }
     wait?: string
+}
+
+export interface GameUpdate {
+    roomId: string
+    isGameOver: boolean
+    reason?: 'tsumo' | 'ryuukyoku' | 'player-disconnected' | 'ron'
+    events: {
+        eventName: string
+        payload: Record<string, unknown>
+        to: 'all' | 'player'
+        playerId?: string
+    }[]
 }

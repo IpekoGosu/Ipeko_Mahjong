@@ -111,7 +111,7 @@ export class MahjongGateway {
 
     @SubscribeMessage('start-game')
     async handleStartGame(@ConnectedSocket() client: Socket): Promise<void> {
-        const room = this.gameRoomService.createRoom(client.id)
+        const room = await this.gameRoomService.createRoom(client.id)
         await client.join(room.roomId)
 
         // 1. Initialize round logic (deals 13 tiles)

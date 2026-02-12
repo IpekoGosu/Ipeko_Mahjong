@@ -140,8 +140,7 @@ describe('MahjongGateway', () => {
 
         client.on(
             'update-discard',
-            (data: { playerId: string; tile: string }) => {
-            },
+            (_data: { playerId: string; tile: string }) => {},
         )
     }, 20000)
 })

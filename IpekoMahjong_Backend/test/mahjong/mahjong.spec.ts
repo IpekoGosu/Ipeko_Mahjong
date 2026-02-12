@@ -1,4 +1,4 @@
-import { Wall } from '@src/modules/mahjong/classes/wall.class'
+import { Wall4p as Wall } from '@src/modules/mahjong/classes/Wall.4p'
 import { Player } from '@src/modules/mahjong/classes/player.class'
 import { Tile } from '@src/modules/mahjong/classes/tile.class'
 import Riichi from 'riichi'

@@ -30,7 +30,7 @@ describe('Chi Logic with Red Fives', () => {
         expect(player.getHand().map((t) => t.toString())).toContain('0s')
         expect(player.getHand().map((t) => t.toString())).toContain('7s')
 
-        const options = game.checkChi(player, '6s')
+        const options = game.actionManager.checkChi(player, '6s')
 
         // Expect option to use '0s' and '7s'
         expect(options).toHaveLength(1)
@@ -44,7 +44,7 @@ describe('Chi Logic with Red Fives', () => {
         player.draw(normal5s)
         player.draw(tile7s)
 
-        const options = game.checkChi(player, '6s')
+        const options = game.actionManager.checkChi(player, '6s')
 
         expect(options).toHaveLength(1)
         expect(options[0]).toEqual(expect.arrayContaining(['5s', '7s']))
@@ -59,7 +59,7 @@ describe('Chi Logic with Red Fives', () => {
         player.draw(normal5s)
         player.draw(tile7s)
 
-        const options = game.checkChi(player, '6s')
+        const options = game.actionManager.checkChi(player, '6s')
 
         // Expect options: [0s, 7s] and [5s, 7s]
         expect(options).toHaveLength(2)
@@ -75,7 +75,7 @@ describe('Chi Logic with Red Fives', () => {
         player.draw(tile4s)
         player.draw(tile6s)
 
-        const options = game.checkChi(player, '0s')
+        const options = game.actionManager.checkChi(player, '0s')
 
         expect(options).toHaveLength(1)
         expect(options[0]).toEqual(expect.arrayContaining(['4s', '6s']))

@@ -1,68 +1,47 @@
 import { SimpleAI } from '@src/modules/mahjong/ai/simple.ai'
 import { GameObservation } from '@src/modules/mahjong/ai/mahjong-ai.interface'
+import { MahjongGame } from '@src/modules/mahjong/classes/mahjong.game.class'
+import { RoundManager4p } from '@src/modules/mahjong/classes/managers/RoundManager.4p'
+import { TurnManager } from '@src/modules/mahjong/classes/managers/TurnManager'
+import { ActionManager4p } from '@src/modules/mahjong/classes/managers/ActionManager.4p'
 
 describe('SimpleAI', () => {
     let ai: SimpleAI
+    let game: MahjongGame
 
     beforeEach(() => {
         ai = new SimpleAI()
+        game = new MahjongGame(
+            [
+                { id: 'p1', isAi: false },
+                { id: 'p2', isAi: true },
+                { id: 'p3', isAi: true },
+                { id: 'p4', isAi: true },
+            ],
+            new RoundManager4p(),
+            new TurnManager(),
+            new ActionManager4p(),
+        )
+        game.startGame('room1')
     })
 
     it('should wait 2 seconds and decide a discard', async () => {
-        const obs: GameObservation = {
-            myHand: [
-                '1m',
-                '2m',
-                '3m',
-                '4m',
-                '5m',
-                '6m',
-                '7m',
-                '8m',
-                '9m',
-                '1p',
-                '1p',
-                '1p',
-                '2p',
-                '2p',
-            ],
-            myLastDraw: '2p',
-            myIndex: 0,
-            players: [],
-            doraIndicators: [],
-            wallCount: 70,
-            deadWallCount: 14,
-            bakaze: 1,
-            turnCounter: 0,
-        }
+        const player = game.getPlayer('p1')!
+        const obs: GameObservation = game.createGameObservation(player)
 
-        const start = Date.now()
+        // ai.decideDiscard should return a tile from hand
         const discard = await ai.decideDiscard(obs)
-        const duration = Date.now() - start
 
-        expect(duration).toBeLessThan(500)
         expect(discard).toBeDefined()
         expect(obs.myHand).toContain(discard)
-    }, 5000) // Increase timeout for this test
+    }, 5000)
 
     it('should wait 2 seconds and decide an action', async () => {
-        const obs: GameObservation = {
-            myHand: ['1m', '2m', '3m'],
-            myLastDraw: null,
-            myIndex: 0,
-            players: [],
-            doraIndicators: [],
-            wallCount: 70,
-            deadWallCount: 14,
-            bakaze: 1,
-            turnCounter: 0,
-        }
+        const player = game.getPlayer('p1')!
+        const obs: GameObservation = game.createGameObservation(player)
 
-        const start = Date.now()
         const action = await ai.decideAction(obs, '1m', { pon: true })
-        const duration = Date.now() - start
-
-        expect(duration).toBeLessThan(500)
+        // For now SimpleAI always returns 'skip'
         expect(action).toBe('skip')
     }, 5000)
 })

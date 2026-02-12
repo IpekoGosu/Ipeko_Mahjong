@@ -4,6 +4,12 @@ import { GameRoomService } from './service/game-room.service'
 import { GameRoomServiceImpl } from './service/impl/game-room.service.impl'
 import { WinstonLoggerService } from '@src/common/logger/winston.logger.service'
 import { AuthModule } from '../authorization/auth.module'
+import { MahjongFactory } from './mahjong.factory'
+import { RoundManager4p } from './classes/managers/RoundManager.4p'
+import { RoundManagerSanma } from './classes/managers/RoundManager.Sanma'
+import { TurnManager } from './classes/managers/TurnManager'
+import { ActionManager4p } from './classes/managers/ActionManager.4p'
+import { ActionManagerSanma } from './classes/managers/ActionManager.Sanma'
 
 @Module({
     imports: [AuthModule],
@@ -14,6 +20,13 @@ import { AuthModule } from '../authorization/auth.module'
             useClass: GameRoomServiceImpl,
         },
         WinstonLoggerService,
+        MahjongFactory,
+        RoundManager4p,
+        RoundManagerSanma,
+        TurnManager,
+        ActionManager4p,
+        ActionManagerSanma,
     ],
+    exports: [GameRoomService],
 })
 export class MahjongModule {}

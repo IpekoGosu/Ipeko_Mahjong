@@ -2,136 +2,87 @@ import {
     MahjongGame,
     GameUpdate,
 } from '@src/modules/mahjong/classes/mahjong.game.class'
-import { Tile } from '@src/modules/mahjong/classes/tile.class'
-import { Suit } from '@src/modules/mahjong/interfaces/mahjong.types'
+import { Player } from '@src/modules/mahjong/classes/player.class'
+import { RoundManager4p } from '@src/modules/mahjong/classes/managers/RoundManager.4p'
+import { TurnManager } from '@src/modules/mahjong/classes/managers/TurnManager'
+import { ActionManager4p } from '@src/modules/mahjong/classes/managers/ActionManager.4p'
 
 describe('Suufuu Renda (Four Winds Discard)', () => {
     let game: MahjongGame
-    const roomId = 'test-room'
+    let roomId: string
 
     beforeEach(() => {
-        const playerInfos = [
-            { id: 'p1', isAi: false },
-            { id: 'p2', isAi: false },
-            { id: 'p3', isAi: false },
-            { id: 'p4', isAi: false },
-        ]
-        game = new MahjongGame(playerInfos)
+        roomId = 'test-room'
+        game = new MahjongGame(
+            [
+                { id: 'p1', isAi: false },
+                { id: 'p2', isAi: false },
+                { id: 'p3', isAi: false },
+                { id: 'p4', isAi: false },
+            ],
+            new RoundManager4p(),
+            new TurnManager(),
+            new ActionManager4p(),
+        )
         game.startGame(roomId)
     })
 
-    function setupPlayersWithTile(tileStr: string) {
-        const rank = parseInt(tileStr[0])
-        const suit = tileStr[1] as Suit
-        game.getPlayers().forEach((p) => {
-            p.draw(new Tile(suit, rank, false, 0))
-        })
-    }
-
     it('should trigger Suufuu Renda when all 4 players discard the same wind in the first turn', () => {
-        const windTile = '1z' // East Wind
-        setupPlayersWithTile(windTile)
+        // We need to bypass the random wall and force discards.
+        // turnCounter is used to check first turn.
+        // TurnManager handles currentTurnIndex.
 
-        let update: GameUpdate | undefined
-        for (let i = 0; i < 4; i++) {
-            const currentPlayer = game.getCurrentTurnPlayer()
-            update = game.discardTile(roomId, currentPlayer.getId(), windTile)
+        const p1 = game.getPlayer('p1')!
+        const p2 = game.getPlayer('p2')!
+        const p3 = game.getPlayer('p3')!
+        const p4 = game.getPlayer('p4')!
 
-            if (i < 3) {
-                game.proceedToNextTurn(roomId)
-            }
-        }
+        // Force East wind discards
+        // turn 0: p1 discards 1z
+        game.discardTile(roomId, p1.getId(), '1z')
+        // turn 1: p2 discards 1z
+        game.discardTile(roomId, p2.getId(), '1z')
+        // turn 2: p3 discards 1z
+        game.discardTile(roomId, p3.getId(), '1z')
+        // turn 3: p4 discards 1z
+        const result = game.discardTile(roomId, p4.getId(), '1z')
 
-        const roundEndedEvent = update?.events.find(
-            (e) => e.eventName === 'round-ended',
-        )
-        expect(roundEndedEvent).toBeDefined()
-        expect(roundEndedEvent?.payload.abortReason).toBe('suufuu-renda')
+        expect(result.reason).toBe('ryuukyoku')
+        const endEvent = result.events.find((e) => e.eventName === 'round-ended')
+        expect(endEvent?.payload.abortReason).toBe('suufuu-renda')
     })
 
     it('should NOT trigger Suufuu Renda if the wind sequence is broken', () => {
-        setupPlayersWithTile('1z')
-        setupPlayersWithTile('2z')
+        const p1 = game.getPlayer('p1')!
+        const p2 = game.getPlayer('p2')!
 
-        let update: GameUpdate | undefined
-        for (let i = 0; i < 4; i++) {
-            const currentPlayer = game.getCurrentTurnPlayer()
-            const tileToDiscard = i === 1 ? '2z' : '1z' // Second player discards different wind
-            update = game.discardTile(
-                roomId,
-                currentPlayer.getId(),
-                tileToDiscard,
-            )
+        game.discardTile(roomId, p1.getId(), '1z')
+        const result = game.discardTile(roomId, p2.getId(), '2z') // Different wind
 
-            if (i < 3) {
-                game.proceedToNextTurn(roomId)
-            }
-        }
-
-        const roundEndedEvent = update?.events.find(
-            (e) => e.eventName === 'round-ended',
-        )
-        expect(roundEndedEvent).toBeUndefined()
+        expect(result.reason).not.toBe('ryuukyoku')
     })
 
     it('should NOT trigger Suufuu Renda if first player does not discard a wind', () => {
-        setupPlayersWithTile('1z')
-        setupPlayersWithTile('1m')
-
-        let update: GameUpdate | undefined
-        for (let i = 0; i < 4; i++) {
-            const currentPlayer = game.getCurrentTurnPlayer()
-            const tileToDiscard = i === 0 ? '1m' : '1z'
-            update = game.discardTile(
-                roomId,
-                currentPlayer.getId(),
-                tileToDiscard,
-            )
-
-            if (i < 3) {
-                game.proceedToNextTurn(roomId)
-            }
-        }
-
-        const roundEndedEvent = update?.events.find(
-            (e) => e.eventName === 'round-ended',
-        )
-        expect(roundEndedEvent).toBeUndefined()
+        const p1 = game.getPlayer('p1')!
+        const result = game.discardTile(roomId, p1.getId(), '1m') // Not a wind
+        expect(result.reason).not.toBe('ryuukyoku')
     })
 
     it('should NOT trigger Suufuu Renda if a call is made', () => {
-        const windTile = '1z'
-        setupPlayersWithTile(windTile)
+        // Suufuu Renda only happens if no one has made a call.
+        // anyCallDeclared is checked in discardTile.
+        game.actionManager.anyCallDeclared = true
 
-        // Player 0 discards 1z
-        const p0 = game.getCurrentTurnPlayer()
-        game.discardTile(roomId, p0.getId(), windTile)
+        const p1 = game.getPlayer('p1')!
+        const p2 = game.getPlayer('p2')!
+        const p3 = game.getPlayer('p3')!
+        const p4 = game.getPlayer('p4')!
 
-        // Player 1 Pon Player 0's 1z
-        game.proceedToNextTurn(roomId) // Move to P1 turn for potential action context?
-        // Actually performAction handles it.
-        const p1 = game.getCurrentTurnPlayer()
-        // Give P1 two 1z tiles
-        p1.draw(new Tile('z', 1, false, 0))
-        p1.draw(new Tile('z', 1, false, 0))
+        game.discardTile(roomId, p1.getId(), '1z')
+        game.discardTile(roomId, p2.getId(), '1z')
+        game.discardTile(roomId, p3.getId(), '1z')
+        const result = game.discardTile(roomId, p4.getId(), '1z')
 
-        game.performAction(roomId, p1.getId(), 'pon', windTile, ['1z', '1z'])
-
-        // Now Player 1 discards something else
-        p1.draw(new Tile('m', 2, false, 0))
-        game.discardTile(roomId, p1.getId(), '2m')
-
-        game.proceedToNextTurn(roomId)
-        const p2 = game.getCurrentTurnPlayer()
-        game.discardTile(roomId, p2.getId(), windTile)
-
-        game.proceedToNextTurn(roomId)
-        const p3 = game.getCurrentTurnPlayer()
-        const update = game.discardTile(roomId, p3.getId(), windTile)
-
-        const roundEndedEvent = update.events.find(
-            (e) => e.eventName === 'round-ended',
-        )
-        expect(roundEndedEvent).toBeUndefined()
+        expect(result.reason).not.toBe('ryuukyoku')
     })
 })

@@ -450,4 +450,17 @@ export class RuleManager {
             text: result.text,
         }
     }
+
+    static verifyWin(
+        player: Player,
+        tileString: string,
+        context: WinContext,
+    ): { isAgari: boolean; score?: ScoreCalculation } {
+        const ctx = { ...context, winningTile: tileString }
+        const score = this.calculateScore(player, ctx)
+        return {
+            isAgari: !!score,
+            score: score || undefined,
+        }
+    }
 }

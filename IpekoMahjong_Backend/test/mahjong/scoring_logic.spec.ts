@@ -7,9 +7,11 @@ class TestMahjongGame extends MahjongGame {
         roomId: string,
         result: {
             reason: 'ron' | 'tsumo' | 'ryuukyoku'
+            winners?: { winnerId: string; score: ScoreCalculation }[]
             winnerId?: string
             loserId?: string
             score?: ScoreCalculation
+            abortReason?: string
         },
     ) {
         return this.endKyoku(roomId, result)
@@ -41,7 +43,6 @@ describe('Mahjong Scoring Logic', () => {
         const ko = players.find((p) => !p.isOya)!
 
         // Mock a Ron score result for 40 fu 1 han
-        // From my debug script: Ko Ron 40fu 1han => oya pays 2000, ko pays 1300.
         const scoreResult: ScoreCalculation = {
             han: 1,
             fu: 40,
@@ -57,9 +58,8 @@ describe('Mahjong Scoring Logic', () => {
         // Scenario 1: Ko wins from Oya
         game.triggerEndKyoku('test-room', {
             reason: 'ron',
-            winnerId: ko.getId(),
+            winners: [{ winnerId: ko.getId(), score: scoreResult }],
             loserId: oya.getId(),
-            score: scoreResult,
         })
 
         expect(oya.points).toBe(25000 - 2000)
@@ -86,9 +86,8 @@ describe('Mahjong Scoring Logic', () => {
 
         game.triggerEndKyoku('test-room', {
             reason: 'ron',
-            winnerId: winner.getId(),
+            winners: [{ winnerId: winner.getId(), score: scoreResult }],
             loserId: loser.getId(),
-            score: scoreResult,
         })
 
         expect(loser.points).toBe(25000 - 1300)
@@ -114,9 +113,8 @@ describe('Mahjong Scoring Logic', () => {
 
         game.triggerEndKyoku('test-room', {
             reason: 'ron',
-            winnerId: oya.getId(),
+            winners: [{ winnerId: oya.getId(), score: scoreResult }],
             loserId: ko.getId(),
-            score: scoreResult,
         })
 
         expect(ko.points).toBe(25000 - 2000)

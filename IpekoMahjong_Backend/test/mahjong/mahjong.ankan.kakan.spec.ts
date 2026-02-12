@@ -3,18 +3,26 @@ import { Tile } from '@src/modules/mahjong/classes/tile.class'
 import { RuleManager } from '@src/modules/mahjong/classes/rule.manager'
 import { Player } from '@src/modules/mahjong/classes/player.class'
 import { Meld } from '@src/modules/mahjong/interfaces/mahjong.types'
+import { RoundManager4p } from '@src/modules/mahjong/classes/managers/RoundManager.4p'
+import { TurnManager } from '@src/modules/mahjong/classes/managers/TurnManager'
+import { ActionManager4p } from '@src/modules/mahjong/classes/managers/ActionManager.4p'
 
 describe('Ankan and Kakan Logic', () => {
     let game: MahjongGame
     let player: Player
 
     beforeEach(() => {
-        game = new MahjongGame([
-            { id: 'p1', isAi: false },
-            { id: 'p2', isAi: true },
-            { id: 'p3', isAi: true },
-            { id: 'p4', isAi: true },
-        ])
+        game = new MahjongGame(
+            [
+                { id: 'p1', isAi: false },
+                { id: 'p2', isAi: true },
+                { id: 'p3', isAi: true },
+                { id: 'p4', isAi: true },
+            ],
+            new RoundManager4p(),
+            new TurnManager(),
+            new ActionManager4p(),
+        )
         game.startGame('room1')
         player = game.getPlayer('p1')!
         player.resetKyokuState()
@@ -65,7 +73,7 @@ describe('Ankan and Kakan Logic', () => {
 
         // Check meld
         expect(player.getMelds().length).toBe(1)
-        expect(player.getMelds()[0].type).toBe('kan')
+        expect(player.getMelds()[0].type).toBe('ankan')
         expect(player.getMelds()[0].opened).toBe(false)
         expect(player.getMelds()[0].tiles.length).toBe(4)
 
@@ -95,7 +103,7 @@ describe('Ankan and Kakan Logic', () => {
 
         // Check meld updated
         expect(player.getMelds().length).toBe(1)
-        expect(player.getMelds()[0].type).toBe('kan')
+        expect(player.getMelds()[0].type).toBe('kakan')
         expect(player.getMelds()[0].tiles.length).toBe(4)
 
         // Check hand reduced (1 removed, 1 replacement drawn)
