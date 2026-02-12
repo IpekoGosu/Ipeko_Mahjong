@@ -2,8 +2,8 @@ import { Tile } from './tile.class'
 import { Suit } from '../interfaces/mahjong.types'
 
 export class Wall {
-    private tiles: Tile[] = []
-    private deadWall: Tile[] = []
+    protected tiles: Tile[] = []
+    protected deadWall: Tile[] = []
     private dora: Tile[] = []
 
     constructor() {
@@ -45,11 +45,42 @@ export class Wall {
         }
     }
 
-    revealDora(): void {
-        // 첫 도라패를 공개합니다. 왕패의 5번째 패 (인덱스 4)
-        if (this.deadWall.length >= 5) {
-            this.dora.push(this.deadWall[4])
+    replenishDeadWall(): void {
+        // Live wall usually pops from the end to replenish dead wall
+        // Standard Mahjong: Dead wall slides, consuming the last tile of live wall.
+        if (this.tiles.length > 0) {
+            const tile = this.tiles.pop()
+            if (tile) {
+                this.deadWall.push(tile)
+            }
         }
+    }
+
+    revealDora(): void {
+        // Dora indicators are at index 4, 6, 8, 10, 12 relative to the current dead wall state
+        // But since we SHIFT the dead wall on Kan, the indices shift.
+        // Logic:
+        // 0 Kans: Index 4.
+        // 1 Kan: Shifted once. Next dora (was 6) is at 5.
+        // 2 Kans: Shifted twice. Next dora (was 8) is at 6.
+        // Formula: 4 + current_dora_count
+        const index = 4 + this.dora.length
+        if (index < this.deadWall.length) {
+            this.dora.push(this.deadWall[index])
+        }
+    }
+
+    getUradora(): Tile[] {
+        // For each revealed dora, find its pair (the tile immediately following it in dead wall)
+        return this.dora
+            .map((d) => {
+                const idx = this.deadWall.indexOf(d)
+                if (idx !== -1 && idx + 1 < this.deadWall.length) {
+                    return this.deadWall[idx + 1]
+                }
+                return null
+            })
+            .filter((t): t is Tile => t !== null)
     }
 
     draw(): Tile | null {
@@ -60,11 +91,16 @@ export class Wall {
     }
 
     drawReplacement(): Tile | null {
-        // Draw from the "Rinshan" area of Dead Wall.
-        // For simplicity, we take from the end of deadWall array.
-        // In a full implementation, we might need to replenish deadWall from live wall.
+        // Draw from the "Rinshan" area of Dead Wall (Start of dead wall)
         if (this.deadWall.length === 0) return null
-        return this.deadWall.pop() as Tile
+
+        // Take from index 0 (Rinshan)
+        const tile = this.deadWall.shift()
+
+        // Maintain 14 tiles in dead wall
+        this.replenishDeadWall()
+
+        return tile || null
     }
 
     getRemainingTiles(): number {

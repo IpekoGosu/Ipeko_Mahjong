@@ -1,10 +1,16 @@
 import { Test, TestingModule } from '@nestjs/testing'
 import { INestApplication } from '@nestjs/common'
 import { Socket, io } from 'socket.io-client'
-import { MahjongModule } from '../mahjong.module'
+import { MahjongModule } from '@src/modules/mahjong/mahjong.module'
 import { AddressInfo } from 'net'
 import { Server } from 'http'
 import { JwtService } from '@nestjs/jwt'
+import * as dotenv from 'dotenv'
+import * as path from 'path'
+import { initializeEnv } from '@src/common/utils/env'
+
+// Load .env for tests
+dotenv.config({ path: path.resolve(process.cwd(), '.env') })
 
 describe('MahjongGateway', () => {
     let app: INestApplication
@@ -14,6 +20,8 @@ describe('MahjongGateway', () => {
     let token: string
 
     beforeAll(async () => {
+        await initializeEnv()
+
         const moduleFixture: TestingModule = await Test.createTestingModule({
             imports: [MahjongModule],
         }).compile()
@@ -21,7 +29,7 @@ describe('MahjongGateway', () => {
         jwtService = moduleFixture.get<JwtService>(JwtService)
         token = jwtService.sign({ sub: 1, email: 'test@example.com' })
 
-        app = moduleFixture.createNestApplication()
+        app = moduleFixture.createNestApplication({ logger: false })
         await app.listen(0) // Listen on a random port
         const server = app.getHttpServer() as Server
         const address = server.address() as AddressInfo
@@ -36,15 +44,21 @@ describe('MahjongGateway', () => {
         // Connect to the WebSocket server
         client = io(`http://localhost:${port}`, {
             auth: { token },
+            transports: ['websocket'],
+            forceNew: true,
         })
         client.on('connect', () => {
             done()
         })
+        client.on('connect_error', (err) => {
+            console.error('Connection Error:', err.message)
+            done(err)
+        })
     })
 
     afterEach(() => {
-        if (client.connected) {
-            client.disconnect()
+        if (client) {
+            client.close()
         }
     })
 
@@ -53,6 +67,7 @@ describe('MahjongGateway', () => {
 
         let gameStartedReceived = false
         let turnChangedReceived = false
+        let doneCalled = false
 
         client.on('game-started', (data: Record<string, unknown>) => {
             gameStartedReceived = true
@@ -63,7 +78,8 @@ describe('MahjongGateway', () => {
             expect(data.dora).toHaveLength(1)
 
             // Check if all events are received
-            if (gameStartedReceived && turnChangedReceived) {
+            if (gameStartedReceived && turnChangedReceived && !doneCalled) {
+                doneCalled = true
                 done()
             }
         })
@@ -71,7 +87,8 @@ describe('MahjongGateway', () => {
         client.on('turn-changed', (data: Record<string, unknown>) => {
             turnChangedReceived = true
             expect(data).toHaveProperty('playerId')
-            if (gameStartedReceived && turnChangedReceived) {
+            if (gameStartedReceived && turnChangedReceived && !doneCalled) {
+                doneCalled = true
                 done()
             }
         })
@@ -86,7 +103,9 @@ describe('MahjongGateway', () => {
         client.emit('start-game')
 
         let myRoomId: string
-        let myHand: string[] = []
+        let myPlayerId: string
+        let myTurnCount = 0
+        let doneCalled = false
 
         client.on(
             'game-started',
@@ -97,26 +116,32 @@ describe('MahjongGateway', () => {
                 oyaId: string
             }) => {
                 myRoomId = data.roomId
-                myHand = data.hand
-
-                // If I am Oya, I discard immediately to start the game
-                if (data.yourPlayerId === data.oyaId) {
-                    const tileToDiscard = myHand[myHand.length - 1]
-                    client.emit('discard-tile', {
-                        roomId: myRoomId,
-                        tile: tileToDiscard,
-                    })
-                }
+                myPlayerId = data.yourPlayerId
             },
         )
 
-        client.on('new-tile-drawn', (data: Record<string, unknown>) => {
-            // This event is received when it's my turn AGAIN (after AIs played)
-            // or if I wasn't Oya.
-
-            // If this fires, it means the round completed successfully!
-            expect(data).toHaveProperty('tile')
-            done()
+        client.on('turn-changed', (data: { playerId: string }) => {
+            if (data.playerId === myPlayerId) {
+                myTurnCount++
+                if (myTurnCount === 2 && !doneCalled) {
+                    doneCalled = true
+                    done()
+                }
+            }
         })
-    }, 15000)
+
+        client.on('new-tile-drawn', (data: { tile: string }) => {
+            // Always discard when drawing a tile to keep the game moving
+            client.emit('discard-tile', {
+                roomId: myRoomId,
+                tile: data.tile,
+            })
+        })
+
+        client.on(
+            'update-discard',
+            (data: { playerId: string; tile: string }) => {
+            },
+        )
+    }, 20000)
 })

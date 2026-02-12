@@ -4,16 +4,27 @@
   "description": "Monorepo root for IpekoMahjong",
   "private": true,
   "scripts": {
-    "install:all": "npm install && cd IpekoMahjong_Backend && npm install && cd ../IpekoMahjong_Frontend && npm install",
-    "dev:backend": "cd IpekoMahjong_Backend && npm run dev",
-    "dev:frontend": "cd IpekoMahjong_Frontend && npm run dev",
-    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\" --names \"BACKEND,FRONTEND\" --prefix-colors \"blue,green\""
+    "install:all": "pnpm install",
+    "build": "pnpm -r build",
+    "dev:backend": "pnpm --filter ipekomahjong_backend dev",
+    "dev:frontend": "pnpm --filter ipeko-mahjong-frontend dev",
+    "dev": "pnpm -r --parallel dev",
+    "test:backend": "pnpm --filter ipekomahjong_backend test:e2e",
+    "start:backend": "pnpm --filter ipekomahjong_backend start",
+    "start:frontend": "pnpm --filter ipeko-mahjong-frontend start",
+    "start": "pnpm -r --parallel start",
+    "lint:backend": "pnpm --filter ipekomahjong_backend lint",
+    "lint:frontend": "pnpm --filter ipeko-mahjong-frontend lint"
   },
-  "devDependencies": {
-    "@types/cookie-parser": "^1.4.10",
-    "concurrently": "^8.2.0"
-  },
-  "dependencies": {
-    "cookie-parser": "^1.4.7"
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "bcrypt",
+      "prisma",
+      "@prisma/engines",
+      "@swc/core",
+      "@nestjs/core",
+      "esbuild",
+      "protobufjs"
+    ]
   }
 }

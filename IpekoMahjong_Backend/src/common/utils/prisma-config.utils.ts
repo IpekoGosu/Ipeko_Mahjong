@@ -1,5 +1,5 @@
 import { PrismaMariaDb } from '@prisma/adapter-mariadb'
-import { ENV } from '@src/common/utils/env'
+import { ENV } from './env'
 
 export interface DbConfig {
     host: string
@@ -9,6 +9,7 @@ export interface DbConfig {
     database: string
     ssl?: { rejectUnauthorized: boolean }
     isCloud: boolean
+    connectionLimit: number
 }
 
 export function getDbConfig(): DbConfig {
@@ -24,6 +25,7 @@ export function getDbConfig(): DbConfig {
         database: ENV.DATABASE_NAME,
         ssl: isCloud ? { rejectUnauthorized: false } : undefined,
         isCloud,
+        connectionLimit: 10,
     }
 }
 

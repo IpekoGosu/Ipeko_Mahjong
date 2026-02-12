@@ -2,14 +2,20 @@ import { Injectable, LoggerService } from '@nestjs/common'
 import * as winston from 'winston'
 import chalk from 'chalk'
 import { convertUtcToKst } from '@src/common/utils/date.utils'
+import { ENV } from '@src/common/utils/env'
 
 @Injectable()
 export class WinstonLoggerService implements LoggerService {
     private logger: winston.Logger
 
     constructor() {
+        // Use process.env directly if ENV is not yet initialized
+        const nodeEnv = process.env.NODE_ENV || ENV.NODE_ENV || 'development'
+        const level =
+            nodeEnv === 'test' || nodeEnv === 'production' ? 'warn' : 'info'
+
         this.logger = winston.createLogger({
-            level: 'info',
+            level: level,
             format: winston.format.combine(
                 winston.format.timestamp({
                     format: () => {
@@ -45,6 +51,11 @@ export class WinstonLoggerService implements LoggerService {
     }
 
     log(message: string) {
+        this.logger.info(message)
+    }
+
+    // NestJS LoggerService doesn't have info, but we keep it for direct calls
+    info(message: string) {
         this.logger.info(message)
     }
 
