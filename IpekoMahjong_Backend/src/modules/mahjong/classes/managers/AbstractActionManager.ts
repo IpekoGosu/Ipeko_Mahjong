@@ -24,8 +24,6 @@ export abstract class AbstractActionManager {
     public receivedRonCommands: { playerId: string; tileString: string }[] = []
     public processedRonners: string[] = []
 
-    constructor() {}
-
     public reset() {
         this.pendingActions = {}
         this.activeDiscard = null

@@ -100,6 +100,7 @@ export class ActionManagerSanma extends AbstractActionManager {
         _turnManager: TurnManager,
     ): GameUpdate {
         // Implementation omitted for brevity
+        // TODO implement Sanma
         return { roomId, isGameOver: false, events: [] }
     }
 

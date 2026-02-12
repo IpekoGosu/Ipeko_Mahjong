@@ -112,6 +112,7 @@ export class ActionManager4p extends AbstractActionManager {
         turnManager: TurnManager,
     ): GameUpdate {
         const player = players.find((p) => p.getId() === playerId)!
+        const playerIndex = players.indexOf(player)
 
         if (actionType === 'ron') {
             if (this.potentialRonners.includes(playerId)) {
@@ -154,6 +155,41 @@ export class ActionManager4p extends AbstractActionManager {
                         playerId,
                     },
                 ],
+            }
+        }
+
+        // Validation for other actions
+        if (actionType === 'ankan' || actionType === 'kakan') {
+            if (turnManager.currentTurnIndex !== playerIndex) {
+                return {
+                    roomId,
+                    isGameOver: false,
+                    events: [
+                        {
+                            eventName: 'error',
+                            payload: { message: 'Not your turn' },
+                            to: 'player',
+                            playerId,
+                        },
+                    ],
+                }
+            }
+        } else {
+            // chi, pon, kan (daiminkan)
+            const pending = this.pendingActions[playerId]
+            if (!pending || !pending[actionType]) {
+                return {
+                    roomId,
+                    isGameOver: false,
+                    events: [
+                        {
+                            eventName: 'error',
+                            payload: { message: 'Action not allowed' },
+                            to: 'player',
+                            playerId,
+                        },
+                    ],
+                }
             }
         }
 
@@ -259,15 +295,24 @@ export class ActionManager4p extends AbstractActionManager {
             }
             stolenFromId = this.activeDiscard.playerId
             const stolenTile = this.activeDiscard.tile
-            consumedTiles.forEach((ts) => player.removeFromHand(ts))
-            meldTiles = [
-                ...consumedTiles.map((ts) => {
-                    const rank = parseInt(ts[0]) === 0 ? 5 : parseInt(ts[0])
-                    const suit = ts[1] as Suit
-                    return new Tile(suit, rank, ts[0] === '0', 0)
-                }),
-                stolenTile,
-            ]
+            
+            const removedTiles = player.removeTiles(consumedTiles)
+            if (removedTiles.length !== consumedTiles.length) {
+                return {
+                    roomId,
+                    isGameOver: false,
+                    events: [
+                        {
+                            eventName: 'error',
+                            payload: { message: 'Invalid consumed tiles' },
+                            to: 'player',
+                            playerId,
+                        },
+                    ],
+                }
+            }
+
+            meldTiles = [...removedTiles, stolenTile]
             player.addMeld({
                 type: actionType as MeldType,
                 tiles: meldTiles,
@@ -277,7 +322,6 @@ export class ActionManager4p extends AbstractActionManager {
             this.activeDiscard = null
         }
 
-        const playerIndex = players.indexOf(player)
         turnManager.currentTurnIndex = playerIndex
 
         const events: GameUpdate['events'] = [
@@ -432,7 +476,7 @@ export class ActionManager4p extends AbstractActionManager {
         return RuleManager.verifyWin(player, lastTile.toString(), context)
     }
 
-    private checkChi(player: Player, tileString: string): string[][] {
+    public checkChi(player: Player, tileString: string): string[][] {
         const suit = tileString[1]
         if (suit === 'z') return []
 

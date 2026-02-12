@@ -18,4 +18,8 @@ export class MahjongGame extends AbstractMahjongGame {
     protected createWall(): AbstractWall {
         return new Wall4p()
     }
+
+    public getActionManager(): ActionManager4p {
+        return this.actionManager as ActionManager4p
+    }
 }
