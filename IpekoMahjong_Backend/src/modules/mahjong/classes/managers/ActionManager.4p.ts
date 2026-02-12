@@ -6,8 +6,9 @@ import {
     GameUpdate,
     ScoreCalculation,
     MeldType,
+    WinContext,
 } from '../../interfaces/mahjong.types'
-import { RuleManager, WinContext } from '../rule.manager'
+import { RuleManager } from '../rule.manager'
 import { AbstractRoundManager } from './AbstractRoundManager'
 import { TurnManager } from './TurnManager'
 import { AbstractActionManager } from './AbstractActionManager'

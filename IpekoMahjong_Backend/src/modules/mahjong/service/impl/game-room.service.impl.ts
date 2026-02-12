@@ -1,16 +1,8 @@
 import { Injectable, OnModuleDestroy } from '@nestjs/common'
-import { MahjongGame } from '../../classes/AbstractMahjongGame'
 import { GameRoomService } from '../game-room.service'
 import { WinstonLoggerService } from '@src/common/logger/winston.logger.service'
 import { MahjongFactory } from '../../mahjong.factory'
-
-// 인터페이스는 구현 파일 내에서 직접 export하여 순환 참조를 방지합니다.
-export interface GameRoom {
-    readonly roomId: string
-    readonly mahjongGame: MahjongGame
-    gameStatus: 'in-progress' | 'finished'
-    timer?: NodeJS.Timeout
-}
+import { GameRoom } from '../../interfaces/mahjong.types'
 
 @Injectable()
 export class GameRoomServiceImpl

@@ -1,7 +1,5 @@
-import {
-    MahjongGame,
-    GameUpdate,
-} from '@src/modules/mahjong/classes/AbstractMahjongGame'
+import { MahjongGame } from '@src/modules/mahjong/classes/AbstractMahjongGame'
+import { GameUpdate } from '@src/modules/mahjong/interfaces/mahjong.types'
 import { RoundManager4p } from '@src/modules/mahjong/classes/managers/RoundManager.4p'
 import { TurnManager } from '@src/modules/mahjong/classes/managers/TurnManager'
 import { ActionManager4p } from '@src/modules/mahjong/classes/managers/ActionManager.4p'

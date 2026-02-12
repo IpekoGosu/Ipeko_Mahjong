@@ -1,10 +1,14 @@
-import { GameObservation, MahjongAI } from './mahjong-ai.interface'
-import { PossibleActions } from '../interfaces/mahjong.types'
+import { MahjongAI } from '@src/modules/mahjong/classes/ai/MahjongAI'
+import { GameObservation } from '../../interfaces/mahjong-ai.interface'
+import { PossibleActions } from '../../interfaces/mahjong.types'
+import { Injectable, Scope } from '@nestjs/common'
 
-export class SimpleAI implements MahjongAI {
+@Injectable({ scope: Scope.TRANSIENT })
+export class SimpleAI extends MahjongAI {
     private readonly delay: number
 
     constructor() {
+        super()
         this.delay = process.env.NODE_ENV === 'test' ? 0 : 1000
     }
 

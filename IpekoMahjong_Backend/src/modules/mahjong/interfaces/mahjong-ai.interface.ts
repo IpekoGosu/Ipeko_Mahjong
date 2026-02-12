@@ -1,4 +1,4 @@
-import { MeldType, PossibleActions } from '../interfaces/mahjong.types'
+import { MeldType } from '../interfaces/mahjong.types'
 
 /**
  * Information about a player from the AI's perspective.
@@ -32,25 +32,4 @@ export interface GameObservation {
     deadWallCount: number
     bakaze: number // 1: East, 2: South, ...
     turnCounter: number
-}
-
-/**
- * Abstract AI interface for Mahjong.
- * This can be implemented by simple heuristic-based AIs or sophisticated neural networks.
- */
-export interface MahjongAI {
-    /**
-     * Decides which tile to discard given the current game observation.
-     */
-    decideDiscard(observation: GameObservation): Promise<string>
-
-    /**
-     * Decides whether to perform an action (Chi, Pon, Kan, Ron) on a discarded tile.
-     * Returns the action type or 'skip'.
-     */
-    decideAction(
-        observation: GameObservation,
-        discardedTile: string,
-        possibleActions: PossibleActions,
-    ): Promise<'chi' | 'pon' | 'kan' | 'ron' | 'skip'>
 }
