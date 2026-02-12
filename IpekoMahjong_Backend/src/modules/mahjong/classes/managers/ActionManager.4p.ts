@@ -22,6 +22,7 @@ export class ActionManager4p extends AbstractActionManager {
         players: Player[],
         wall: AbstractWall,
         roundManager: AbstractRoundManager,
+        isKakan: boolean = false,
     ): Record<string, PossibleActions> {
         const discarder = players.find((p) => p.getId() === discarderId)
         if (!discarder) return {}
@@ -46,11 +47,18 @@ export class ActionManager4p extends AbstractActionManager {
                 wall,
                 roundManager,
                 players,
+                isKakan,
             )
             if (result.isAgari) {
                 possibleActions.ron = true
                 hasAction = true
                 this.potentialRonners.push(player.getId())
+            }
+
+            // Chankan (Ron on Kakan) is only Ron. No Pon/Chi/Kan allowed on Kakan.
+            if (isKakan) {
+                if (hasAction) actions[player.getId()] = possibleActions
+                return
             }
 
             if (player.isRiichi) {
@@ -376,6 +384,7 @@ export class ActionManager4p extends AbstractActionManager {
         wall: AbstractWall,
         roundManager: AbstractRoundManager,
         players: Player[],
+        isKakan: boolean = false,
     ): { isAgari: boolean; score?: ScoreCalculation } {
         const context: WinContext = {
             bakaze: roundManager.bakaze,
@@ -383,7 +392,7 @@ export class ActionManager4p extends AbstractActionManager {
             isTsumo: false,
             isIppatsu: player.ippatsuEligible,
             isRinshan: false,
-            isChankan: false, // TODO
+            isChankan: isKakan,
             isHaitei: false,
             isHoutei: wall.getRemainingTiles() === 0,
             dora: wall.getDora().map((t) => t.toString()),

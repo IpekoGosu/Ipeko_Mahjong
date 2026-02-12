@@ -8,9 +8,9 @@ import { AbstractWall } from './AbstractWall'
 export class SanmaMahjongGame extends AbstractMahjongGame {
     constructor(
         playerInfos: { id: string; isAi: boolean }[],
-        public override roundManager: RoundManagerSanma,
-        public override turnManager: TurnManager,
-        public override actionManager: ActionManagerSanma,
+        roundManager: RoundManagerSanma,
+        turnManager: TurnManager,
+        actionManager: ActionManagerSanma,
     ) {
         super(playerInfos, roundManager, turnManager, actionManager)
     }

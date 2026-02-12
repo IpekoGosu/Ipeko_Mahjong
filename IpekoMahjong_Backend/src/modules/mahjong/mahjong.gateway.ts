@@ -345,6 +345,19 @@ export class MahjongGateway {
             await this.checkAndNotifyActions(roomId, discarderId, tileString)
         }
 
+        const meldEvent = update.events.find(
+            (e) => e.eventName === 'update-meld',
+        )
+        if (meldEvent && meldEvent.payload.type === 'kakan') {
+            const playerId = meldEvent.payload.playerId as string
+            // For kakan, the added tile is the one being robbed.
+            // ActionManager should have stored which tile was added, or we can infer it.
+            // In ActionManager.4p, tilesToMove contains the added tile for kakan.
+            const addedTiles = meldEvent.payload.consumedTiles as string[]
+            const addedTile = addedTiles[0]
+            await this.checkAndNotifyActions(roomId, playerId, addedTile, true)
+        }
+
         const turnEvent = update.events.find(
             (e) => e.eventName === 'turn-changed',
         )
@@ -361,6 +374,7 @@ export class MahjongGateway {
         roomId: string,
         discarderId: string,
         tileString: string,
+        isKakan: boolean = false,
     ): Promise<void> {
         const room = this.gameRoomService.getRoom(roomId)
         if (!room) return
@@ -368,6 +382,7 @@ export class MahjongGateway {
         const actions = room.mahjongGame.getPossibleActions(
             discarderId,
             tileString,
+            isKakan,
         )
         const hasActions = Object.keys(actions).length > 0
 

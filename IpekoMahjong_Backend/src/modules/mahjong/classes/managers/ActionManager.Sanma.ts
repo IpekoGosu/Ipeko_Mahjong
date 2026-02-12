@@ -19,6 +19,7 @@ export class ActionManagerSanma extends AbstractActionManager {
         players: Player[],
         wall: AbstractWall,
         roundManager: AbstractRoundManager,
+        isKakan: boolean = false,
     ): Record<string, PossibleActions> {
         const discarder = players.find((p) => p.getId() === discarderId)
         if (!discarder) return {}
@@ -42,11 +43,17 @@ export class ActionManagerSanma extends AbstractActionManager {
                 wall,
                 roundManager,
                 players,
+                isKakan,
             )
             if (result.isAgari) {
                 possibleActions.ron = true
                 hasAction = true
                 this.potentialRonners.push(player.getId())
+            }
+
+            if (isKakan) {
+                if (hasAction) actions[player.getId()] = possibleActions
+                return
             }
 
             if (player.isRiichi) {
@@ -118,11 +125,13 @@ export class ActionManagerSanma extends AbstractActionManager {
         wall: AbstractWall,
         roundManager: AbstractRoundManager,
         players: Player[],
+        isKakan: boolean = false,
     ): { isAgari: boolean; score?: ScoreCalculation } {
         const context: WinContext = {
             bakaze: roundManager.bakaze,
             seatWind: roundManager.getSeatWind(players.indexOf(player)),
             isTsumo: false,
+            isChankan: isKakan,
             dora: wall.getDora().map((t) => t.toString()),
             uradora: player.isRiichi
                 ? wall.getUradora().map((t) => t.toString())

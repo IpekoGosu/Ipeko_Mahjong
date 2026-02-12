@@ -43,6 +43,7 @@ export abstract class AbstractActionManager {
         players: Player[],
         wall: AbstractWall,
         roundManager: AbstractRoundManager,
+        isKakan?: boolean,
     ): Record<string, PossibleActions>
 
     public abstract performAction(
@@ -72,6 +73,7 @@ export abstract class AbstractActionManager {
         wall: AbstractWall,
         roundManager: AbstractRoundManager,
         players: Player[],
+        isKakan?: boolean,
     ): { isAgari: boolean; score?: ScoreCalculation }
 
     public abstract verifyTsumo(

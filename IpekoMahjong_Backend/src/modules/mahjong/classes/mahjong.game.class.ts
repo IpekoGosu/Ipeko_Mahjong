@@ -620,6 +620,7 @@ export abstract class AbstractMahjongGame {
     getPossibleActions(
         discarderId: string,
         tileString: string,
+        isKakan: boolean = false,
     ): Record<string, PossibleActions> {
         return this.actionManager.getPossibleActions(
             discarderId,
@@ -627,6 +628,7 @@ export abstract class AbstractMahjongGame {
             this.players,
             this.wall,
             this.roundManager,
+            isKakan,
         )
     }
 
