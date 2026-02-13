@@ -1,5 +1,8 @@
 import { Player } from '@src/modules/mahjong/classes/player.class'
-import { ScoreCalculation, GameUpdate } from '@src/modules/mahjong/interfaces/mahjong.types'
+import {
+    ScoreCalculation,
+    GameUpdate,
+} from '@src/modules/mahjong/interfaces/mahjong.types'
 import { RuleManager } from '@src/modules/mahjong/classes/managers/RuleManager'
 import { AbstractRoundManager } from '@src/modules/mahjong/classes/managers/AbstractRoundManager'
 
