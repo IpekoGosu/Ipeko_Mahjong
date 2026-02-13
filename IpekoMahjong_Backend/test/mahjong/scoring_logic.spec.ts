@@ -1,11 +1,9 @@
 import { MahjongGame } from '@src/modules/mahjong/classes/MahjongGame.4p'
 import { Player } from '@src/modules/mahjong/classes/player.class'
 import { ScoreCalculation } from '@src/modules/mahjong/interfaces/mahjong.types'
-import { RoundManager4p } from '@src/modules/mahjong/classes/managers/RoundManager.4p'
-import { TurnManager } from '@src/modules/mahjong/classes/managers/TurnManager'
-import { ActionManager4p } from '@src/modules/mahjong/classes/managers/ActionManager.4p'
-import { RuleEffectManager } from '@src/modules/mahjong/classes/managers/RuleEffectManager'
 import { SimpleAI } from '@src/modules/mahjong/classes/ai/simple.ai'
+import { createTestManagers } from './test_utils'
+import { DEFAULT_4P_RULES } from '@src/modules/mahjong/interfaces/game-rules.config'
 
 class TestMahjongGame extends MahjongGame {
     public triggerEndKyoku(
@@ -30,6 +28,7 @@ describe('Mahjong Scoring Logic', () => {
     beforeEach(() => {
         // 4 players
         const ai = new SimpleAI()
+        const managers = createTestManagers()
         game = new TestMahjongGame(
             [
                 { id: 'p1', isAi: false },
@@ -37,10 +36,12 @@ describe('Mahjong Scoring Logic', () => {
                 { id: 'p3', isAi: true, ai },
                 { id: 'p4', isAi: true, ai },
             ],
-            new RoundManager4p(),
-            new TurnManager(),
-            new ActionManager4p(),
-            new RuleEffectManager(),
+            managers.roundManager,
+            managers.turnManager,
+            managers.actionManager,
+            managers.ruleEffectManager,
+            managers.ruleManager,
+            DEFAULT_4P_RULES,
         )
         // Seating is randomized in startGame, but we can force it or inspect it.
         game.startGame('test-room')

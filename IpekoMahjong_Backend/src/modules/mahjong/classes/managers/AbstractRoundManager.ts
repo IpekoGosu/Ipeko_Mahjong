@@ -3,9 +3,8 @@ import {
     ScoreCalculation,
     GameUpdate,
 } from '@src/modules/mahjong/interfaces/mahjong.types'
-import { Logger, Injectable } from '@nestjs/common'
+import { Logger } from '@nestjs/common'
 
-@Injectable()
 export abstract class AbstractRoundManager {
     protected readonly logger = new Logger(this.constructor.name)
 

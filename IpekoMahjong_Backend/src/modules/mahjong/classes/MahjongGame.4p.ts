@@ -6,6 +6,9 @@ import { MahjongAI } from '@src/modules/mahjong/classes/ai/MahjongAI'
 import { AbstractRoundManager } from '@src/modules/mahjong/classes/managers/AbstractRoundManager'
 import { AbstractActionManager } from '@src/modules/mahjong/classes/managers/AbstractActionManager'
 import { AbstractRuleEffectManager } from '@src/modules/mahjong/classes/managers/AbstractRuleEffectManager'
+import { RuleManager } from '@src/modules/mahjong/classes/managers/RuleManager'
+
+import { GameRulesConfig } from '@src/modules/mahjong/interfaces/game-rules.config'
 
 export class MahjongGame extends AbstractMahjongGame {
     constructor(
@@ -14,6 +17,8 @@ export class MahjongGame extends AbstractMahjongGame {
         turnManager: TurnManager,
         actionManager: AbstractActionManager,
         ruleEffectManager: AbstractRuleEffectManager,
+        ruleManager: RuleManager,
+        gameRulesConfig: GameRulesConfig,
     ) {
         super(
             playerInfos,
@@ -21,6 +26,8 @@ export class MahjongGame extends AbstractMahjongGame {
             turnManager,
             actionManager,
             ruleEffectManager,
+            ruleManager,
+            gameRulesConfig,
         )
     }
 

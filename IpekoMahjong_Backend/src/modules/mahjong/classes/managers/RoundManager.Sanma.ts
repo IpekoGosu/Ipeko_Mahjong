@@ -5,9 +5,16 @@ import {
 } from '@src/modules/mahjong/interfaces/mahjong.types'
 import { RuleManager } from '@src/modules/mahjong/classes/managers/RuleManager'
 import { AbstractRoundManager } from '@src/modules/mahjong/classes/managers/AbstractRoundManager'
+import { Injectable } from '@nestjs/common'
+import { DEFAULT_3P_RULES } from '@src/modules/mahjong/interfaces/game-rules.config'
 
+@Injectable()
 export class RoundManagerSanma extends AbstractRoundManager {
     public readonly playerCount = 3
+
+    constructor(private readonly ruleManager: RuleManager) {
+        super()
+    }
 
     public getSeatWind(playerIndex: number): string {
         const relativePos = (playerIndex - this.oyaIndex + 3) % 3
@@ -117,7 +124,9 @@ export class RoundManagerSanma extends AbstractRoundManager {
             })
         } else if (result.reason === 'ryuukyoku') {
             // Tenpai-noten logic for 3p
-            const tenpaiList = players.filter((p) => RuleManager.isTenpai(p))
+            const tenpaiList = players.filter((p) =>
+                this.ruleManager.isTenpai(p),
+            )
             const notenList = players.filter((p) => !tenpaiList.includes(p))
             if (tenpaiList.length > 0 && notenList.length > 0) {
                 const flow = 3000
@@ -218,18 +227,15 @@ export class RoundManagerSanma extends AbstractRoundManager {
         events: GameUpdate['events'],
     ): GameUpdate {
         const sorted = this.getSortedPlayers(players)
-        const finalRanking = sorted.map((p, idx) => {
-            let uma = 0
-            if (idx === 0) uma = 20000
-            if (idx === 1) uma = 0
-            if (idx === 2) uma = -20000
+        const { returnPoints, uma, oka } = DEFAULT_3P_RULES
 
-            // 25000 start, 30000 return (oka is 5000*3 = 15000)
-            const finalPoint = p.points - 30000 + uma
+        const finalRanking = sorted.map((p, idx) => {
+            const playerUma = uma[idx]
+            const finalPoint = p.points - returnPoints + playerUma
             return {
                 id: p.getId(),
                 points: p.points,
-                finalScore: idx === 0 ? finalPoint + 15000 : finalPoint,
+                finalScore: idx === 0 ? finalPoint + oka : finalPoint,
                 rank: idx + 1,
             }
         })

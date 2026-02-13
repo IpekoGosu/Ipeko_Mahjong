@@ -3,8 +3,14 @@ import { AbstractWall } from '@src/modules/mahjong/classes/wall/AbstractWall'
 import { TurnManager } from '@src/modules/mahjong/classes/managers/TurnManager'
 import { AbstractRuleEffectManager } from '@src/modules/mahjong/classes/managers/AbstractRuleEffectManager'
 import { RuleManager } from '@src/modules/mahjong/classes/managers/RuleManager'
+import { Injectable } from '@nestjs/common'
 
+@Injectable()
 export class RuleEffectManager extends AbstractRuleEffectManager {
+    constructor(private readonly ruleManager: RuleManager) {
+        super()
+    }
+
     public handleRiichi(
         player: Player,
         tileString: string,
@@ -20,7 +26,7 @@ export class RuleEffectManager extends AbstractRuleEffectManager {
             }
         }
 
-        const validRiichiDiscards = RuleManager.getRiichiDiscards(player)
+        const validRiichiDiscards = this.ruleManager.getRiichiDiscards(player)
         if (
             player.isRiichi ||
             !player.isHandClosed() ||
@@ -50,7 +56,7 @@ export class RuleEffectManager extends AbstractRuleEffectManager {
     }
 
     public updateFuritenStatus(player: Player): void {
-        const standardFuriten = RuleManager.calculateFuriten(player)
+        const standardFuriten = this.ruleManager.calculateFuriten(player)
         player.isFuriten =
             standardFuriten ||
             player.isTemporaryFuriten ||
@@ -110,7 +116,7 @@ export class RuleEffectManager extends AbstractRuleEffectManager {
             return { success: false, error: 'Too late for Kyuushu Kyuuhai' }
         }
 
-        const terminals = RuleManager.countTerminalsAndHonors(player)
+        const terminals = this.ruleManager.countTerminalsAndHonors(player)
         if (terminals < 9) {
             return { success: false, error: 'Not enough terminals/honors' }
         }

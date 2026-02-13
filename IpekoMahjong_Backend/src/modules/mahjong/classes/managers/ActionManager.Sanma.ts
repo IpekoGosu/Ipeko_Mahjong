@@ -9,8 +9,14 @@ import {
 } from '@src/modules/mahjong/interfaces/mahjong.types'
 import { RuleManager } from '@src/modules/mahjong/classes/managers/RuleManager'
 import { AbstractActionManager } from '@src/modules/mahjong/classes/managers/AbstractActionManager'
+import { Injectable } from '@nestjs/common'
 
+@Injectable()
 export class ActionManagerSanma extends AbstractActionManager {
+    constructor(private readonly ruleManager: RuleManager) {
+        super()
+    }
+
     public getPossibleActions(
         discarderId: string,
         tileString: string,
@@ -340,8 +346,10 @@ export class ActionManagerSanma extends AbstractActionManager {
             isHoutei: context.isHoutei,
             dora: context.dora,
             uradora: context.uradora,
+            isRiichi: player.isRiichi,
+            isDoubleRiichi: player.isDoubleRiichi,
         }
-        return RuleManager.verifyWin(player, tileString, winCtx)
+        return this.ruleManager.verifyWin(player, tileString, winCtx)
     }
 
     public verifyTsumo(
@@ -367,6 +375,6 @@ export class ActionManagerSanma extends AbstractActionManager {
             dora: context.dora,
             uradora: context.uradora,
         }
-        return RuleManager.verifyWin(player, lastTile.toString(), winCtx)
+        return this.ruleManager.verifyWin(player, lastTile.toString(), winCtx)
     }
 }

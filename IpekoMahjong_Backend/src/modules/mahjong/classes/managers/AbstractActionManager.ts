@@ -5,9 +5,8 @@ import {
     ActionResult,
     ScoreCalculation,
 } from '@src/modules/mahjong/interfaces/mahjong.types'
-import { Logger, Injectable } from '@nestjs/common'
+import { Logger } from '@nestjs/common'
 
-@Injectable()
 export abstract class AbstractActionManager {
     protected readonly logger = new Logger(this.constructor.name)
 

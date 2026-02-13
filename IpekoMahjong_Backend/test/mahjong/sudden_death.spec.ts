@@ -1,10 +1,8 @@
 import { MahjongGame } from '@src/modules/mahjong/classes/MahjongGame.4p'
 import { ScoreCalculation } from '@src/modules/mahjong/interfaces/mahjong.types'
-import { RoundManager4p } from '@src/modules/mahjong/classes/managers/RoundManager.4p'
-import { TurnManager } from '@src/modules/mahjong/classes/managers/TurnManager'
-import { ActionManager4p } from '@src/modules/mahjong/classes/managers/ActionManager.4p'
-import { RuleEffectManager } from '@src/modules/mahjong/classes/managers/RuleEffectManager'
 import { SimpleAI } from '@src/modules/mahjong/classes/ai/simple.ai'
+import { createTestManagers } from './test_utils'
+import { DEFAULT_4P_RULES } from '@src/modules/mahjong/interfaces/game-rules.config'
 
 class TestMahjongGame extends MahjongGame {
     public setSuddenDeath(val: boolean) {
@@ -43,6 +41,7 @@ describe('MahjongGame - Indefinite Sudden Death', () => {
     beforeEach(() => {
         roomId = 'test-room'
         const ai = new SimpleAI()
+        const managers = createTestManagers()
         game = new TestMahjongGame(
             [
                 { id: 'p1', isAi: false },
@@ -50,10 +49,12 @@ describe('MahjongGame - Indefinite Sudden Death', () => {
                 { id: 'p3', isAi: true, ai },
                 { id: 'p4', isAi: true, ai },
             ],
-            new RoundManager4p(),
-            new TurnManager(),
-            new ActionManager4p(),
-            new RuleEffectManager(),
+            managers.roundManager,
+            managers.turnManager,
+            managers.actionManager,
+            managers.ruleEffectManager,
+            managers.ruleManager,
+            DEFAULT_4P_RULES,
         )
         game.startGame(roomId)
     })
