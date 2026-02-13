@@ -22,19 +22,20 @@ function getEnv(key: string, required = true): string | undefined {
  * Note: These values might be overwritten by initializeEnv() if USE_GSM is true.
  */
 export const ENV = {
-    PORT: '3000',
-    NODE_ENV: 'development',
-    JWT_SECRET_KEY: '',
-    DB_ENV: 'localhost',
-    DATABASE_NAME: '',
-    DATABASE_PORT: '3306',
-    LOCAL_DATABASE_HOST: '',
-    LOCAL_DATABASE_USER: '',
-    LOCAL_DATABASE_PASSWORD: '',
-    GOOGLE_DATABASE_HOST: '',
-    GOOGLE_DATABASE_USER: '',
-    GOOGLE_DATABASE_PASSWORD: '',
-    GOOGLE_CLOUD_STORAGE_BUCKET: 'ipeko-mahjong',
+    PORT: process.env.PORT || '3000',
+    NODE_ENV: process.env.NODE_ENV || 'development',
+    JWT_SECRET_KEY: process.env.JWT_SECRET_KEY || '',
+    DB_ENV: process.env.DB_ENV || 'localhost',
+    DATABASE_NAME: process.env.DATABASE_NAME || '',
+    DATABASE_PORT: process.env.DATABASE_PORT || '3306',
+    LOCAL_DATABASE_HOST: process.env.LOCAL_DATABASE_HOST || '',
+    LOCAL_DATABASE_USER: process.env.LOCAL_DATABASE_USER || '',
+    LOCAL_DATABASE_PASSWORD: process.env.LOCAL_DATABASE_PASSWORD || '',
+    GOOGLE_DATABASE_HOST: process.env.GOOGLE_DATABASE_HOST || '',
+    GOOGLE_DATABASE_USER: process.env.GOOGLE_DATABASE_USER || '',
+    GOOGLE_DATABASE_PASSWORD: process.env.GOOGLE_DATABASE_PASSWORD || '',
+    GOOGLE_CLOUD_STORAGE_BUCKET:
+        process.env.GOOGLE_CLOUD_STORAGE_BUCKET || 'ipeko-mahjong',
 }
 
 let isInitialized = false
