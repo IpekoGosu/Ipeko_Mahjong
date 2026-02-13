@@ -218,12 +218,22 @@ export class RoundManagerSanma extends AbstractRoundManager {
         events: GameUpdate['events'],
     ): GameUpdate {
         const sorted = this.getSortedPlayers(players)
-        const finalRanking = sorted.map((p, idx) => ({
-            id: p.getId(),
-            points: p.points,
-            rank: idx + 1,
-        }))
-        // TODO implement Sanma specific uma and oka
+        const finalRanking = sorted.map((p, idx) => {
+            let uma = 0
+            if (idx === 0) uma = 20000
+            if (idx === 1) uma = 0
+            if (idx === 2) uma = -20000
+
+            // 25000 start, 30000 return (oka is 5000*3 = 15000)
+            const finalPoint = p.points - 30000 + uma
+            return {
+                id: p.getId(),
+                points: p.points,
+                finalScore: idx === 0 ? finalPoint + 15000 : finalPoint,
+                rank: idx + 1,
+            }
+        })
+
         return {
             roomId,
             isGameOver: true,

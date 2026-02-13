@@ -303,7 +303,6 @@ export abstract class AbstractMahjongGame {
                 ],
             }
         }
-        // ... (rest of function)
 
         let doraRevealedEvent: GameUpdate['events'][0] | null = null
         if (this.pendingDoraReveal) {

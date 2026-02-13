@@ -43,13 +43,9 @@ export class Player {
         this.isRiichiFuriten = false
     }
 
-    // ... (keep existing methods)
-
     isHandClosed(): boolean {
         return this.melds.every((m) => !m.opened)
     }
-
-    // ... (rest of the methods are the same)
 
     getId(): string {
         return this.id
