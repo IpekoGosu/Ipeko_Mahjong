@@ -632,24 +632,36 @@ export abstract class AbstractMahjongGame {
             const forbidden: string[] = [tileString]
 
             if (actionType === 'chi') {
-                // Determine if it was a side-wait or middle-wait Chi
-                const ranks = consumedTiles
-                    .map((t) => Tile.parseRank(t))
-                    .sort((a, b) => a - b)
-                // If we Chi 3m with 1m-2m, stolen is 3, ranks are 1,2. Sequence is 1-2-3.
-                // forbidden is 3m (same tile) and NOTHING else.
-                // Wait! Rule: Chi 3m with 1m-2m -> cannot discard 3m. (Nothing else)
-                // Chi 3m with 4m-5m -> cannot discard 3m OR 6m.
-                // Chi 4m with 3m-5m -> cannot discard 4m.
+                const ranks = consumedTiles.map((t) => Tile.parseRank(t))
+                ranks.push(stolenRank)
+                ranks.sort((a, b) => a - b)
+                // ranks is now the full sequence, e.g., [3, 4, 5]
 
-                if (stolenRank === ranks[0] - 1) {
-                    // Chi 3m with 4m-5m
-                    const otherEnd = ranks[1] + 1
-                    if (otherEnd <= 9) forbidden.push(`${otherEnd}${suit}`)
-                } else if (stolenRank === ranks[1] + 1) {
-                    // Chi 3m with 1m-2m
-                    const otherEnd = ranks[0] - 1
-                    if (otherEnd >= 1) forbidden.push(`${otherEnd}${suit}`)
+                // Forbid discarding any tile that could have formed the same meld (suji-kuikae).
+                // Case 1: Called tile is the lowest in the sequence (e.g., chi 3m with 4m-5m).
+                if (ranks[0] === stolenRank && ranks[0] > 1) {
+                    const otherSide = ranks[2] + 1
+                    if (otherSide <= 9) {
+                        forbidden.push(`${otherSide}${suit}`)
+                    }
+                }
+                // Case 2: Called tile is the highest in the sequence (e.g., chi 7m with 5m-6m).
+                else if (ranks[2] === stolenRank && ranks[2] < 9) {
+                    const otherSide = ranks[0] - 1
+                    if (otherSide >= 1) {
+                        forbidden.push(`${otherSide}${suit}`)
+                    }
+                }
+                // Case 3: Called tile is in the middle (e.g., chi 4m with 3m-5m).
+                else if (ranks[1] === stolenRank) {
+                    const lowerSuji = ranks[0] - 1
+                    if (lowerSuji >= 1) {
+                        forbidden.push(`${lowerSuji}${suit}`)
+                    }
+                    const upperSuji = ranks[2] + 1
+                    if (upperSuji <= 9) {
+                        forbidden.push(`${upperSuji}${suit}`)
+                    }
                 }
             }
             player.forbiddenDiscard = forbidden
