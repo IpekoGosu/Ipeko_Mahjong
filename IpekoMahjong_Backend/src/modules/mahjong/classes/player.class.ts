@@ -1,5 +1,5 @@
-import { Tile } from './tile.class'
-import { Meld } from '../interfaces/mahjong.types'
+import { Tile } from '@src/modules/mahjong/classes/tile.class'
+import { Meld } from '@src/modules/mahjong/interfaces/mahjong.types'
 import { Logger } from '@nestjs/common'
 import { MahjongAI } from '@src/modules/mahjong/classes/ai/MahjongAI'
 
@@ -22,6 +22,7 @@ export class Player {
     public isRiichiFuriten: boolean = false
     public points: number = 25000
     public initialSeatIndex?: number
+    public forbiddenDiscard: string[] = []
 
     constructor(id: string, isOya: boolean = false, isAi: boolean = false) {
         this.id = id
@@ -41,15 +42,12 @@ export class Player {
         this.isFuriten = false
         this.isTemporaryFuriten = false
         this.isRiichiFuriten = false
+        this.forbiddenDiscard = []
     }
-
-    // ... (keep existing methods)
 
     isHandClosed(): boolean {
         return this.melds.every((m) => !m.opened)
     }
-
-    // ... (rest of the methods are the same)
 
     getId(): string {
         return this.id

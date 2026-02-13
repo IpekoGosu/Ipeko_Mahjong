@@ -4,6 +4,7 @@ import { Suit } from '@src/modules/mahjong/interfaces/mahjong.types'
 import { RoundManager4p } from '@src/modules/mahjong/classes/managers/RoundManager.4p'
 import { TurnManager } from '@src/modules/mahjong/classes/managers/TurnManager'
 import { ActionManager4p } from '@src/modules/mahjong/classes/managers/ActionManager.4p'
+import { RuleEffectManager } from '@src/modules/mahjong/classes/managers/RuleEffectManager'
 
 describe('Seat Wind Calculation', () => {
     let game: MahjongGame
@@ -20,6 +21,7 @@ describe('Seat Wind Calculation', () => {
             new RoundManager4p(),
             new TurnManager(),
             new ActionManager4p(),
+            new RuleEffectManager(),
         )
         // Set Oya to player 0 (default)
         // startGame will shuffle, but we can manually set state for testing

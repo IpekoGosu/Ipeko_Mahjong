@@ -1,4 +1,4 @@
-import { Suit } from '../interfaces/mahjong.types'
+import { Suit } from '@src/modules/mahjong/interfaces/mahjong.types'
 
 export class Tile {
     readonly id: string

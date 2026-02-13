@@ -1,4 +1,4 @@
-import { Tile } from './tile.class'
+import { Tile } from '@src/modules/mahjong/classes/tile.class'
 
 export abstract class AbstractWall {
     protected tiles: Tile[] = []

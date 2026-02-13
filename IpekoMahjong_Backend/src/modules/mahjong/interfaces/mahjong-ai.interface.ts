@@ -1,4 +1,4 @@
-import { MeldType } from '../interfaces/mahjong.types'
+import { MeldType } from '@src/modules/mahjong/interfaces/mahjong.types'
 
 /**
  * Information about a player from the AI's perspective.

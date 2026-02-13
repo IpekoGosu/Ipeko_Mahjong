@@ -6,13 +6,13 @@ import {
     MessageBody,
 } from '@nestjs/websockets'
 import { Server, Socket } from 'socket.io'
-import { GameRoomService } from './service/game-room.service'
-import { GameUpdate } from './interfaces/mahjong.types'
+import { GameRoomService } from '@src/modules/mahjong/service/game-room.service'
+import { GameUpdate } from '@src/modules/mahjong/interfaces/mahjong.types'
 import { WinstonLoggerService } from '@src/common/logger/winston.logger.service'
-import { RuleManager } from './classes/rule.manager'
-import { SimpleAI } from './classes/ai/simple.ai'
+import { RuleManager } from '@src/modules/mahjong/classes/managers/RuleManager'
+import { SimpleAI } from '@src/modules/mahjong/classes/ai/simple.ai'
 import { UseGuards } from '@nestjs/common'
-import { JwtAuthGuard } from '../authorization/jwt-auth.guard'
+import { JwtAuthGuard } from '@src/modules/authorization/jwt-auth.guard'
 import { JwtService } from '@nestjs/jwt'
 import { extractJwt, RequestWithAuth } from '@src/common/utils/auth.utils'
 

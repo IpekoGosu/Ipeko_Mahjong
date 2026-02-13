@@ -1,7 +1,10 @@
-import { Player } from '../player.class'
-import { ScoreCalculation, GameUpdate } from '../../interfaces/mahjong.types'
-import { RuleManager } from '../rule.manager'
-import { AbstractRoundManager } from './AbstractRoundManager'
+import { Player } from '@src/modules/mahjong/classes/player.class'
+import {
+    ScoreCalculation,
+    GameUpdate,
+} from '@src/modules/mahjong/interfaces/mahjong.types'
+import { RuleManager } from '@src/modules/mahjong/classes/managers/RuleManager'
+import { AbstractRoundManager } from '@src/modules/mahjong/classes/managers/AbstractRoundManager'
 
 export class RoundManager4p extends AbstractRoundManager {
     public readonly playerCount = 4
@@ -183,9 +186,7 @@ export class RoundManager4p extends AbstractRoundManager {
 
         if (isGameOver) {
             if (this.kyotaku > 0) {
-                const topPlayer = players.reduce((a, b) =>
-                    a.points > b.points ? a : b,
-                )
+                const topPlayer = this.getSortedPlayers(players)[0]
                 topPlayer.points += this.kyotaku * 1000
                 nextKyotaku = 0
             }
@@ -233,9 +234,9 @@ export class RoundManager4p extends AbstractRoundManager {
                 loserId: result.loserId,
                 allWinners: result.winners,
                 nextState: {
-                    bakaze: this.bakaze,
-                    kyoku: this.kyokuNum,
-                    honba: this.honba,
+                    bakaze: nextBakaze,
+                    kyoku: nextKyokuNum,
+                    honba: nextHonba,
                     isGameOver: isGameOver,
                 },
             },
@@ -268,12 +269,7 @@ export class RoundManager4p extends AbstractRoundManager {
         players: Player[],
         events: GameUpdate['events'],
     ): GameUpdate {
-        const sortedPlayers = [...players].sort((a, b) => {
-            if (b.points !== a.points) return b.points - a.points
-            const idxA = this.initialPlayerOrder.indexOf(a.getId())
-            const idxB = this.initialPlayerOrder.indexOf(b.getId())
-            return idxA - idxB
-        })
+        const sortedPlayers = this.getSortedPlayers(players)
 
         const finalScores = sortedPlayers.map((p, idx) => {
             let uma = 0

@@ -4,6 +4,7 @@ import { MahjongGame } from '@src/modules/mahjong/classes/MahjongGame.4p'
 import { RoundManager4p } from '@src/modules/mahjong/classes/managers/RoundManager.4p'
 import { TurnManager } from '@src/modules/mahjong/classes/managers/TurnManager'
 import { ActionManager4p } from '@src/modules/mahjong/classes/managers/ActionManager.4p'
+import { RuleEffectManager } from '@src/modules/mahjong/classes/managers/RuleEffectManager'
 
 describe('Action Validation', () => {
     let game: MahjongGame
@@ -24,6 +25,7 @@ describe('Action Validation', () => {
             new RoundManager4p(),
             turnManager,
             actionManager,
+            new RuleEffectManager(),
         )
         // Manually start and initialize to have control
         game.startGame('room1')

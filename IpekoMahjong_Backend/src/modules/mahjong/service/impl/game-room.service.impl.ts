@@ -1,8 +1,8 @@
 import { Injectable, OnModuleDestroy } from '@nestjs/common'
-import { GameRoomService } from '../game-room.service'
+import { GameRoomService } from '@src/modules/mahjong/service/game-room.service'
 import { WinstonLoggerService } from '@src/common/logger/winston.logger.service'
-import { MahjongFactory } from '../../mahjong.factory'
-import { GameRoom } from '../../interfaces/mahjong.types'
+import { MahjongFactory } from '@src/modules/mahjong/mahjong.factory'
+import { GameRoom } from '@src/modules/mahjong/interfaces/mahjong.types'
 
 @Injectable()
 export class GameRoomServiceImpl

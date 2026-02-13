@@ -1,25 +1,30 @@
-import { Player } from '../player.class'
-import { AbstractWall } from '../AbstractWall'
-import { Tile } from '../tile.class'
+import { Player } from '@src/modules/mahjong/classes/player.class'
+import { Tile } from '@src/modules/mahjong/classes/tile.class'
 import {
     PossibleActions,
-    GameUpdate,
+    ActionResult,
     ScoreCalculation,
     MeldType,
     WinContext,
-} from '../../interfaces/mahjong.types'
-import { RuleManager } from '../rule.manager'
-import { AbstractRoundManager } from './AbstractRoundManager'
-import { TurnManager } from './TurnManager'
-import { AbstractActionManager } from './AbstractActionManager'
+} from '@src/modules/mahjong/interfaces/mahjong.types'
+import { RuleManager } from '@src/modules/mahjong/classes/managers/RuleManager'
+import { AbstractActionManager } from '@src/modules/mahjong/classes/managers/AbstractActionManager'
 
 export class ActionManager4p extends AbstractActionManager {
     public getPossibleActions(
         discarderId: string,
         tileString: string,
         players: Player[],
-        wall: AbstractWall,
-        roundManager: AbstractRoundManager,
+        context: {
+            bakaze: string
+            dora: string[]
+            playerContexts: {
+                playerId: string
+                seatWind: string
+                uradora: string[]
+            }[]
+            isHoutei: boolean
+        },
         isKakan: boolean = false,
     ): Record<string, PossibleActions> {
         const discarder = players.find((p) => p.getId() === discarderId)
@@ -39,15 +44,29 @@ export class ActionManager4p extends AbstractActionManager {
             const possibleActions: PossibleActions = {}
             let hasAction = false
 
+            const playerCtx = context.playerContexts.find(
+                (c) => c.playerId === player.getId(),
+            )!
+
             const result = this.verifyRon(
                 player,
                 tileString,
-                wall,
-                roundManager,
-                players,
+                {
+                    bakaze: context.bakaze,
+                    seatWind: playerCtx.seatWind,
+                    dora: context.dora,
+                    uradora: playerCtx.uradora,
+                    isHoutei: context.isHoutei,
+                },
                 isKakan,
             )
-            if (result.isAgari) {
+
+            const isFuriten =
+                player.isFuriten ||
+                player.isTemporaryFuriten ||
+                player.isRiichiFuriten
+
+            if (result.isAgari && !isFuriten) {
                 possibleActions.ron = true
                 hasAction = true
                 this.potentialRonners.push(player.getId())
@@ -56,6 +75,14 @@ export class ActionManager4p extends AbstractActionManager {
             // Chankan (Ron on Kakan) is only Ron. No Pon/Chi/Kan allowed on Kakan.
             if (isKakan) {
                 if (hasAction) actions[player.getId()] = possibleActions
+                return
+            }
+
+            // Houtei restriction: cannot call last tile except for Ron
+            if (context.isHoutei) {
+                if (possibleActions.ron) {
+                    actions[player.getId()] = { ron: true }
+                }
                 return
             }
 
@@ -99,16 +126,13 @@ export class ActionManager4p extends AbstractActionManager {
     }
 
     public performAction(
-        roomId: string,
         playerId: string,
         actionType: 'chi' | 'pon' | 'kan' | 'ron' | 'ankan' | 'kakan',
         tileString: string,
         consumedTiles: string[],
         players: Player[],
-        wall: AbstractWall,
-        roundManager: AbstractRoundManager,
-        turnManager: TurnManager,
-    ): GameUpdate {
+        currentPlayerIndex: number,
+    ): ActionResult {
         const player = players.find((p) => p.getId() === playerId)!
         const playerIndex = players.indexOf(player)
 
@@ -121,72 +145,54 @@ export class ActionManager4p extends AbstractActionManager {
                     this.processedRonners.length ===
                     this.potentialRonners.length
                 ) {
-                    return this.processRons(roomId, players, roundManager, wall)
+                    // All ron decisions are made. Orchestrator will handle Ron processing.
+                    return {
+                        success: true,
+                        events: [],
+                        roundEnd: {
+                            reason: 'ron',
+                            winners: this.receivedRonCommands.map((cmd) => ({
+                                winnerId: cmd.playerId,
+                                // Orchestrator will need to recalculate score or we pass it
+                                // Better if Orchestrator calls verifyRon again or we pass them here.
+                                score: {} as ScoreCalculation, // Placeholder, Orchestrator will fill
+                            })),
+                            loserId: this.activeDiscard?.playerId,
+                        },
+                    }
                 } else {
-                    return { roomId, isGameOver: false, events: [] }
+                    return { success: true, events: [] }
                 }
             } else {
                 return {
-                    roomId,
-                    isGameOver: false,
-                    events: [
-                        {
-                            eventName: 'error',
-                            payload: { message: 'Invalid Ron attempt' },
-                            to: 'player',
-                            playerId,
-                        },
-                    ],
+                    success: false,
+                    error: 'Invalid Ron attempt',
+                    events: [],
                 }
             }
         }
 
         if (this.potentialRonners.length > 0) {
             return {
-                roomId,
-                isGameOver: false,
-                events: [
-                    {
-                        eventName: 'error',
-                        payload: { message: 'Wait for Ron decisions' },
-                        to: 'player',
-                        playerId,
-                    },
-                ],
+                success: false,
+                error: 'Wait for Ron decisions',
+                events: [],
             }
         }
 
         // Validation for other actions
         if (actionType === 'ankan' || actionType === 'kakan') {
-            if (turnManager.currentTurnIndex !== playerIndex) {
-                return {
-                    roomId,
-                    isGameOver: false,
-                    events: [
-                        {
-                            eventName: 'error',
-                            payload: { message: 'Not your turn' },
-                            to: 'player',
-                            playerId,
-                        },
-                    ],
-                }
+            if (currentPlayerIndex !== playerIndex) {
+                return { success: false, error: 'Not your turn', events: [] }
             }
         } else {
             // chi, pon, kan (daiminkan)
             const pending = this.pendingActions[playerId]
             if (!pending || !pending[actionType]) {
                 return {
-                    roomId,
-                    isGameOver: false,
-                    events: [
-                        {
-                            eventName: 'error',
-                            payload: { message: 'Action not allowed' },
-                            to: 'player',
-                            playerId,
-                        },
-                    ],
+                    success: false,
+                    error: 'Action not allowed',
+                    events: [],
                 }
             }
         }
@@ -207,18 +213,7 @@ export class ActionManager4p extends AbstractActionManager {
                 .getHand()
                 .filter((t) => t.getRank() === rank && t.getSuit() === suit)
             if (matches.length < 4)
-                return {
-                    roomId,
-                    isGameOver: false,
-                    events: [
-                        {
-                            eventName: 'error',
-                            payload: { message: 'Not enough tiles' },
-                            to: 'player',
-                            playerId,
-                        },
-                    ],
-                }
+                return { success: false, error: 'Not enough tiles', events: [] }
 
             meldTiles = matches.slice(0, 4)
             tilesToMove = meldTiles.map((t) => t.toString())
@@ -234,18 +229,7 @@ export class ActionManager4p extends AbstractActionManager {
                 .getHand()
                 .find((t) => t.getRank() === rank && t.getSuit() === suit)
             if (!tile)
-                return {
-                    roomId,
-                    isGameOver: false,
-                    events: [
-                        {
-                            eventName: 'error',
-                            payload: { message: 'Tile not in hand' },
-                            to: 'player',
-                            playerId,
-                        },
-                    ],
-                }
+                return { success: false, error: 'Tile not in hand', events: [] }
 
             const ponMeld = player
                 .getMelds()
@@ -257,16 +241,9 @@ export class ActionManager4p extends AbstractActionManager {
                 )
             if (!ponMeld)
                 return {
-                    roomId,
-                    isGameOver: false,
-                    events: [
-                        {
-                            eventName: 'error',
-                            payload: { message: 'Corresponding Pon not found' },
-                            to: 'player',
-                            playerId,
-                        },
-                    ],
+                    success: false,
+                    error: 'Corresponding Pon not found',
+                    events: [],
                 }
 
             player.removeFromHand(tile.toString())
@@ -279,16 +256,9 @@ export class ActionManager4p extends AbstractActionManager {
         } else {
             if (!this.activeDiscard) {
                 return {
-                    roomId,
-                    isGameOver: false,
-                    events: [
-                        {
-                            eventName: 'error',
-                            payload: { message: 'No active discard to call' },
-                            to: 'player',
-                            playerId,
-                        },
-                    ],
+                    success: false,
+                    error: 'No active discard to call',
+                    events: [],
                 }
             }
             stolenFromId = this.activeDiscard.playerId
@@ -297,16 +267,9 @@ export class ActionManager4p extends AbstractActionManager {
             const removedTiles = player.removeTiles(consumedTiles)
             if (removedTiles.length !== consumedTiles.length) {
                 return {
-                    roomId,
-                    isGameOver: false,
-                    events: [
-                        {
-                            eventName: 'error',
-                            payload: { message: 'Invalid consumed tiles' },
-                            to: 'player',
-                            playerId,
-                        },
-                    ],
+                    success: false,
+                    error: 'Invalid consumed tiles',
+                    events: [],
                 }
             }
 
@@ -320,9 +283,7 @@ export class ActionManager4p extends AbstractActionManager {
             this.activeDiscard = null
         }
 
-        turnManager.currentTurnIndex = playerIndex
-
-        const events: GameUpdate['events'] = [
+        const events: ActionResult['events'] = [
             {
                 eventName: 'update-meld',
                 payload: {
@@ -336,31 +297,26 @@ export class ActionManager4p extends AbstractActionManager {
             },
         ]
 
+        let needsReplacementTile = false
         if (
             actionType === 'ankan' ||
             actionType === 'kakan' ||
             actionType === 'kan'
         ) {
-            const replacementEvents = turnManager.drawTile(wall, player)
-            if (!replacementEvents) {
-                return roundManager.endRound(roomId, players, {
-                    reason: 'ryuukyoku',
-                })
-            }
-            events.push(...replacementEvents)
+            needsReplacementTile = true
         }
 
-        return { roomId, isGameOver: false, events }
+        return {
+            success: true,
+            events,
+            needsReplacementTile,
+        }
     }
 
     public skipAction(
-        roomId: string,
         playerId: string,
         players: Player[],
-        turnManager: TurnManager,
-        _roundManager: AbstractRoundManager,
-        _wall: AbstractWall,
-    ): { shouldProceed: boolean; update?: GameUpdate } {
+    ): { shouldProceed: boolean; actionsRemaining: boolean } {
         const pending = this.pendingActions[playerId]
         if (pending && pending.ron) {
             const player = players.find((p) => p.getId() === playerId)
@@ -372,106 +328,67 @@ export class ActionManager4p extends AbstractActionManager {
         delete this.pendingActions[playerId]
 
         if (Object.keys(this.pendingActions).length === 0) {
-            turnManager.advanceTurn(players.length)
-            return { shouldProceed: true }
+            return { shouldProceed: true, actionsRemaining: false }
         }
-        return { shouldProceed: false }
-    }
-
-    private processRons(
-        roomId: string,
-        players: Player[],
-        roundManager: AbstractRoundManager,
-        wall: AbstractWall,
-    ): GameUpdate {
-        const discarderId = this.activeDiscard?.playerId
-        const discarder = players.find((p) => p.getId() === discarderId!)!
-        const discarderIndex = players.indexOf(discarder)
-
-        const sortedRons = this.receivedRonCommands.sort((a, b) => {
-            const idxA = players.findIndex((p) => p.getId() === a.playerId)
-            const idxB = players.findIndex((p) => p.getId() === b.playerId)
-            const distA =
-                (idxA - discarderIndex + players.length) % players.length
-            const distB =
-                (idxB - discarderIndex + players.length) % players.length
-            return distA - distB
-        })
-
-        const winners: { winnerId: string; score: ScoreCalculation }[] = []
-        for (const cmd of sortedRons) {
-            const player = players.find((p) => p.getId() === cmd.playerId)!
-            const result = this.verifyRon(
-                player,
-                cmd.tileString,
-                wall,
-                roundManager,
-                players,
-            )
-            if (result.isAgari && result.score) {
-                winners.push({ winnerId: player.getId(), score: result.score })
-            }
-        }
-
-        return roundManager.endRound(roomId, players, {
-            reason: 'ron',
-            winners,
-            loserId: discarderId,
-        })
+        return { shouldProceed: false, actionsRemaining: true }
     }
 
     public verifyRon(
         player: Player,
         tileString: string,
-        wall: AbstractWall,
-        roundManager: AbstractRoundManager,
-        players: Player[],
+        context: {
+            bakaze: string
+            seatWind: string
+            dora: string[]
+            uradora: string[]
+            isHoutei: boolean
+        },
         isKakan: boolean = false,
     ): { isAgari: boolean; score?: ScoreCalculation } {
-        const context: WinContext = {
-            bakaze: roundManager.bakaze,
-            seatWind: roundManager.getSeatWind(players.indexOf(player)),
+        const winCtx: WinContext = {
+            bakaze: context.bakaze,
+            seatWind: context.seatWind,
             isTsumo: false,
             isIppatsu: player.ippatsuEligible,
             isRinshan: false,
             isChankan: isKakan,
             isHaitei: false,
-            isHoutei: wall.getRemainingTiles() === 0,
-            dora: wall.getDora().map((t) => t.toString()),
-            uradora: player.isRiichi
-                ? wall.getUradora().map((t) => t.toString())
-                : [],
+            isHoutei: context.isHoutei,
+            dora: context.dora,
+            uradora: context.uradora,
         }
 
-        return RuleManager.verifyWin(player, tileString, context)
+        return RuleManager.verifyWin(player, tileString, winCtx)
     }
 
     public verifyTsumo(
         player: Player,
-        wall: AbstractWall,
-        roundManager: AbstractRoundManager,
-        _turnManager: TurnManager,
-        players: Player[],
+        context: {
+            bakaze: string
+            seatWind: string
+            dora: string[]
+            uradora: string[]
+            isHaitei: boolean
+            rinshanFlag: boolean
+        },
     ): { isAgari: boolean; score?: ScoreCalculation } {
         const lastTile = player.getHand().slice(-1)[0]
-        const context: WinContext = {
-            bakaze: roundManager.bakaze,
-            seatWind: roundManager.getSeatWind(players.indexOf(player)),
+        const winCtx: WinContext = {
+            bakaze: context.bakaze,
+            seatWind: context.seatWind,
             isTsumo: true,
             isRiichi: player.isRiichi,
             isDoubleRiichi: player.isDoubleRiichi,
             isIppatsu: player.ippatsuEligible,
-            isRinshan: this.rinshanFlag,
+            isRinshan: context.rinshanFlag,
             isChankan: false,
-            isHaitei: wall.getRemainingTiles() === 0,
+            isHaitei: context.isHaitei,
             isHoutei: false,
-            dora: wall.getDora().map((t) => t.toString()),
-            uradora: player.isRiichi
-                ? wall.getUradora().map((t) => t.toString())
-                : [],
+            dora: context.dora,
+            uradora: context.uradora,
         }
 
-        return RuleManager.verifyWin(player, lastTile.toString(), context)
+        return RuleManager.verifyWin(player, lastTile.toString(), winCtx)
     }
 
     public checkChi(player: Player, tileString: string): string[][] {
@@ -491,7 +408,6 @@ export class ActionManager4p extends AbstractActionManager {
             const tiles2 = getTilesOfRank(r2)
 
             if (tiles1.length > 0 && tiles2.length > 0) {
-                // If either rank is 5, we need to consider both normal 5 and red 5 (0)
                 const t1Strings = Array.from(
                     new Set(tiles1.map((t) => t.toString())),
                 )
