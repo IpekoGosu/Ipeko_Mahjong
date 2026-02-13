@@ -115,7 +115,7 @@ export interface AskActionPayload {
 // Event: 'update-meld'
 export interface UpdateMeldPayload {
     playerId: string
-    type: 'chi' | 'pon' | 'kan' | 'ron'
+    type: 'chi' | 'pon' | 'kan' | 'ron' | 'ankan' | 'kakan'
     tiles: TileString[] // The tiles involved in the meld (e.g., ['1m', '2m', '3m'])
     stolenFrom?: string // Player ID whose discard was taken
     isFuriten?: boolean
