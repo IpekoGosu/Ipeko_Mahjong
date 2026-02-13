@@ -2,9 +2,7 @@ import { Player } from '../player.class'
 import { ScoreCalculation, GameUpdate } from '../../interfaces/mahjong.types'
 import { RuleManager } from '../rule.manager'
 import { AbstractRoundManager } from './AbstractRoundManager'
-import { Injectable, Scope } from '@nestjs/common'
 
-@Injectable({ scope: Scope.TRANSIENT })
 export class RoundManagerSanma extends AbstractRoundManager {
     public readonly playerCount = 3
 

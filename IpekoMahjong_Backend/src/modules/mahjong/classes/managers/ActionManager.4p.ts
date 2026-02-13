@@ -12,9 +12,7 @@ import { RuleManager } from '../rule.manager'
 import { AbstractRoundManager } from './AbstractRoundManager'
 import { TurnManager } from './TurnManager'
 import { AbstractActionManager } from './AbstractActionManager'
-import { Injectable, Scope } from '@nestjs/common'
 
-@Injectable({ scope: Scope.TRANSIENT })
 export class ActionManager4p extends AbstractActionManager {
     public getPossibleActions(
         discarderId: string,

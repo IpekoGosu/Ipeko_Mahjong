@@ -1,17 +1,17 @@
 import { AbstractMahjongGame } from './AbstractMahjongGame'
-import { RoundManagerSanma } from './managers/RoundManager.Sanma'
 import { TurnManager } from './managers/TurnManager'
-import { ActionManagerSanma } from './managers/ActionManager.Sanma'
 import { WallSanma } from './Wall.Sanma'
 import { AbstractWall } from './AbstractWall'
 import { MahjongAI } from '@src/modules/mahjong/classes/ai/MahjongAI'
+import { AbstractRoundManager } from './managers/AbstractRoundManager'
+import { AbstractActionManager } from './managers/AbstractActionManager'
 
 export class SanmaMahjongGame extends AbstractMahjongGame {
     constructor(
         playerInfos: { id: string; isAi: boolean; ai?: MahjongAI }[],
-        roundManager: RoundManagerSanma,
+        roundManager: AbstractRoundManager,
         turnManager: TurnManager,
-        actionManager: ActionManagerSanma,
+        actionManager: AbstractActionManager,
     ) {
         super(playerInfos, roundManager, turnManager, actionManager)
     }

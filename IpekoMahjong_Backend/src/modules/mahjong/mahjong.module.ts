@@ -12,6 +12,7 @@ import { ActionManager4p } from './classes/managers/ActionManager.4p'
 import { ActionManagerSanma } from './classes/managers/ActionManager.Sanma'
 import { SimpleAI } from './classes/ai/simple.ai'
 import { MahjongAI } from '@src/modules/mahjong/classes/ai/MahjongAI'
+import { Scope } from '@nestjs/common'
 
 @Module({
     imports: [AuthModule],
@@ -23,11 +24,31 @@ import { MahjongAI } from '@src/modules/mahjong/classes/ai/MahjongAI'
         },
         WinstonLoggerService,
         MahjongFactory,
-        RoundManager4p,
-        RoundManagerSanma,
-        TurnManager,
-        ActionManager4p,
-        ActionManagerSanma,
+        {
+            provide: RoundManager4p,
+            useFactory: () => new RoundManager4p(),
+            scope: Scope.TRANSIENT,
+        },
+        {
+            provide: RoundManagerSanma,
+            useFactory: () => new RoundManagerSanma(),
+            scope: Scope.TRANSIENT,
+        },
+        {
+            provide: TurnManager,
+            useFactory: () => new TurnManager(),
+            scope: Scope.TRANSIENT,
+        },
+        {
+            provide: ActionManager4p,
+            useFactory: () => new ActionManager4p(),
+            scope: Scope.TRANSIENT,
+        },
+        {
+            provide: ActionManagerSanma,
+            useFactory: () => new ActionManagerSanma(),
+            scope: Scope.TRANSIENT,
+        },
         {
             provide: MahjongAI,
             useClass: SimpleAI,

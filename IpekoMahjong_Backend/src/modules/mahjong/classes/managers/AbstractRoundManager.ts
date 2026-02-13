@@ -15,7 +15,7 @@ export abstract class AbstractRoundManager {
     public isSuddenDeath: boolean = false
     public initialPlayerOrder: string[] = []
 
-    public abstract readonly playerCount: number
+    public abstract readonly playerCount: 3 | 4
 
     constructor() {}
 
