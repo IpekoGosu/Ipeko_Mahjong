@@ -234,9 +234,9 @@ export class RoundManager4p extends AbstractRoundManager {
                 loserId: result.loserId,
                 allWinners: result.winners,
                 nextState: {
-                    bakaze: this.bakaze,
-                    kyoku: this.kyokuNum,
-                    honba: this.honba,
+                    bakaze: nextBakaze,
+                    kyoku: nextKyokuNum,
+                    honba: nextHonba,
                     isGameOver: isGameOver,
                 },
             },

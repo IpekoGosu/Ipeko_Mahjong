@@ -190,9 +190,9 @@ export class RoundManagerSanma extends AbstractRoundManager {
                 scoreDeltas,
                 winnerId: result.winnerId || result.winners?.[0]?.winnerId,
                 nextState: {
-                    bakaze: this.bakaze,
-                    kyoku: this.kyokuNum,
-                    honba: this.honba,
+                    bakaze: nextBakaze,
+                    kyoku: nextKyokuNum,
+                    honba: nextHonba,
                     isGameOver,
                 },
             },

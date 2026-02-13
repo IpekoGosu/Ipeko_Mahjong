@@ -231,4 +231,33 @@ describe('MahjongGame - Dobon (Bankruptcy) Rules', () => {
         // Oya (p1) paid 500 for Tsumo. Net 24500.
         expect(p1.points).toBe(24500)
     })
+
+    it('should NOT end the game if a player has exactly 0 points', () => {
+        const players = game.getPlayers()
+        const p2 = players[1]
+        const p3 = players[2]
+
+        p2.points = 1000 // Will be 0 after paying 1000
+
+        const mockScore: ScoreCalculation = {
+            han: 1,
+            fu: 30,
+            ten: 1000,
+            yaku: { Riichi: '1' },
+            yakuman: 0,
+            oya: [1500, 500],
+            ko: [1000, 300, 500],
+            name: 'Riichi',
+            text: '1 Han 30 Fu',
+        }
+
+        const result = game.callEndKyoku(roomId, {
+            reason: 'ron',
+            winners: [{ winnerId: p3.getId(), score: mockScore }],
+            loserId: p2.getId(),
+        })
+
+        expect(p2.points).toBe(0)
+        expect(result.isGameOver).toBe(false)
+    })
 })

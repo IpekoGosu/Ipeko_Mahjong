@@ -59,8 +59,10 @@ export class ActionManagerSanma extends AbstractActionManager {
                 },
                 isKakan,
             )
+            
+            const isFuriten = player.isFuriten || player.isTemporaryFuriten || player.isRiichiFuriten
 
-            if (result.isAgari) {
+            if (result.isAgari && !isFuriten) {
                 possibleActions.ron = true
                 hasAction = true
                 this.potentialRonners.push(player.getId())
@@ -68,6 +70,14 @@ export class ActionManagerSanma extends AbstractActionManager {
 
             if (isKakan) {
                 if (hasAction) actions[player.getId()] = possibleActions
+                return
+            }
+
+            // Houtei restriction: cannot call last tile except for Ron
+            if (context.isHoutei) {
+                if (possibleActions.ron) {
+                    actions[player.getId()] = { ron: true }
+                }
                 return
             }
 

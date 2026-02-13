@@ -92,7 +92,38 @@ export class RuleManager {
 
                 // 2. Check if waits change
                 // Current waits
-                const currentWaits = this.getWaits(player).sort()
+                // We need waits for the 13-tile hand (before drawing the 4th tile)
+                const currentHand = hand.filter(
+                    (t) => t.id !== player.lastDrawnTile!.id,
+                )
+                const currentHandStr = this.convertTilesToRiichiString(
+                    currentHand.map((t) => t.toString()),
+                )
+
+                let currentWaits: string[] = []
+                try {
+                    const result = new Riichi(
+                        currentHandStr,
+                    ).calc() as RiichiResult
+                    if (result.hairi?.now === 0 && result.hairi.wait) {
+                        currentWaits.push(...Object.keys(result.hairi.wait))
+                    }
+                    if (
+                        result.hairi7and13?.now === 0 &&
+                        result.hairi7and13.wait
+                    ) {
+                        currentWaits.push(
+                            ...Object.keys(result.hairi7and13.wait),
+                        )
+                    }
+                    currentWaits = Array.from(new Set(currentWaits)).sort()
+                } catch (e) {
+                    RuleManager.logger.error(
+                        'Error calculating current waits for Ankan check',
+                        e,
+                    )
+                    return false
+                }
 
                 // Simulated waits after Ankan
                 // We need to simulate the hand state after Ankan.

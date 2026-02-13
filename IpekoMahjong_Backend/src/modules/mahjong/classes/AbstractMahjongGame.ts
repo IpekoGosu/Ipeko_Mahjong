@@ -304,6 +304,37 @@ export abstract class AbstractMahjongGame {
             }
         }
 
+        // Kuikae prevention
+        if (player.forbiddenDiscard) {
+            const rank = parseInt(tileString[0]) === 0 ? 5 : parseInt(tileString[0])
+            const suit = tileString[1]
+            const forbiddenRank = parseInt(player.forbiddenDiscard[0]) === 0 ? 5 : parseInt(player.forbiddenDiscard[0])
+            const forbiddenSuit = player.forbiddenDiscard[1]
+            
+            // Check for both same tile and opposite end (for Chi)
+            // Note: forbiddenDiscard stores a string like "3m" or "3m6m"
+            const isForbidden = player.forbiddenDiscard.split(',').some(f => {
+                const fRank = parseInt(f[0]) === 0 ? 5 : parseInt(f[0])
+                const fSuit = f[1]
+                return rank === fRank && suit === fSuit
+            })
+
+            if (isForbidden) {
+                return {
+                    roomId,
+                    isGameOver: false,
+                    events: [
+                        {
+                            eventName: 'error',
+                            payload: { message: 'Kuikae (Swap-calling) is forbidden' },
+                            to: 'player',
+                            playerId,
+                        },
+                    ],
+                }
+            }
+        }
+
         let doraRevealedEvent: GameUpdate['events'][0] | null = null
         if (this.pendingDoraReveal) {
             this.wall.revealDora()
@@ -398,6 +429,7 @@ export abstract class AbstractMahjongGame {
 
         // Handle side effects after discard
         player.isTemporaryFuriten = false
+        player.forbiddenDiscard = null
         this.ruleEffectManager.updateFuritenStatus(player)
         this.ruleEffectManager.handleIppatsuExpiration(player, this.turnCounter)
 
@@ -582,6 +614,32 @@ export abstract class AbstractMahjongGame {
         }
 
         const events = [...result.events]
+        const player = this.getPlayer(playerId)!
+
+        if (actionType === 'pon' || actionType === 'chi') {
+            const stolenRank = parseInt(tileString[0]) === 0 ? 5 : parseInt(tileString[0])
+            const suit = tileString[1]
+            let forbidden = tileString
+
+            if (actionType === 'chi') {
+                // Determine if it was a side-wait or middle-wait Chi
+                const ranks = consumedTiles.map(t => parseInt(t[0]) === 0 ? 5 : parseInt(t[0])).sort((a, b) => a - b)
+                // If we Chi 3m with 1m-2m, stolen is 3, ranks are 1,2. Sequence is 1-2-3.
+                // forbidden is 3m (same tile) and NOTHING else.
+                // Wait! Rule: Chi 3m with 1m-2m -> cannot discard 3m. (Nothing else)
+                // Chi 3m with 4m-5m -> cannot discard 3m OR 6m.
+                // Chi 4m with 3m-5m -> cannot discard 4m.
+                
+                if (stolenRank === ranks[0] - 1) { // Chi 3m with 4m-5m
+                    const otherEnd = ranks[1] + 1
+                    if (otherEnd <= 9) forbidden += `,${otherEnd}${suit}`
+                } else if (stolenRank === ranks[1] + 1) { // Chi 3m with 1m-2m
+                    const otherEnd = ranks[0] - 1
+                    if (otherEnd >= 1) forbidden += `,${otherEnd}${suit}`
+                }
+            }
+            player.forbiddenDiscard = forbidden
+        }
 
         if (result.roundEnd) {
             if (result.roundEnd.reason === 'ron') {
@@ -616,6 +674,23 @@ export abstract class AbstractMahjongGame {
 
         if (result.needsReplacementTile) {
             const player = this.getPlayer(playerId)!
+            
+            // For Ankan, flip dora immediately (Tenhou/Mahjong Soul rules)
+            if (actionType === 'ankan') {
+                this.wall.revealDora()
+                this.pendingDoraReveal = false
+                const doraIndicators = this.getDora().map((t) => t.toString())
+                const actualDora = RuleManager.getActualDoraList(doraIndicators)
+                events.push({
+                    eventName: 'dora-revealed',
+                    payload: {
+                        dora: doraIndicators,
+                        actualDora: actualDora,
+                    },
+                    to: 'all',
+                })
+            }
+
             // When a call is made (chi/pon/kan), it becomes that player's turn.
             // Actually only chi/pon/kan (daiminkan) do this. Ankan/Kakan don't change turn index (already their turn).
             if (
