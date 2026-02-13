@@ -13,6 +13,8 @@ import { TurnManager } from './managers/TurnManager'
 import { AbstractActionManager } from './managers/AbstractActionManager'
 import { MahjongAI } from '@src/modules/mahjong/classes/ai/MahjongAI'
 import { GameObservation } from '@src/modules/mahjong/interfaces/mahjong-ai.interface'
+import { CommonError } from '@src/common/error/common.error'
+import { ERROR_STATUS } from '@src/common/error/error.status'
 
 /**
  * AbstractMahjongGame 클래스는 한 판의 마작 게임에 대한 모든 규칙과 상태를 관리합니다.
@@ -139,7 +141,8 @@ export abstract class AbstractMahjongGame {
         ai?: MahjongAI
     }): Player {
         const player = new Player(info.id, false, info.isAi) // isOya set later
-        if (info.isAi && info.ai) {
+        if (info.isAi) {
+            if (!info.ai) throw new CommonError(ERROR_STATUS.AI_NOT_PROVIDED)
             player.ai = info.ai
         }
         return player

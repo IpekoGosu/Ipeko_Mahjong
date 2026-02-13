@@ -1,5 +1,5 @@
 import { Tile } from '../classes/tile.class'
-import type { MahjongGame } from '../classes/AbstractMahjongGame'
+import type { AbstractMahjongGame } from '../classes/AbstractMahjongGame'
 
 export type Suit = 'm' | 'p' | 's' | 'z'
 
@@ -80,7 +80,7 @@ export interface WinContext {
 
 export interface GameRoom {
     readonly roomId: string
-    readonly mahjongGame: MahjongGame
+    readonly mahjongGame: AbstractMahjongGame
     gameStatus: 'in-progress' | 'finished'
     timer?: NodeJS.Timeout
 }

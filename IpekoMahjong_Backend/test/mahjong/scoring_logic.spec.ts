@@ -4,6 +4,7 @@ import { ScoreCalculation } from '@src/modules/mahjong/interfaces/mahjong.types'
 import { RoundManager4p } from '@src/modules/mahjong/classes/managers/RoundManager.4p'
 import { TurnManager } from '@src/modules/mahjong/classes/managers/TurnManager'
 import { ActionManager4p } from '@src/modules/mahjong/classes/managers/ActionManager.4p'
+import { SimpleAI } from '@src/modules/mahjong/classes/ai/simple.ai'
 
 class TestMahjongGame extends MahjongGame {
     public triggerEndKyoku(
@@ -27,12 +28,13 @@ describe('Mahjong Scoring Logic', () => {
 
     beforeEach(() => {
         // 4 players
+        const ai = new SimpleAI()
         game = new TestMahjongGame(
             [
                 { id: 'p1', isAi: false },
-                { id: 'p2', isAi: true },
-                { id: 'p3', isAi: true },
-                { id: 'p4', isAi: true },
+                { id: 'p2', isAi: true, ai },
+                { id: 'p3', isAi: true, ai },
+                { id: 'p4', isAi: true, ai },
             ],
             new RoundManager4p(),
             new TurnManager(),

@@ -21,15 +21,7 @@ export class MahjongFactory {
         const turnManager = await this.moduleRef.resolve(TurnManager)
         const actionManager = await this.moduleRef.resolve(ActionManager4p)
 
-        const playersWithAI = await Promise.all(
-            playerInfos.map(async (p) => {
-                if (p.isAi) {
-                    const ai = await this.moduleRef.resolve(MahjongAI)
-                    return { ...p, ai }
-                }
-                return p
-            }),
-        )
+        const playersWithAI = await this.createPlayersWithAI(playerInfos)
 
         return new MahjongGame(
             playersWithAI,
@@ -46,7 +38,20 @@ export class MahjongFactory {
         const turnManager = await this.moduleRef.resolve(TurnManager)
         const actionManager = await this.moduleRef.resolve(ActionManagerSanma)
 
-        const playersWithAI = await Promise.all(
+        const playersWithAI = await this.createPlayersWithAI(playerInfos)
+
+        return new SanmaMahjongGame(
+            playersWithAI,
+            roundManager,
+            turnManager,
+            actionManager,
+        )
+    }
+
+    private async createPlayersWithAI(
+        playerInfos: { id: string; isAi: boolean }[],
+    ) {
+        return Promise.all(
             playerInfos.map(async (p) => {
                 if (p.isAi) {
                     const ai = await this.moduleRef.resolve(MahjongAI)
@@ -54,13 +59,6 @@ export class MahjongFactory {
                 }
                 return p
             }),
-        )
-
-        return new SanmaMahjongGame(
-            playersWithAI,
-            roundManager,
-            turnManager,
-            actionManager,
         )
     }
 }

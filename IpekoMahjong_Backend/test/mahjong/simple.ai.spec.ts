@@ -14,9 +14,9 @@ describe('SimpleAI', () => {
         game = new MahjongGame(
             [
                 { id: 'p1', isAi: false },
-                { id: 'p2', isAi: true },
-                { id: 'p3', isAi: true },
-                { id: 'p4', isAi: true },
+                { id: 'p2', isAi: true, ai: ai },
+                { id: 'p3', isAi: true, ai: ai },
+                { id: 'p4', isAi: true, ai: ai },
             ],
             new RoundManager4p(),
             new TurnManager(),

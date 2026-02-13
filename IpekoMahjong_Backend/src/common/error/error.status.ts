@@ -10,4 +10,5 @@ export const ERROR_STATUS = {
     GOOGLE_CLOUD_STORAGE_DOWNLOAD_ERROR:
         'failed to download file from google cloud storage',
     ENV_MISSING_ERROR: 'missing environment variable',
+    AI_NOT_PROVIDED: 'ai implementation not provided for ai player',
 }
