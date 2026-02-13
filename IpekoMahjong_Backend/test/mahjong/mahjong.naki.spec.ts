@@ -1,26 +1,19 @@
 import { MahjongGame } from '@src/modules/mahjong/classes/MahjongGame.4p'
 import { Tile } from '@src/modules/mahjong/classes/tile.class'
-import { RoundManager4p } from '@src/modules/mahjong/classes/managers/RoundManager.4p'
-import { TurnManager } from '@src/modules/mahjong/classes/managers/TurnManager'
-import { ActionManager4p } from '@src/modules/mahjong/classes/managers/ActionManager.4p'
 import { SimpleAI } from '@src/modules/mahjong/classes/ai/simple.ai'
+import { createTestGame } from './test_utils'
 
 describe('MahjongGame Naki (Call) System', () => {
     let game: MahjongGame
 
     beforeEach(() => {
         const ai = new SimpleAI()
-        game = new MahjongGame(
-            [
-                { id: 'p1', isAi: false },
-                { id: 'p2', isAi: true, ai },
-                { id: 'p3', isAi: true, ai },
-                { id: 'p4', isAi: true, ai },
-            ],
-            new RoundManager4p(),
-            new TurnManager(),
-            new ActionManager4p(),
-        )
+        game = createTestGame([
+            { id: 'p1', isAi: false },
+            { id: 'p2', isAi: true, ai },
+            { id: 'p3', isAi: true, ai },
+            { id: 'p4', isAi: true, ai },
+        ])
         game.startGame('room1')
     })
 
@@ -32,13 +25,7 @@ describe('MahjongGame Naki (Call) System', () => {
         p1.draw(new Tile('m', 1, false, 1))
 
         // p2 discards 1m
-        const actions = game.actionManager.getPossibleActions(
-            'p2',
-            '1m',
-            game.getPlayers(),
-            game.getWall(),
-            game.roundManager,
-        )
+        const actions = game.getPossibleActions('p2', '1m')
 
         expect(actions['p1']?.pon).toBe(true)
     })

@@ -1,16 +1,17 @@
-import { Player } from '../player.class'
-import { AbstractWall } from '../AbstractWall'
-import { GameUpdate } from '../../interfaces/mahjong.types'
-import { RuleManager } from '../rule.manager'
-import { Logger } from '@nestjs/common'
+import { Player } from '@src/modules/mahjong/classes/player.class'
+import { AbstractWall } from '@src/modules/mahjong/classes/wall/AbstractWall'
+import { GameUpdate } from '@src/modules/mahjong/interfaces/mahjong.types'
+import { RuleManager } from '@src/modules/mahjong/classes/managers/RuleManager'
+import { Injectable, Logger } from '@nestjs/common'
 
+@Injectable()
 export class TurnManager {
     private readonly logger = new Logger(TurnManager.name)
     public currentTurnIndex: number = 0
     public turnCounter: number = 0
     public firstTurnDiscards: { wind: string; count: number } | null = null
 
-    constructor() {}
+    constructor(private readonly ruleManager: RuleManager) {}
 
     public reset(oyaIndex: number) {
         this.currentTurnIndex = oyaIndex
@@ -42,14 +43,14 @@ export class TurnManager {
 
         // Update Furiten logic
         player.isFuriten =
-            RuleManager.calculateFuriten(player) ||
+            this.ruleManager.calculateFuriten(player) ||
             player.isTemporaryFuriten ||
             player.isRiichiFuriten
 
-        const ankanList = RuleManager.getAnkanOptions(player)
-        const kakanList = RuleManager.getKakanOptions(player)
+        const ankanList = this.ruleManager.getAnkanOptions(player)
+        const kakanList = this.ruleManager.getKakanOptions(player)
         const doraIndicators = wall.getDora().map((t) => t.toString())
-        const actualDora = RuleManager.getActualDoraList(doraIndicators)
+        const actualDora = this.ruleManager.getActualDoraList(doraIndicators)
 
         const events: GameUpdate['events'] = [
             {
@@ -71,10 +72,10 @@ export class TurnManager {
                 eventName: 'new-tile-drawn',
                 payload: {
                     tile: tile.toString(),
-                    riichiDiscards: RuleManager.getRiichiDiscards(player),
+                    riichiDiscards: this.ruleManager.getRiichiDiscards(player),
                     // canTsumo is context-dependent, handled by ActionManager/Game
                     isFuriten: player.isFuriten,
-                    waits: RuleManager.getWaits(player),
+                    waits: this.ruleManager.getWaits(player),
                     ankanList,
                     kakanList,
                 },

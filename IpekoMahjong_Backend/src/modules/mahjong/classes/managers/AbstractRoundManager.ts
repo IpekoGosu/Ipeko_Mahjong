@@ -1,8 +1,10 @@
-import { Player } from '../player.class'
-import { ScoreCalculation, GameUpdate } from '../../interfaces/mahjong.types'
-import { Logger, Injectable } from '@nestjs/common'
+import { Player } from '@src/modules/mahjong/classes/player.class'
+import {
+    ScoreCalculation,
+    GameUpdate,
+} from '@src/modules/mahjong/interfaces/mahjong.types'
+import { Logger } from '@nestjs/common'
 
-@Injectable()
 export abstract class AbstractRoundManager {
     protected readonly logger = new Logger(this.constructor.name)
 
@@ -33,6 +35,15 @@ export abstract class AbstractRoundManager {
         const relativePos =
             (playerIndex - this.oyaIndex + this.playerCount) % this.playerCount
         return `${relativePos + 1}z`
+    }
+
+    public getSortedPlayers(players: Player[]): Player[] {
+        return [...players].sort((a, b) => {
+            if (b.points !== a.points) return b.points - a.points
+            const idxA = this.initialPlayerOrder.indexOf(a.getId())
+            const idxB = this.initialPlayerOrder.indexOf(b.getId())
+            return idxA - idxB
+        })
     }
 
     public abstract endRound(

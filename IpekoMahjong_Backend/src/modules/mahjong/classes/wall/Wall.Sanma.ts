@@ -1,6 +1,6 @@
-import { Tile } from './tile.class'
-import { Suit } from '../interfaces/mahjong.types'
-import { AbstractWall } from './AbstractWall'
+import { Tile } from '@src/modules/mahjong/classes/tile.class'
+import { Suit } from '@src/modules/mahjong/interfaces/mahjong.types'
+import { AbstractWall } from '@src/modules/mahjong/classes/wall/AbstractWall'
 
 export class WallSanma extends AbstractWall {
     protected initialize(): void {

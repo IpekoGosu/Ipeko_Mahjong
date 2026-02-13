@@ -1,8 +1,8 @@
 import { Injectable, OnModuleDestroy } from '@nestjs/common'
-import { GameRoomService } from '../game-room.service'
+import { GameRoomService } from '@src/modules/mahjong/service/game-room.service'
 import { WinstonLoggerService } from '@src/common/logger/winston.logger.service'
-import { MahjongFactory } from '../../mahjong.factory'
-import { GameRoom } from '../../interfaces/mahjong.types'
+import { MahjongFactory } from '@src/modules/mahjong/mahjong.factory'
+import { GameRoom } from '@src/modules/mahjong/interfaces/mahjong.types'
 
 @Injectable()
 export class GameRoomServiceImpl
@@ -28,16 +28,25 @@ export class GameRoomServiceImpl
         this.rooms.clear()
     }
 
-    async createRoom(humanPlayerSocketId: string): Promise<GameRoom> {
+    async createRoom(
+        humanPlayerSocketId: string,
+        gameMode: '4p' | 'sanma',
+    ): Promise<GameRoom> {
         const roomId = this.generateRoomId()
         const playerIds = [
             { id: humanPlayerSocketId, isAi: false },
             { id: 'ai-1', isAi: true },
             { id: 'ai-2', isAi: true },
-            { id: 'ai-3', isAi: true },
         ]
 
-        const mahjongGame = await this.mahjongFactory.create4pGame(playerIds)
+        if (gameMode === '4p') {
+            playerIds.push({ id: 'ai-3', isAi: true })
+        }
+
+        const mahjongGame =
+            gameMode === '4p'
+                ? await this.mahjongFactory.create4pGame(playerIds)
+                : await this.mahjongFactory.create3pGame(playerIds)
 
         const room: GameRoom = {
             roomId,
@@ -46,7 +55,7 @@ export class GameRoomServiceImpl
         }
 
         this.rooms.set(roomId, room)
-        this.logger.log(`Room created: ${roomId}`)
+        this.logger.log(`Room created: ${roomId} (${gameMode})`)
         return room
     }
 

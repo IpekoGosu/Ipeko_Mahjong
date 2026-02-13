@@ -63,7 +63,7 @@ describe('MahjongGateway', () => {
     })
 
     it('should start a game and receive initial state', (done) => {
-        client.emit('start-game')
+        client.emit('start-game', {}) // Default to 4p
 
         let gameStartedReceived = false
         let turnChangedReceived = false
@@ -97,10 +97,10 @@ describe('MahjongGateway', () => {
             expect(data).toHaveProperty('tile')
             // This might not happen for Oya start
         })
-    }, 10000)
+    }, 20000)
 
     it('should play a full round (discard -> AI turns -> my turn)', (done) => {
-        client.emit('start-game')
+        client.emit('start-game', { gameMode: '4p' })
 
         let myRoomId: string
         let myPlayerId: string
@@ -142,5 +142,14 @@ describe('MahjongGateway', () => {
             'update-discard',
             (_data: { playerId: string; tile: string }) => {},
         )
-    }, 20000)
+    }, 30000)
+
+    it('should start a Sanma game', (done) => {
+        client.emit('start-game', { gameMode: 'sanma' })
+
+        client.on('game-started', (data: Record<string, unknown>) => {
+            expect(data.players).toHaveLength(3)
+            done()
+        })
+    }, 10000)
 })

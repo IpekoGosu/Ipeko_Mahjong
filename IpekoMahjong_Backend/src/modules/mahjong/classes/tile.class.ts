@@ -1,4 +1,4 @@
-import { Suit } from '../interfaces/mahjong.types'
+import { Suit } from '@src/modules/mahjong/interfaces/mahjong.types'
 
 export class Tile {
     readonly id: string
@@ -24,6 +24,11 @@ export class Tile {
 
     getRank(): number {
         return this.rank
+    }
+
+    static parseRank(tileString: string): number {
+        const rank = parseInt(tileString[0])
+        return rank === 0 ? 5 : rank
     }
 
     toString(): string {

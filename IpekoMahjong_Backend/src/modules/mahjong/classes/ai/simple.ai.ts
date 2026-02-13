@@ -1,6 +1,6 @@
 import { MahjongAI } from '@src/modules/mahjong/classes/ai/MahjongAI'
-import { GameObservation } from '../../interfaces/mahjong-ai.interface'
-import { PossibleActions } from '../../interfaces/mahjong.types'
+import { GameObservation } from '@src/modules/mahjong/interfaces/mahjong-ai.interface'
+import { PossibleActions } from '@src/modules/mahjong/interfaces/mahjong.types'
 import { Injectable, Scope } from '@nestjs/common'
 
 @Injectable({ scope: Scope.TRANSIENT })

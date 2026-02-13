@@ -1,3 +1,11 @@
+// Game Mode
+export type GameMode = '4p' | 'sanma'
+
+// Event: 'start-game' (Sent from client)
+export interface StartGamePayload {
+    gameMode?: GameMode // Default to '4p'
+}
+
 // Tile string format: "{number}{suit}"
 // Suits: 'm' (man), 'p' (pin), 's' (sou), 'z' (zihai - 1:East, 2:South, 3:West, 4:North, 5:White, 6:Green, 7:Red)
 export type TileString = string // e.g., "1m", "5z"
@@ -115,11 +123,18 @@ export interface AskActionPayload {
 // Event: 'update-meld'
 export interface UpdateMeldPayload {
     playerId: string
-    type: 'chi' | 'pon' | 'kan' | 'ron'
+    type: 'chi' | 'pon' | 'kan' | 'ron' | 'ankan' | 'kakan'
     tiles: TileString[] // The tiles involved in the meld (e.g., ['1m', '2m', '3m'])
     stolenFrom?: string // Player ID whose discard was taken
     isFuriten?: boolean
     waits?: TileString[]
+}
+
+export interface RankingEntry {
+    id: string
+    points: number
+    finalScore: number
+    rank: number
 }
 
 // Event: 'game-over'
@@ -139,6 +154,7 @@ export interface GameOverPayload {
         text: string
     }
     scores?: number[] // Final scores
+    finalRanking?: RankingEntry[]
 }
 
 // Event: 'error'
@@ -187,6 +203,7 @@ export interface GameState {
     user: User | null
     token: string | null
     isConnected: boolean
+    gameMode: GameMode | null
     roomId: string | null
     myPlayerId: string | null
     myHand: string[] // List of tile strings.

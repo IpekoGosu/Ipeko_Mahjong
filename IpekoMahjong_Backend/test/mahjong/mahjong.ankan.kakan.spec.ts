@@ -1,30 +1,25 @@
 import { MahjongGame } from '@src/modules/mahjong/classes/MahjongGame.4p'
 import { Tile } from '@src/modules/mahjong/classes/tile.class'
-import { RuleManager } from '@src/modules/mahjong/classes/rule.manager'
+import { RuleManager } from '@src/modules/mahjong/classes/managers/RuleManager'
 import { Player } from '@src/modules/mahjong/classes/player.class'
-import { Meld } from '@src/modules/mahjong/interfaces/mahjong.types'
-import { RoundManager4p } from '@src/modules/mahjong/classes/managers/RoundManager.4p'
-import { TurnManager } from '@src/modules/mahjong/classes/managers/TurnManager'
-import { ActionManager4p } from '@src/modules/mahjong/classes/managers/ActionManager.4p'
 import { SimpleAI } from '@src/modules/mahjong/classes/ai/simple.ai'
+import { createTestGame } from './test_utils'
+import { Meld } from '@src/modules/mahjong/interfaces/mahjong.types'
 
 describe('Ankan and Kakan Logic', () => {
     let game: MahjongGame
     let player: Player
+    let ruleManager: RuleManager
 
     beforeEach(() => {
         const ai = new SimpleAI()
-        game = new MahjongGame(
-            [
-                { id: 'p1', isAi: false },
-                { id: 'p2', isAi: true, ai },
-                { id: 'p3', isAi: true, ai },
-                { id: 'p4', isAi: true, ai },
-            ],
-            new RoundManager4p(),
-            new TurnManager(),
-            new ActionManager4p(),
-        )
+        game = createTestGame([
+            { id: 'p1', isAi: false },
+            { id: 'p2', isAi: true, ai },
+            { id: 'p3', isAi: true, ai },
+            { id: 'p4', isAi: true, ai },
+        ])
+        ruleManager = game.ruleManager
         game.startGame('room1')
         player = game.getCurrentTurnPlayer()
         player.resetKyokuState()
@@ -38,7 +33,7 @@ describe('Ankan and Kakan Logic', () => {
         player.draw(new Tile('m', 1, false, 3))
         player.draw(new Tile('p', 1, false, 4)) // filler
 
-        const options = RuleManager.getAnkanOptions(player)
+        const options = ruleManager.getAnkanOptions(player)
         expect(options).toContain('1m')
     })
 
@@ -59,7 +54,7 @@ describe('Ankan and Kakan Logic', () => {
         player.draw(new Tile('p', 5, false, 3))
         player.draw(new Tile('m', 1, false, 4))
 
-        const options = RuleManager.getKakanOptions(player)
+        const options = ruleManager.getKakanOptions(player)
         expect(options).toContain('5p')
     })
 

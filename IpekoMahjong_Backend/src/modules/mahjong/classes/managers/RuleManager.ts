@@ -3,13 +3,15 @@ import {
     RiichiResult,
     WinContext,
 } from '@src/modules/mahjong/interfaces/mahjong.types'
-import { Player } from './player.class'
+import { Player } from '@src/modules/mahjong/classes/player.class'
 import Riichi from 'riichi'
-import { Logger } from '@nestjs/common'
+import { Injectable, Logger } from '@nestjs/common'
 
+@Injectable()
 export class RuleManager {
-    private static readonly logger = new Logger(RuleManager.name)
-    static getActualDora(indicator: string): string {
+    private readonly logger = new Logger(RuleManager.name)
+
+    getActualDora(indicator: string): string {
         const rank = parseInt(indicator[0])
         const suit = indicator[1]
 
@@ -29,7 +31,7 @@ export class RuleManager {
         }
     }
 
-    static getRiichiDiscards(player: Player): string[] {
+    getRiichiDiscards(player: Player): string[] {
         if (!player.isHandClosed() || player.isRiichi) return []
 
         const hand = player.getHand()
@@ -56,7 +58,7 @@ export class RuleManager {
                     validDiscards.push(tileStr)
                 }
             } catch (e) {
-                RuleManager.logger.error(
+                this.logger.error(
                     `Error calculating shanten for tile ${tileStr}:`,
                     e,
                 )
@@ -66,7 +68,7 @@ export class RuleManager {
         return validDiscards
     }
 
-    static getAnkanOptions(player: Player): string[] {
+    getAnkanOptions(player: Player): string[] {
         const hand = player.getHand()
         const counts: Record<string, number> = {}
         hand.forEach((t) => {
@@ -92,14 +94,40 @@ export class RuleManager {
 
                 // 2. Check if waits change
                 // Current waits
-                const currentWaits = this.getWaits(player).sort()
+                // We need waits for the 13-tile hand (before drawing the 4th tile)
+                const currentHand = hand.filter(
+                    (t) => t.id !== player.lastDrawnTile!.id,
+                )
+                const currentHandStr = this.convertTilesToRiichiString(
+                    currentHand.map((t) => t.toString()),
+                )
+
+                let currentWaits: string[] = []
+                try {
+                    const result = new Riichi(
+                        currentHandStr,
+                    ).calc() as RiichiResult
+                    if (result.hairi?.now === 0 && result.hairi.wait) {
+                        currentWaits.push(...Object.keys(result.hairi.wait))
+                    }
+                    if (
+                        result.hairi7and13?.now === 0 &&
+                        result.hairi7and13.wait
+                    ) {
+                        currentWaits.push(
+                            ...Object.keys(result.hairi7and13.wait),
+                        )
+                    }
+                    currentWaits = Array.from(new Set(currentWaits)).sort()
+                } catch (e) {
+                    this.logger.error(
+                        'Error calculating current waits for Ankan check',
+                        e,
+                    )
+                    return false
+                }
 
                 // Simulated waits after Ankan
-                // We need to simulate the hand state after Ankan.
-                // Player class has 'getHandStringForRiichi'.
-                // If we Ankan 'tileStr', we remove 4 tiles and add a 'closed kan' meld.
-                // We can construct the string manually.
-
                 // Construct hand string for simulation
                 const remainingHand = hand.filter(
                     (t) => t.toString() !== tileStr,
@@ -120,28 +148,6 @@ export class RuleManager {
                 })
 
                 // Add NEW Ankan Meld
-                // Ankan in riichi lib format: "010m" (closed)?
-                // Riichi lib format for closed kan: "1111m" treated as?
-                // Actually riichi lib detects "1111m" as 4 tiles.
-                // But we need to specify it's a Kan (meld).
-                // In riichi string, "+1111m" might be open kan.
-                // How to specify Closed Kan?
-                // Usually Closed Kan is NOT separated with '+'.
-                // BUT if we don't separate it, it's just 4 tiles in hand.
-                // If 4 tiles in hand, can it be interpreted as Kan?
-                // Riichi lib might have specific syntax for Closed Kan.
-                // Often: (1111m) or similar.
-                // Looking at `riichi` docs/source or assuming standard:
-                // If we treat it as Melded for "Wait Calculation", it reduces hand size.
-                // A closed kan is 4 tiles that don't count towards the 13-tile limit (standard 13 + 1).
-                // It replaces 3 tiles effectively.
-                // If we just remove the 4 tiles from "hand" string, the hand has 10 tiles.
-                // We need to tell the calculator that we have a Kan.
-                // If `riichi` lib doesn't support explicit Closed Kan syntax easily, we might struggle.
-                // However, `riichi` lib usually treats `+1111m` as Meld.
-                // For Wait Calculation, Open vs Closed Kan doesn't matter for *Waits* (shapes), only for Yaku (Suuankou vs Taiaitou).
-                // So using `+1111m` (Meld) is safe for checking *Waits*.
-
                 const rank = tileStr[0]
                 const suit = tileStr[1]
                 testHandStr += `+${rank}${rank}${rank}${rank}${suit}`
@@ -171,7 +177,7 @@ export class RuleManager {
 
                     return true
                 } catch (e) {
-                    RuleManager.logger.error('Error simulating Ankan waits', e)
+                    this.logger.error('Error simulating Ankan waits', e)
                     return false
                 }
             })
@@ -180,7 +186,7 @@ export class RuleManager {
         return possibleAnkans
     }
 
-    static getKakanOptions(player: Player): string[] {
+    getKakanOptions(player: Player): string[] {
         if (player.isRiichi) return [] // Cannot Kakan in Riichi
 
         const hand = player.getHand()
@@ -208,7 +214,7 @@ export class RuleManager {
         return options
     }
 
-    static calculateFuriten(player: Player): boolean {
+    calculateFuriten(player: Player): boolean {
         const hand = player.getHand().map((t) => t.toString())
         const handStr = this.convertTilesToRiichiString(hand)
         const result = new Riichi(handStr).calc() as RiichiResult
@@ -225,7 +231,7 @@ export class RuleManager {
         return false
     }
 
-    static getWaits(player: Player): string[] {
+    getWaits(player: Player): string[] {
         let handStr = player.getHandStringForRiichi()
         const melds = player.getMelds()
         if (melds.length > 0) {
@@ -254,7 +260,7 @@ export class RuleManager {
             }
             return Array.from(new Set(waits))
         } catch (e) {
-            RuleManager.logger.error(
+            this.logger.error(
                 `Error getting waits for player ${player.getId()}:`,
                 e,
             )
@@ -262,7 +268,7 @@ export class RuleManager {
         }
     }
 
-    static countTerminalsAndHonors(player: Player): number {
+    countTerminalsAndHonors(player: Player): number {
         const hand = player.getHand()
         const uniqueTiles = new Set<string>()
 
@@ -272,17 +278,6 @@ export class RuleManager {
 
             // Check if terminal or honor
             if (suit === 'z' || rank === 1 || rank === 9) {
-                // Determine uniqueness based on suit and rank (ignore id, aka)
-                // Actually `tile.toString()` format is `1m`, `5z` etc.
-                // 0m, 0p, 0s are 5.
-                // 1m, 9m, 1p, 9p, 1s, 9s, 1z...7z
-                // 0 is not 1 or 9, so safe.
-
-                // If 1m and 1m exist, we count only 1 unique.
-                // `tile.toString()` format: rank+suit. (e.g. 1m).
-                // Red 5 is 0m. Rank is 5. Not terminal.
-                // Wait, tile.toString() uses rank.
-                // If I have 1m and 1m, uniqueTiles set handles it.
                 uniqueTiles.add(`${rank}${suit}`)
             }
         })
@@ -290,11 +285,11 @@ export class RuleManager {
         return uniqueTiles.size
     }
 
-    static getActualDoraList(indicators: string[]): string[] {
+    getActualDoraList(indicators: string[]): string[] {
         return indicators.map((indicator) => this.getActualDora(indicator))
     }
 
-    static isTenpai(player: Player): boolean {
+    isTenpai(player: Player): boolean {
         // Construct hand string including melds
         let handStr = player.getHandStringForRiichi()
         const melds = player.getMelds()
@@ -319,7 +314,7 @@ export class RuleManager {
                 (result.hairi7and13?.now ?? 100) === 0
             )
         } catch (e) {
-            RuleManager.logger.error(
+            this.logger.error(
                 `Error checking Tenpai for player ${player.getId()}:`,
                 e,
             )
@@ -327,7 +322,7 @@ export class RuleManager {
         }
     }
 
-    private static convertTilesToRiichiString(tiles: string[]): string {
+    private convertTilesToRiichiString(tiles: string[]): string {
         const groups: Record<string, string[]> = { m: [], p: [], s: [], z: [] }
         tiles.forEach((t) => {
             const rank = t[0]
@@ -344,7 +339,7 @@ export class RuleManager {
         return result
     }
 
-    static calculateScore(
+    calculateScore(
         player: Player,
         context: WinContext,
     ): ScoreCalculation | null {
@@ -372,7 +367,7 @@ export class RuleManager {
         // This sets isTsumo = false in the library constructor automatically
         if (!context.isTsumo) {
             if (!context.winningTile) {
-                RuleManager.logger.error('Winning tile required for Ron')
+                this.logger.error('Winning tile required for Ron')
                 return null
             }
             handStr += `+${context.winningTile}`
@@ -434,7 +429,7 @@ export class RuleManager {
         }
     }
 
-    static verifyWin(
+    verifyWin(
         player: Player,
         tileString: string,
         context: WinContext,

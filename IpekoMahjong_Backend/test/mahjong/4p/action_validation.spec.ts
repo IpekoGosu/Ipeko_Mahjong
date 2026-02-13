@@ -1,9 +1,10 @@
 import { Player } from '@src/modules/mahjong/classes/player.class'
 import { Tile } from '@src/modules/mahjong/classes/tile.class'
 import { MahjongGame } from '@src/modules/mahjong/classes/MahjongGame.4p'
-import { RoundManager4p } from '@src/modules/mahjong/classes/managers/RoundManager.4p'
-import { TurnManager } from '@src/modules/mahjong/classes/managers/TurnManager'
 import { ActionManager4p } from '@src/modules/mahjong/classes/managers/ActionManager.4p'
+import { TurnManager } from '@src/modules/mahjong/classes/managers/TurnManager'
+import { createTestManagers } from '../test_utils'
+import { DEFAULT_4P_RULES } from '@src/modules/mahjong/interfaces/game-rules.config'
 
 describe('Action Validation', () => {
     let game: MahjongGame
@@ -12,8 +13,9 @@ describe('Action Validation', () => {
     let players: Player[]
 
     beforeEach(() => {
-        actionManager = new ActionManager4p()
-        turnManager = new TurnManager()
+        const managers = createTestManagers()
+        actionManager = managers.actionManager
+        turnManager = managers.turnManager
         game = new MahjongGame(
             [
                 { id: 'p1', isAi: false },
@@ -21,9 +23,12 @@ describe('Action Validation', () => {
                 { id: 'p3', isAi: false },
                 { id: 'p4', isAi: false },
             ],
-            new RoundManager4p(),
-            turnManager,
-            actionManager,
+            managers.roundManager,
+            managers.turnManager,
+            managers.actionManager,
+            managers.ruleEffectManager,
+            managers.ruleManager,
+            DEFAULT_4P_RULES,
         )
         // Manually start and initialize to have control
         game.startGame('room1')

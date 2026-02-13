@@ -6,15 +6,22 @@ import {
     MessageBody,
 } from '@nestjs/websockets'
 import { Server, Socket } from 'socket.io'
-import { GameRoomService } from './service/game-room.service'
-import { GameUpdate } from './interfaces/mahjong.types'
+import { GameRoomService } from '@src/modules/mahjong/service/game-room.service'
+import { GameUpdate } from '@src/modules/mahjong/interfaces/mahjong.types'
 import { WinstonLoggerService } from '@src/common/logger/winston.logger.service'
-import { RuleManager } from './classes/rule.manager'
-import { SimpleAI } from './classes/ai/simple.ai'
+import { RuleManager } from '@src/modules/mahjong/classes/managers/RuleManager'
+import { SimpleAI } from '@src/modules/mahjong/classes/ai/simple.ai'
 import { UseGuards } from '@nestjs/common'
-import { JwtAuthGuard } from '../authorization/jwt-auth.guard'
+import { JwtAuthGuard } from '@src/modules/authorization/jwt-auth.guard'
 import { JwtService } from '@nestjs/jwt'
 import { extractJwt, RequestWithAuth } from '@src/common/utils/auth.utils'
+import {
+    DiscardTileDto,
+    DeclareTsumoDto,
+    NextRoundDto,
+    SelectActionDto,
+    StartGameDto,
+} from './dto/mahjong.dto'
 
 @UseGuards(JwtAuthGuard)
 @WebSocketGateway({
@@ -31,6 +38,7 @@ export class MahjongGateway {
         private readonly gameRoomService: GameRoomService,
         private readonly logger: WinstonLoggerService,
         private readonly jwtService: JwtService,
+        private readonly ruleManager: RuleManager,
     ) {}
 
     // #region WebSocket Lifecycle Handlers
@@ -110,8 +118,14 @@ export class MahjongGateway {
     // #region WebSocket Message Handlers
 
     @SubscribeMessage('start-game')
-    async handleStartGame(@ConnectedSocket() client: Socket): Promise<void> {
-        const room = await this.gameRoomService.createRoom(client.id)
+    async handleStartGame(
+        @ConnectedSocket() client: Socket,
+        @MessageBody() data: StartGameDto,
+    ): Promise<void> {
+        const room = await this.gameRoomService.createRoom(
+            client.id,
+            data.gameMode || '4p',
+        )
         await client.join(room.roomId)
 
         // 1. Initialize round logic (deals 13 tiles)
@@ -138,11 +152,11 @@ export class MahjongGateway {
                 })),
                 hand: human.getHand().map((t) => t.toString()),
                 dora: doraIndicators,
-                actualDora: RuleManager.getActualDoraList(doraIndicators),
+                actualDora: this.ruleManager.getActualDoraList(doraIndicators),
                 wallCount: room.mahjongGame.getWallCount(),
                 deadWallCount: room.mahjongGame.getDeadWallCount(),
-                riichiDiscards: RuleManager.getRiichiDiscards(human),
-                waits: RuleManager.getWaits(human),
+                riichiDiscards: this.ruleManager.getRiichiDiscards(human),
+                waits: this.ruleManager.getWaits(human),
             })
         }
 
@@ -159,7 +173,7 @@ export class MahjongGateway {
     async handleDiscardTile(
         @ConnectedSocket() client: Socket,
         @MessageBody()
-        data: { roomId: string; tile: string; isRiichi?: boolean },
+        data: DiscardTileDto,
     ): Promise<void> {
         try {
             const room = this.gameRoomService.getRoom(data.roomId)
@@ -200,7 +214,7 @@ export class MahjongGateway {
     @SubscribeMessage('declare-tsumo')
     handleDeclareTsumo(
         @ConnectedSocket() client: Socket,
-        @MessageBody() data: { roomId: string },
+        @MessageBody() data: DeclareTsumoDto,
     ): void {
         try {
             const room = this.gameRoomService.getRoom(data.roomId)
@@ -231,7 +245,7 @@ export class MahjongGateway {
     @SubscribeMessage('next-round')
     handleNextRound(
         @ConnectedSocket() client: Socket,
-        @MessageBody() data: { roomId: string },
+        @MessageBody() data: NextRoundDto,
     ): void {
         try {
             const room = this.gameRoomService.getRoom(data.roomId)
@@ -261,12 +275,7 @@ export class MahjongGateway {
     async handleSelectAction(
         @ConnectedSocket() client: Socket,
         @MessageBody()
-        data: {
-            roomId: string
-            type: 'chi' | 'pon' | 'kan' | 'ron' | 'skip' | 'ankan' | 'kakan'
-            tile: string
-            consumedTiles?: string[]
-        },
+        data: SelectActionDto,
     ): Promise<void> {
         try {
             const room = this.gameRoomService.getRoom(data.roomId)

@@ -1,4 +1,4 @@
-import { GameRoom } from '../interfaces/mahjong.types'
+import { GameRoom } from '@src/modules/mahjong/interfaces/mahjong.types'
 
 /**
  * GameRoomService는 게임 룸의 생명주기(생성, 삭제)와
@@ -8,8 +8,12 @@ export abstract class GameRoomService {
     /**
      * 새로운 게임 룸을 생성합니다.
      * @param humanPlayerSocketId 게임을 시작한 플레이어의 소켓 ID
+     * @param gameMode '4p' | 'sanma'
      */
-    abstract createRoom(humanPlayerSocketId: string): Promise<GameRoom>
+    abstract createRoom(
+        humanPlayerSocketId: string,
+        gameMode: '4p' | 'sanma',
+    ): Promise<GameRoom>
 
     /**
      * ID로 게임 룸을 찾습니다.

@@ -1,5 +1,5 @@
-import { Tile } from '../classes/tile.class'
-import type { AbstractMahjongGame } from '../classes/AbstractMahjongGame'
+import { Tile } from '@src/modules/mahjong/classes/tile.class'
+import type { AbstractMahjongGame } from '@src/modules/mahjong/classes/AbstractMahjongGame'
 
 export type Suit = 'm' | 'p' | 's' | 'z'
 
@@ -48,6 +48,22 @@ export interface RiichiResult {
     wait?: string
 }
 
+export interface GameState {
+    bakaze: '1z' | '2z' | '3z' | '4z'
+    kyoku: number
+    honba: number
+    kyotaku: number
+    oyaIndex: number
+    currentTurnIndex: number
+    turnCounter: number
+    isSuddenDeath: boolean
+    wallCount: number
+    deadWallCount: number
+    doraIndicators: string[]
+    actualDora: string[]
+    gameMode: '4p' | 'sanma'
+}
+
 export interface GameUpdate {
     roomId: string
     isGameOver: boolean
@@ -83,4 +99,23 @@ export interface GameRoom {
     readonly mahjongGame: AbstractMahjongGame
     gameStatus: 'in-progress' | 'finished'
     timer?: NodeJS.Timeout
+}
+
+export type ActionType = 'chi' | 'pon' | 'kan' | 'ron' | 'ankan' | 'kakan'
+
+export interface ActionResult {
+    success: boolean
+    events: GameUpdate['events']
+    needsReplacementTile?: boolean
+    roundEnd?: RoundEndResult
+    error?: string
+}
+
+export interface RoundEndResult {
+    reason: 'ron' | 'tsumo' | 'ryuukyoku'
+    winners?: { winnerId: string; score: ScoreCalculation }[]
+    winnerId?: string
+    loserId?: string
+    score?: ScoreCalculation
+    abortReason?: string
 }
