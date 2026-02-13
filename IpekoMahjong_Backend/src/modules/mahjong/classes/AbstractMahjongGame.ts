@@ -316,13 +316,12 @@ export abstract class AbstractMahjongGame {
 
         // Kuikae prevention
         if (player.forbiddenDiscard.length > 0) {
-            const rank =
-                parseInt(tileString[0]) === 0 ? 5 : parseInt(tileString[0])
+            const rank = Tile.parseRank(tileString)
             const suit = tileString[1]
 
             // Check for both same tile and opposite end (for Chi)
             const isForbidden = player.forbiddenDiscard.some((f) => {
-                const fRank = parseInt(f[0]) === 0 ? 5 : parseInt(f[0])
+                const fRank = Tile.parseRank(f)
                 const fSuit = f[1]
                 return rank === fRank && suit === fSuit
             })
@@ -628,15 +627,14 @@ export abstract class AbstractMahjongGame {
         const player = this.getPlayer(playerId)!
 
         if (actionType === 'pon' || actionType === 'chi') {
-            const stolenRank =
-                parseInt(tileString[0]) === 0 ? 5 : parseInt(tileString[0])
+            const stolenRank = Tile.parseRank(tileString)
             const suit = tileString[1]
             const forbidden: string[] = [tileString]
 
             if (actionType === 'chi') {
                 // Determine if it was a side-wait or middle-wait Chi
                 const ranks = consumedTiles
-                    .map((t) => (parseInt(t[0]) === 0 ? 5 : parseInt(t[0])))
+                    .map((t) => Tile.parseRank(t))
                     .sort((a, b) => a - b)
                 // If we Chi 3m with 1m-2m, stolen is 3, ranks are 1,2. Sequence is 1-2-3.
                 // forbidden is 3m (same tile) and NOTHING else.

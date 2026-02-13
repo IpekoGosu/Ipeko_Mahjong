@@ -26,6 +26,11 @@ export class Tile {
         return this.rank
     }
 
+    static parseRank(tileString: string): number {
+        const rank = parseInt(tileString[0])
+        return rank === 0 ? 5 : rank
+    }
+
     toString(): string {
         // Aka Dora (Red Five) is represented as '0' for rank in many riichi libraries,
         // including the one we use for calculation.
