@@ -2,9 +2,8 @@ import { Player } from '../player.class'
 import { AbstractWall } from '../AbstractWall'
 import { GameUpdate } from '../../interfaces/mahjong.types'
 import { RuleManager } from '../rule.manager'
-import { Logger, Injectable, Scope } from '@nestjs/common'
+import { Logger } from '@nestjs/common'
 
-@Injectable({ scope: Scope.TRANSIENT })
 export class TurnManager {
     private readonly logger = new Logger(TurnManager.name)
     public currentTurnIndex: number = 0

@@ -862,6 +862,3 @@ export abstract class AbstractMahjongGame {
 
     // #endregion
 }
-
-export { MahjongGame } from './MahjongGame.4p'
-export { SanmaMahjongGame } from './MahjongGame.Sanma'
