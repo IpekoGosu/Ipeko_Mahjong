@@ -902,6 +902,7 @@ export abstract class AbstractMahjongGame {
             deadWallCount: this.wall.getRemainingDeadWall(),
             doraIndicators: doraIndicators,
             actualDora: this.ruleManager.getActualDoraList(doraIndicators),
+            gameMode: this.players.length === 4 ? '4p' : 'sanma',
         }
     }
 

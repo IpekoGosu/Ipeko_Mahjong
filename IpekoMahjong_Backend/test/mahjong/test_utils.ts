@@ -7,7 +7,10 @@ import { ActionManagerSanma } from '@src/modules/mahjong/classes/managers/Action
 import { RuleEffectManager } from '@src/modules/mahjong/classes/managers/RuleEffectManager'
 import { MahjongGame } from '@src/modules/mahjong/classes/MahjongGame.4p'
 import { SanmaMahjongGame } from '@src/modules/mahjong/classes/MahjongGame.Sanma'
-import { DEFAULT_4P_RULES, DEFAULT_3P_RULES } from '@src/modules/mahjong/interfaces/game-rules.config'
+import {
+    DEFAULT_4P_RULES,
+    DEFAULT_3P_RULES,
+} from '@src/modules/mahjong/interfaces/game-rules.config'
 import { MahjongAI } from '@src/modules/mahjong/classes/ai/MahjongAI'
 
 export function createTestGame(

@@ -61,6 +61,7 @@ export interface GameState {
     deadWallCount: number
     doraIndicators: string[]
     actualDora: string[]
+    gameMode: '4p' | 'sanma'
 }
 
 export interface GameUpdate {

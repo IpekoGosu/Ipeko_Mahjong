@@ -39,45 +39,45 @@ describe('Sanma Scoring Logic', () => {
             DEFAULT_3P_RULES,
         )
         game.startGame(roomId)
-        game.getPlayers().forEach(p => p.points = 25000)
+        game.getPlayers().forEach((p) => (p.points = 25000))
         game.roundManager.kyotaku = 0
     })
 
     it('should correctly distribute points for Oya Tsumo in Sanma', () => {
         const players = game.getPlayers()
-        const oya = players.find(p => p.isOya)!
-        const kos = players.filter(p => !p.isOya)
+        const oya = players.find((p) => p.isOya)!
+        const kos = players.filter((p) => !p.isOya)
 
         // Mock 40 fu 2 han Oya Tsumo (3900 total, 1300 from each Ko)
         const score: ScoreCalculation = {
             han: 2,
             fu: 40,
             ten: 3900,
-            yaku: { 'Test': '2' },
+            yaku: { Test: '2' },
             yakuman: 0,
             oya: [1300], // Each Ko pays 1300
             ko: [1300],
             name: '',
-            text: ''
+            text: '',
         }
 
         game.triggerEndKyoku(roomId, {
             reason: 'tsumo',
             winnerId: oya.getId(),
-            score
+            score,
         })
 
         expect(oya.points).toBe(25000 + 3900) // 25000 + ten (3900)
-        kos.forEach(ko => {
+        kos.forEach((ko) => {
             expect(ko.points).toBe(25000 - 1300)
         })
     })
 
     it('should correctly distribute points for Ko Tsumo in Sanma', () => {
         const players = game.getPlayers()
-        const winner = players.find(p => !p.isOya)!
-        const oya = players.find(p => p.isOya)!
-        const otherKo = players.find(p => !p.isOya && p !== winner)!
+        const winner = players.find((p) => !p.isOya)!
+        const oya = players.find((p) => p.isOya)!
+        const otherKo = players.find((p) => !p.isOya && p !== winner)!
 
         // Mock 40 fu 2 han Ko Tsumo (2700 total: 1300 from Oya, 700 from other Ko)
         // Note: 1300 + 700 = 2000. In Sanma usually North's share is ignored or handled differently.
@@ -88,18 +88,18 @@ describe('Sanma Scoring Logic', () => {
             han: 2,
             fu: 40,
             ten: 2700,
-            yaku: { 'Test': '2' },
+            yaku: { Test: '2' },
             yakuman: 0,
             oya: [1300],
             ko: [1300, 700],
             name: '',
-            text: ''
+            text: '',
         }
 
         game.triggerEndKyoku(roomId, {
             reason: 'tsumo',
             winnerId: winner.getId(),
-            score
+            score,
         })
 
         expect(winner.points).toBe(25000 + 2700)

@@ -4,7 +4,7 @@
 
 **Goal**: Create a lightweight frontend application to verify the Mahjong Game logic implemented in the `IpekoMahjong_Backend` (Phase 2 & 3).
 **Primary User**: Developer (for testing purposes).
-**Key Feature**: Authenticate via JWT, connect to WebSocket, play a full game loop (Draw -> Discard -> Call -> Riichi -> Win), support Hanchan state (multiple rounds), and view detailed game state updates.
+**Key Feature**: Authenticate via JWT, connect to WebSocket, play a full game loop (Draw -> Discard -> Call -> Riichi -> Win), support Hanchan state (multiple rounds), support both 4-Player (Standard) and 3-Player (Sanma) modes, and view detailed game state updates.
 
 ## 2. Technical Stack
 
@@ -28,6 +28,14 @@
 The frontend uses these interfaces to match the backend events exactly.
 
 ```typescript
+// Game Mode
+export type GameMode = '4p' | 'sanma';
+
+// Event: 'start-game' (Sent from client)
+export interface StartGamePayload {
+  gameMode?: GameMode; // Default to '4p'
+}
+
 // Tile string format: "{number}{suit}"
 // Suits: 'm' (man), 'p' (pin), 's' (sou), 'z' (zihai - 1..7)
 export type TileString = string; // e.g., "1m", "5z", "0s" (Aka Dora)
@@ -170,6 +178,7 @@ export interface PlayerState {
 
 export interface GameState {
   isConnected: boolean;
+  gameMode: GameMode | null;
   roomId: string | null;
   myPlayerId: string | null;
   myHand: string[];
@@ -199,7 +208,11 @@ export interface GameState {
 ## 4. UI Layout (Refined)
 
 The UI is a 2D Mahjong Table representation:
+- **Game Mode Selection**: After login, the user can choose between "4-Player Standard" and "3-Player Sanma".
 - **Center Box**: Displays Bakaze (Wind), Kyoku (Round), Honba, Kyotaku, and player scores/winds.
+- **Table Layout**:
+  - **4-Player**: Players positioned at Bottom (Self), Right (Shimoncha), Top (Toimen), Left (Kamicha).
+  - **3-Player (Sanma)**: Players positioned at Bottom (Self), Right (Shimoncha), Left (Kamicha). The Top (Toimen) position is omitted.
 - **Ponds (Kawa)**: Discards arranged in 6x3 grids for each player, with Riichi tiles rotated.
 - **Hand Area**: Current player's tiles, including the "Drawn Tile" separated from the hand.
 - **Info Panels**: Dora indicators, remaining wall count, and "Wait" tiles display.
@@ -231,4 +244,4 @@ The UI is a 2D Mahjong Table representation:
 2. **Game Core Loop**: Completed (Start -> Play -> Round End -> Next Round).
 3. **Advanced Rules**: Completed (Riichi, Furiten, Ankan/Kakan, Dora reveal timing).
 4. **Scoring Display**: Completed (detailed Yaku and point delta breakdown).
-5. **Sanma Support**: Infrastructure present in BE, FE adaptable to 3-player layout.
+5. **Sanma Support**: Implemented (Start screen selection, 3-player UI layout, Sanma-specific rules handling in BE).

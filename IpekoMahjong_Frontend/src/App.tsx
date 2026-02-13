@@ -36,6 +36,7 @@ function App() {
         user: null,
         token: null,
         isConnected: false,
+        gameMode: null,
         roomId: null,
         myPlayerId: null,
         myHand: [],
@@ -145,9 +146,11 @@ function App() {
         socket.on('game-started', (payload: GameStartedPayload) => {
             addLog(`Game started: Room ${payload.roomId}`)
             myPlayerIdRef.current = payload.yourPlayerId
+            const gameMode = payload.players.length === 4 ? '4p' : 'sanma'
             setState((prev) => ({
                 ...prev,
                 roomId: payload.roomId,
+                gameMode,
                 myPlayerId: payload.yourPlayerId,
                 dora: payload.dora,
                 actualDora: payload.actualDora || [],
@@ -447,8 +450,8 @@ function App() {
         }
     }, [addLog, state.isAuthenticated, state.token])
 
-    const handleStartGame = () => {
-        socketRef.current?.emit('start-game')
+    const handleStartGame = (gameMode: '4p' | 'sanma' = '4p') => {
+        socketRef.current?.emit('start-game', { gameMode })
     }
 
     const handleNextRound = () => {
@@ -542,8 +545,8 @@ function App() {
     }
 
     const rightPlayer = getPlayerByOffset(1) // 하가 (Next)
-    const oppositePlayer = getPlayerByOffset(2) // 대면
-    const leftPlayer = getPlayerByOffset(3) // 상가 (Prev)
+    const oppositePlayer = state.gameMode === '4p' ? getPlayerByOffset(2) : undefined // 대면 (Only 4p)
+    const leftPlayer = state.gameMode === '4p' ? getPlayerByOffset(3) : getPlayerByOffset(2) // 상가 (Prev)
 
     const getWindName = (wind: string, short = false) => {
         switch (wind) {
@@ -603,8 +606,17 @@ function App() {
                         const playerIdx = state.players.findIndex((pl) => pl.id === p.id)
                         const stolenFromIdx = state.players.findIndex((pl) => pl.id === meld.stolenFrom)
                         if (playerIdx !== -1 && stolenFromIdx !== -1) {
-                             // 1: Left, 2: Opposite, 3: Right
-                             relativePos = (playerIdx - stolenFromIdx + 4) % 4
+                             if (state.gameMode === '4p') {
+                                 // 1: Left, 2: Opposite, 3: Right
+                                 relativePos = (playerIdx - stolenFromIdx + 4) % 4
+                             } else {
+                                 // Sanma: 1: Left, 2: Right
+                                 // If stolenFrom is next in order (stolenFromIdx = (playerIdx+1)%3), it's Right (relPos 3)
+                                 // If stolenFrom is prev in order (stolenFromIdx = (playerIdx+2)%3), it's Left (relPos 1)
+                                 const diff = (playerIdx - stolenFromIdx + 3) % 3
+                                 if (diff === 1) relativePos = 1 // Left (Kamicha)
+                                 if (diff === 2) relativePos = 3 // Right (Shimocha)
+                             }
                         }
                     }
 
@@ -683,13 +695,22 @@ function App() {
                             Logged in as: {state.user.email}
                         </p>
                     )}
-                    <button
-                        onClick={handleStartGame}
-                        disabled={!state.isConnected}
-                        className="w-full py-3 px-6 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 rounded font-bold transition-colors"
-                    >
-                        Start Single Player Game
-                    </button>
+                    <div className="flex flex-col gap-4">
+                        <button
+                            onClick={() => handleStartGame('4p')}
+                            disabled={!state.isConnected}
+                            className="w-full py-3 px-6 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 rounded font-bold transition-colors"
+                        >
+                            Start 4-Player Game (Standard)
+                        </button>
+                        <button
+                            onClick={() => handleStartGame('sanma')}
+                            disabled={!state.isConnected}
+                            className="w-full py-3 px-6 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 rounded font-bold transition-colors"
+                        >
+                            Start 3-Player Game (Sanma)
+                        </button>
+                    </div>
                 </div>
             </div>
         )
@@ -706,20 +727,22 @@ function App() {
                         {/* Center Info Box */}
                         <div className="absolute inset-0 bg-gray-900/90 border-4 border-gray-700 rounded-3xl shadow-2xl flex flex-col items-center justify-center p-2 z-20 ring-4 ring-black/20 overflow-hidden">
                             {/* Top: Opposite */}
-                            <div className="absolute top-2 left-0 right-0 flex flex-col items-center">
-                                <div className="flex items-center gap-1.5">
-                                    {oppositePlayer?.id === state.dealerId && <span className="bg-red-600 text-white px-1.5 py-0.5 rounded text-[10px] font-bold">親</span>}
-                                    <span className="text-[10px] text-gray-400 font-bold uppercase tracking-tighter">
-                                        {oppositePlayer?.jikaze ? getWindName(oppositePlayer.jikaze, true) : ''}
-                                    </span>
-                                    <span className="text-lg font-mono font-black text-white">{oppositePlayer?.points}</span>
-                                </div>
-                                {oppositePlayer?.isRiichi && (
-                                    <div className="w-16 h-1.5 bg-white border border-gray-400 rounded-full flex items-center justify-center mt-0.5">
-                                        <div className="w-1 h-1 bg-red-600 rounded-full"></div>
+                            {oppositePlayer && (
+                                <div className="absolute top-2 left-0 right-0 flex flex-col items-center">
+                                    <div className="flex items-center gap-1.5">
+                                        {oppositePlayer.id === state.dealerId && <span className="bg-red-600 text-white px-1.5 py-0.5 rounded text-[10px] font-bold">親</span>}
+                                        <span className="text-[10px] text-gray-400 font-bold uppercase tracking-tighter">
+                                            {oppositePlayer.jikaze ? getWindName(oppositePlayer.jikaze, true) : ''}
+                                        </span>
+                                        <span className="text-lg font-mono font-black text-white">{oppositePlayer.points}</span>
                                     </div>
-                                )}
-                            </div>
+                                    {oppositePlayer.isRiichi && (
+                                        <div className="w-16 h-1.5 bg-white border border-gray-400 rounded-full flex items-center justify-center mt-0.5">
+                                            <div className="w-1 h-1 bg-red-600 rounded-full"></div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
 
                             {/* Left: Left Player */}
                             <div className="absolute -left-2 top-0 bottom-0 flex flex-col justify-center items-center rotate-90">
@@ -871,15 +894,17 @@ function App() {
                         {renderMelds(myPlayer)}
                     </div>
 
-                    <div className="absolute top-4 left-1/2 -translate-x-1/2 flex items-center">
-                        <div className={cn(
-                            "px-4 py-1 rounded-full bg-blue-500/20 border border-blue-500/30 text-[10px] font-black uppercase tracking-widest text-blue-200 transition-all whitespace-nowrap",
-                            oppositePlayer?.isMyTurn && "bg-blue-500 ring-4 ring-blue-500/50 text-white"
-                        )}>
-                            TOIMEN {oppositePlayer?.isMyTurn && "●"}
+                    {oppositePlayer && (
+                        <div className="absolute top-4 left-1/2 -translate-x-1/2 flex items-center">
+                            <div className={cn(
+                                "px-4 py-1 rounded-full bg-blue-500/20 border border-blue-500/30 text-[10px] font-black uppercase tracking-widest text-blue-200 transition-all whitespace-nowrap",
+                                oppositePlayer?.isMyTurn && "bg-blue-500 ring-4 ring-blue-500/50 text-white"
+                            )}>
+                                TOIMEN {oppositePlayer?.isMyTurn && "●"}
+                            </div>
+                            {renderMelds(oppositePlayer)}
                         </div>
-                        {renderMelds(oppositePlayer)}
-                    </div>
+                    )}
 
                     <div className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center origin-center">
                         <div className={cn(

@@ -116,6 +116,33 @@ const GameOverModal: React.FC<GameOverModalProps> = ({ data, onClose }) => {
                     </div>
                 )}
 
+                {data.finalRanking && (
+                    <div className="mt-8 space-y-4">
+                        <div className="text-xs text-gray-500 uppercase font-black tracking-[0.2em] border-b border-gray-700 pb-2 mb-4">
+                            Final Ranking
+                        </div>
+                        {data.finalRanking.map((entry) => (
+                            <div key={entry.id} className="flex justify-between items-center bg-gray-800/30 p-4 rounded-2xl border border-gray-700/50">
+                                <div className="flex items-center gap-4">
+                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center font-black ${
+                                        entry.rank === 1 ? 'bg-yellow-500 text-black' :
+                                        entry.rank === 2 ? 'bg-gray-400 text-black' :
+                                        entry.rank === 3 ? 'bg-orange-700 text-white' :
+                                        'bg-gray-700 text-gray-300'
+                                    }`}>
+                                        {entry.rank}
+                                    </div>
+                                    <span className="font-bold text-lg text-white">Player {entry.id.slice(0, 6)}</span>
+                                </div>
+                                <div className="text-right">
+                                    <div className="text-xl font-black text-white">{entry.points} pts</div>
+                                    <div className="text-xs text-gray-500 font-mono">Score: {entry.finalScore > 0 ? '+' : ''}{entry.finalScore}</div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+
                 <div className="mt-10 flex justify-center">
                     <button
                         onClick={onClose}

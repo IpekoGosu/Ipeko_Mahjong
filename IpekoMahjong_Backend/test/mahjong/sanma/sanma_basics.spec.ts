@@ -26,25 +26,26 @@ describe('Sanma Mahjong Game Basics', () => {
 
     it('should not allow Chi in Sanma', () => {
         game.startGame(roomId)
-        const players = game.getPlayers()
-        
+
         // p1 is Oya (usually index 0 after shuffle if we don't force it, but let's assume)
+
         // Let's find who is current turn player
         const currentPlayer = game.getCurrentTurnPlayer()
-        const nextPlayerIndex = (game.getPlayers().indexOf(currentPlayer) + 1) % 3
+        const nextPlayerIndex =
+            (game.getPlayers().indexOf(currentPlayer) + 1) % 3
         const nextPlayer = game.getPlayers()[nextPlayerIndex]
 
         // currentPlayer discards a tile that could be chi'd in 4p
         // But in Sanma, getPossibleActions should not return chi
         const actions = game.getPossibleActions(currentPlayer.getId(), '2s')
-        
+
         expect(actions[nextPlayer.getId()]?.chi).toBeFalsy()
     })
 
     it('should handle round transition correctly in Sanma (skip North)', () => {
         game.startGame(roomId)
         // Seat winds in Sanma: 1z, 2z, 3z (East, South, West)
-        const winds = game.getPlayers().map(p => game.getSeatWind(p))
+        const winds = game.getPlayers().map((p) => game.getSeatWind(p))
         expect(winds).toContain('1z')
         expect(winds).toContain('2z')
         expect(winds).toContain('3z')

@@ -69,7 +69,7 @@ describe('MahjongGateway', () => {
         let turnChangedReceived = false
         let doneCalled = false
 
-        client.on('game-started', (data: Record<string, any>) => {
+        client.on('game-started', (data: Record<string, unknown>) => {
             gameStartedReceived = true
             expect(data).toHaveProperty('roomId')
             expect(data).toHaveProperty('yourPlayerId', client.id)
@@ -84,7 +84,7 @@ describe('MahjongGateway', () => {
             }
         })
 
-        client.on('turn-changed', (data: Record<string, any>) => {
+        client.on('turn-changed', (data: Record<string, unknown>) => {
             turnChangedReceived = true
             expect(data).toHaveProperty('playerId')
             if (gameStartedReceived && turnChangedReceived && !doneCalled) {
@@ -93,7 +93,7 @@ describe('MahjongGateway', () => {
             }
         })
 
-        client.on('new-tile-drawn', (data: Record<string, any>) => {
+        client.on('new-tile-drawn', (data: Record<string, unknown>) => {
             expect(data).toHaveProperty('tile')
             // This might not happen for Oya start
         })
@@ -147,7 +147,7 @@ describe('MahjongGateway', () => {
     it('should start a Sanma game', (done) => {
         client.emit('start-game', { gameMode: 'sanma' })
 
-        client.on('game-started', (data: Record<string, any>) => {
+        client.on('game-started', (data: Record<string, unknown>) => {
             expect(data.players).toHaveLength(3)
             done()
         })
