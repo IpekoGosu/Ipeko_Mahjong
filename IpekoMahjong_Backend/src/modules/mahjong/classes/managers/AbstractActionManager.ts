@@ -77,85 +77,29 @@ export abstract class AbstractActionManager {
         players.forEach((p) => (p.ippatsuEligible = false))
         this.anyCallDeclared = true
 
-        let tilesToMove: string[] = []
-        let meldTiles: Tile[] = []
-        let stolenFromId: string | undefined = undefined
+        let result: {
+            success: boolean
+            error?: string
+            meldTiles?: Tile[]
+            tilesToMove?: string[]
+            stolenFromId?: string
+        }
 
         if (actionType === 'ankan') {
-            const rank = Tile.parseRank(tileString)
-            const suit = tileString[1]
-            const matches = player
-                .getHand()
-                .filter((t) => t.getRank() === rank && t.getSuit() === suit)
-            if (matches.length < 4)
-                return { success: false, error: 'Not enough tiles', events: [] }
-
-            meldTiles = matches.slice(0, 4)
-            tilesToMove = meldTiles.map((t) => t.toString())
-            player.removeTiles(tilesToMove)
-            player.addMeld({ type: 'ankan', tiles: meldTiles, opened: false })
-            this.pendingDoraReveal = true
-            this.rinshanFlag = true
+            result = this.handleClosedKan(player, tileString)
         } else if (actionType === 'kakan') {
-            const rank = Tile.parseRank(tileString)
-            const suit = tileString[1]
-            const tile = player
-                .getHand()
-                .find((t) => t.getRank() === rank && t.getSuit() === suit)
-            if (!tile)
-                return { success: false, error: 'Tile not in hand', events: [] }
-
-            const ponMeld = player
-                .getMelds()
-                .find(
-                    (m) =>
-                        m.type === 'pon' &&
-                        m.tiles[0].getRank() === rank &&
-                        m.tiles[0].getSuit() === suit,
-                )
-            if (!ponMeld)
-                return {
-                    success: false,
-                    error: 'Corresponding Pon not found',
-                    events: [],
-                }
-
-            player.removeFromHand(tile.toString())
-            ponMeld.type = 'kakan'
-            ponMeld.tiles.push(tile)
-            tilesToMove = [tile.toString()]
-            meldTiles = ponMeld.tiles
-            this.pendingDoraReveal = true
-            this.rinshanFlag = true
+            result = this.handleAddedKan(player, tileString)
         } else {
-            if (!this.activeDiscard) {
-                return {
-                    success: false,
-                    error: 'No active discard to call',
-                    events: [],
-                }
-            }
-            stolenFromId = this.activeDiscard.playerId
-            const stolenTile = this.activeDiscard.tile
-
-            const removedTiles = player.removeTiles(consumedTiles)
-            if (removedTiles.length !== consumedTiles.length) {
-                return {
-                    success: false,
-                    error: 'Invalid consumed tiles',
-                    events: [],
-                }
-            }
-
-            meldTiles = [...removedTiles, stolenTile]
-            player.addMeld({
-                type: actionType as MeldType,
-                tiles: meldTiles,
-                opened: true,
-            })
-            tilesToMove = consumedTiles
-            this.activeDiscard = null
+            result = this.handleOpenMeld(player, actionType, consumedTiles)
         }
+
+        if (!result.success) {
+            return { success: false, error: result.error, events: [] }
+        }
+
+        const meldTiles = result.meldTiles!
+        const tilesToMove = result.tilesToMove!
+        const stolenFromId = result.stolenFromId
 
         const events: ActionResult['events'] = [
             {
@@ -171,20 +115,121 @@ export abstract class AbstractActionManager {
             },
         ]
 
-        let needsReplacementTile = false
-        if (
+        const needsReplacementTile =
             actionType === 'ankan' ||
             actionType === 'kakan' ||
             actionType === 'kan'
-        ) {
-            needsReplacementTile = true
-        }
 
         return {
             success: true,
             events,
             needsReplacementTile,
         }
+    }
+
+    protected handleClosedKan(
+        player: Player,
+        tileString: string,
+    ): {
+        success: boolean
+        error?: string
+        meldTiles?: Tile[]
+        tilesToMove?: string[]
+    } {
+        const rank = Tile.parseRank(tileString)
+        const suit = tileString[1]
+        const matches = player
+            .getHand()
+            .filter((t) => t.getRank() === rank && t.getSuit() === suit)
+        if (matches.length < 4)
+            return { success: false, error: 'Not enough tiles' }
+
+        const meldTiles = matches.slice(0, 4)
+        const tilesToMove = meldTiles.map((t) => t.toString())
+        player.removeTiles(tilesToMove)
+        player.addMeld({ type: 'ankan', tiles: meldTiles, opened: false })
+        this.pendingDoraReveal = true
+        this.rinshanFlag = true
+        return { success: true, meldTiles, tilesToMove }
+    }
+
+    protected handleAddedKan(
+        player: Player,
+        tileString: string,
+    ): {
+        success: boolean
+        error?: string
+        meldTiles?: Tile[]
+        tilesToMove?: string[]
+    } {
+        const rank = Tile.parseRank(tileString)
+        const suit = tileString[1]
+        const tile = player
+            .getHand()
+            .find((t) => t.getRank() === rank && t.getSuit() === suit)
+        if (!tile) return { success: false, error: 'Tile not in hand' }
+
+        const ponMeld = player
+            .getMelds()
+            .find(
+                (m) =>
+                    m.type === 'pon' &&
+                    m.tiles[0].getRank() === rank &&
+                    m.tiles[0].getSuit() === suit,
+            )
+        if (!ponMeld)
+            return {
+                success: false,
+                error: 'Corresponding Pon not found',
+            }
+
+        player.removeFromHand(tile.toString())
+        ponMeld.type = 'kakan'
+        ponMeld.tiles.push(tile)
+        const tilesToMove = [tile.toString()]
+        const meldTiles = ponMeld.tiles
+        this.pendingDoraReveal = true
+        this.rinshanFlag = true
+        return { success: true, meldTiles, tilesToMove }
+    }
+
+    protected handleOpenMeld(
+        player: Player,
+        actionType: 'chi' | 'pon' | 'kan',
+        consumedTiles: string[],
+    ): {
+        success: boolean
+        error?: string
+        meldTiles?: Tile[]
+        tilesToMove?: string[]
+        stolenFromId?: string
+    } {
+        if (!this.activeDiscard) {
+            return {
+                success: false,
+                error: 'No active discard to call',
+            }
+        }
+        const stolenFromId = this.activeDiscard.playerId
+        const stolenTile = this.activeDiscard.tile
+
+        const removedTiles = player.removeTiles(consumedTiles)
+        if (removedTiles.length !== consumedTiles.length) {
+            return {
+                success: false,
+                error: 'Invalid consumed tiles',
+            }
+        }
+
+        const meldTiles = [...removedTiles, stolenTile]
+        player.addMeld({
+            type: actionType as MeldType,
+            tiles: meldTiles,
+            opened: true,
+        })
+        const tilesToMove = consumedTiles
+        this.activeDiscard = null
+        return { success: true, meldTiles, tilesToMove, stolenFromId }
     }
 
     public abstract getPossibleActions(
