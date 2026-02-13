@@ -775,7 +775,7 @@ export abstract class AbstractMahjongGame {
             doraIndicators: this.getDora().map((t) => t.toString()),
             wallCount: this.wall.getRemainingTiles(),
             deadWallCount: this.wall.getRemainingDeadWall(),
-            bakaze: 1, // Assuming East Round for now
+            bakaze: parseInt(this.bakaze[0]),
             turnCounter: this.turnCounter,
         }
     }

@@ -183,8 +183,10 @@ export class RoundManager4p extends AbstractRoundManager {
 
         if (isGameOver) {
             if (this.kyotaku > 0) {
-                const oya = players[this.oyaIndex]
-                oya.points += this.kyotaku * 1000
+                const topPlayer = players.reduce((a, b) =>
+                    a.points > b.points ? a : b,
+                )
+                topPlayer.points += this.kyotaku * 1000
                 nextKyotaku = 0
             }
         } else if (stickClaimer) {
