@@ -305,14 +305,13 @@ export abstract class AbstractMahjongGame {
         }
 
         // Kuikae prevention
-        if (player.forbiddenDiscard) {
+        if (player.forbiddenDiscard.length > 0) {
             const rank =
                 parseInt(tileString[0]) === 0 ? 5 : parseInt(tileString[0])
             const suit = tileString[1]
 
             // Check for both same tile and opposite end (for Chi)
-            // Note: forbiddenDiscard stores a string like "3m" or "3m6m"
-            const isForbidden = player.forbiddenDiscard.split(',').some((f) => {
+            const isForbidden = player.forbiddenDiscard.some((f) => {
                 const fRank = parseInt(f[0]) === 0 ? 5 : parseInt(f[0])
                 const fSuit = f[1]
                 return rank === fRank && suit === fSuit
@@ -430,7 +429,7 @@ export abstract class AbstractMahjongGame {
 
         // Handle side effects after discard
         player.isTemporaryFuriten = false
-        player.forbiddenDiscard = null
+        player.forbiddenDiscard = []
         this.ruleEffectManager.updateFuritenStatus(player)
         this.ruleEffectManager.handleIppatsuExpiration(player, this.turnCounter)
 
@@ -621,7 +620,7 @@ export abstract class AbstractMahjongGame {
             const stolenRank =
                 parseInt(tileString[0]) === 0 ? 5 : parseInt(tileString[0])
             const suit = tileString[1]
-            let forbidden = tileString
+            const forbidden: string[] = [tileString]
 
             if (actionType === 'chi') {
                 // Determine if it was a side-wait or middle-wait Chi
@@ -637,11 +636,11 @@ export abstract class AbstractMahjongGame {
                 if (stolenRank === ranks[0] - 1) {
                     // Chi 3m with 4m-5m
                     const otherEnd = ranks[1] + 1
-                    if (otherEnd <= 9) forbidden += `,${otherEnd}${suit}`
+                    if (otherEnd <= 9) forbidden.push(`${otherEnd}${suit}`)
                 } else if (stolenRank === ranks[1] + 1) {
                     // Chi 3m with 1m-2m
                     const otherEnd = ranks[0] - 1
-                    if (otherEnd >= 1) forbidden += `,${otherEnd}${suit}`
+                    if (otherEnd >= 1) forbidden.push(`${otherEnd}${suit}`)
                 }
             }
             player.forbiddenDiscard = forbidden

@@ -22,7 +22,7 @@ export class Player {
     public isRiichiFuriten: boolean = false
     public points: number = 25000
     public initialSeatIndex?: number
-    public forbiddenDiscard: string | null = null
+    public forbiddenDiscard: string[] = []
 
     constructor(id: string, isOya: boolean = false, isAi: boolean = false) {
         this.id = id
@@ -42,7 +42,7 @@ export class Player {
         this.isFuriten = false
         this.isTemporaryFuriten = false
         this.isRiichiFuriten = false
-        this.forbiddenDiscard = null
+        this.forbiddenDiscard = []
     }
 
     isHandClosed(): boolean {
