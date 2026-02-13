@@ -3,7 +3,7 @@ import { Tile } from '@src/modules/mahjong/classes/tile.class'
 import { MahjongGame } from '@src/modules/mahjong/classes/MahjongGame.4p'
 import { ActionManager4p } from '@src/modules/mahjong/classes/managers/ActionManager.4p'
 import { TurnManager } from '@src/modules/mahjong/classes/managers/TurnManager'
-import { createTestManagers } from './test_utils'
+import { createTestManagers } from '../test_utils'
 import { DEFAULT_4P_RULES } from '@src/modules/mahjong/interfaces/game-rules.config'
 
 describe('Action Validation', () => {

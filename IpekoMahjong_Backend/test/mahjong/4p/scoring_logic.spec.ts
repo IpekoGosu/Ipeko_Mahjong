@@ -2,7 +2,7 @@ import { MahjongGame } from '@src/modules/mahjong/classes/MahjongGame.4p'
 import { Player } from '@src/modules/mahjong/classes/player.class'
 import { ScoreCalculation } from '@src/modules/mahjong/interfaces/mahjong.types'
 import { SimpleAI } from '@src/modules/mahjong/classes/ai/simple.ai'
-import { createTestManagers } from './test_utils'
+import { createTestManagers } from '../test_utils'
 import { DEFAULT_4P_RULES } from '@src/modules/mahjong/interfaces/game-rules.config'
 
 class TestMahjongGame extends MahjongGame {

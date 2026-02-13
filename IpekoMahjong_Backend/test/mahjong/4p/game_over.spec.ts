@@ -1,7 +1,7 @@
 import { MahjongGame } from '@src/modules/mahjong/classes/MahjongGame.4p'
 import { GameUpdate } from '@src/modules/mahjong/interfaces/mahjong.types'
 import { SimpleAI } from '@src/modules/mahjong/classes/ai/simple.ai'
-import { createTestGame } from './test_utils'
+import { createTestGame } from '../test_utils'
 
 interface FinalRankingEntry {
     id: string

@@ -1,7 +1,7 @@
 import { MahjongGame } from '@src/modules/mahjong/classes/MahjongGame.4p'
 import { Tile } from '@src/modules/mahjong/classes/tile.class'
 import { Suit } from '@src/modules/mahjong/interfaces/mahjong.types'
-import { createTestGame } from './test_utils'
+import { createTestGame } from '../test_utils'
 
 describe('Seat Wind Calculation', () => {
     let game: MahjongGame

@@ -1,7 +1,7 @@
 import { MahjongGame } from '@src/modules/mahjong/classes/MahjongGame.4p'
 import { Player } from '@src/modules/mahjong/classes/player.class'
 import { Tile } from '@src/modules/mahjong/classes/tile.class'
-import { createTestGame } from './test_utils'
+import { createTestGame } from '../test_utils'
 
 describe('Chi Logic with Red Fives', () => {
     let game: MahjongGame

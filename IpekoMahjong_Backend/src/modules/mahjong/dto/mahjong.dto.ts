@@ -7,6 +7,12 @@ import {
     IsEnum,
 } from 'class-validator'
 
+export class StartGameDto {
+    @IsOptional()
+    @IsEnum(['4p', 'sanma'])
+    gameMode?: '4p' | 'sanma'
+}
+
 export class DiscardTileDto {
     @IsString()
     @IsNotEmpty()

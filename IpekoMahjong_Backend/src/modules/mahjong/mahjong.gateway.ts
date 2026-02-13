@@ -20,6 +20,7 @@ import {
     DeclareTsumoDto,
     NextRoundDto,
     SelectActionDto,
+    StartGameDto,
 } from './dto/mahjong.dto'
 
 @UseGuards(JwtAuthGuard)
@@ -117,8 +118,14 @@ export class MahjongGateway {
     // #region WebSocket Message Handlers
 
     @SubscribeMessage('start-game')
-    async handleStartGame(@ConnectedSocket() client: Socket): Promise<void> {
-        const room = await this.gameRoomService.createRoom(client.id)
+    async handleStartGame(
+        @ConnectedSocket() client: Socket,
+        @MessageBody() data: StartGameDto,
+    ): Promise<void> {
+        const room = await this.gameRoomService.createRoom(
+            client.id,
+            data.gameMode || '4p',
+        )
         await client.join(room.roomId)
 
         // 1. Initialize round logic (deals 13 tiles)

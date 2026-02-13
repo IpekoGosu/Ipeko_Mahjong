@@ -3,7 +3,7 @@ import { Tile } from '@src/modules/mahjong/classes/tile.class'
 import { Player } from '@src/modules/mahjong/classes/player.class'
 import { SimpleAI } from '@src/modules/mahjong/classes/ai/simple.ai'
 import { ScoreCalculation } from '@src/modules/mahjong/interfaces/mahjong.types'
-import { createTestManagers } from './test_utils'
+import { createTestManagers } from '../test_utils'
 import { DEFAULT_4P_RULES } from '@src/modules/mahjong/interfaces/game-rules.config'
 
 class TestPlayer extends Player {
