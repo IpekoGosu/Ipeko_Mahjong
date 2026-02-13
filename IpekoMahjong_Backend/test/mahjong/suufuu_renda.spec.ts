@@ -4,7 +4,7 @@ import { TurnManager } from '@src/modules/mahjong/classes/managers/TurnManager'
 import { ActionManager4p } from '@src/modules/mahjong/classes/managers/ActionManager.4p'
 import { Tile } from '@src/modules/mahjong/classes/tile.class'
 import { Player } from '@src/modules/mahjong/classes/player.class'
-import { SimpleAI } from '@src/modules/mahjong/ai/simple.ai'
+import { SimpleAI } from '@src/modules/mahjong/classes/ai/simple.ai'
 
 class TestPlayer extends Player {
     public forceSetHandLast(tile: Tile) {

@@ -1,4 +1,5 @@
 import { Tile } from '../classes/tile.class'
+import type { AbstractMahjongGame } from '../classes/AbstractMahjongGame'
 
 export type Suit = 'm' | 'p' | 's' | 'z'
 
@@ -57,4 +58,29 @@ export interface GameUpdate {
         to: 'all' | 'player'
         playerId?: string
     }[]
+}
+
+export interface WinContext {
+    bakaze: string // '1z', '2z', etc.
+    seatWind: string // '1z', '2z', etc.
+    dora: string[] // List of dora tiles (e.g. ['1m'])
+    isTsumo: boolean
+    isRiichi?: boolean
+    isDoubleRiichi?: boolean
+    isIppatsu?: boolean
+    isHaitei?: boolean
+    isHoutei?: boolean
+    isRinshan?: boolean
+    isChankan?: boolean
+    isTenhou?: boolean
+    isChiihou?: boolean
+    winningTile?: string // Required for Ron
+    uradora?: string[]
+}
+
+export interface GameRoom {
+    readonly roomId: string
+    readonly mahjongGame: AbstractMahjongGame
+    gameStatus: 'in-progress' | 'finished'
+    timer?: NodeJS.Timeout
 }

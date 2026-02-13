@@ -7,6 +7,7 @@ import { RoundManagerSanma } from './classes/managers/RoundManager.Sanma'
 import { TurnManager } from './classes/managers/TurnManager'
 import { ActionManager4p } from './classes/managers/ActionManager.4p'
 import { ActionManagerSanma } from './classes/managers/ActionManager.Sanma'
+import { MahjongAI } from '@src/modules/mahjong/classes/ai/MahjongAI'
 
 @Injectable()
 export class MahjongFactory {
@@ -20,8 +21,10 @@ export class MahjongFactory {
         const turnManager = await this.moduleRef.resolve(TurnManager)
         const actionManager = await this.moduleRef.resolve(ActionManager4p)
 
+        const playersWithAI = await this.createPlayersWithAI(playerInfos)
+
         return new MahjongGame(
-            playerInfos,
+            playersWithAI,
             roundManager,
             turnManager,
             actionManager,
@@ -35,11 +38,27 @@ export class MahjongFactory {
         const turnManager = await this.moduleRef.resolve(TurnManager)
         const actionManager = await this.moduleRef.resolve(ActionManagerSanma)
 
+        const playersWithAI = await this.createPlayersWithAI(playerInfos)
+
         return new SanmaMahjongGame(
-            playerInfos,
+            playersWithAI,
             roundManager,
             turnManager,
             actionManager,
+        )
+    }
+
+    private async createPlayersWithAI(
+        playerInfos: { id: string; isAi: boolean }[],
+    ) {
+        return Promise.all(
+            playerInfos.map(async (p) => {
+                if (p.isAi) {
+                    const ai = await this.moduleRef.resolve(MahjongAI)
+                    return { ...p, ai }
+                }
+                return p
+            }),
         )
     }
 }

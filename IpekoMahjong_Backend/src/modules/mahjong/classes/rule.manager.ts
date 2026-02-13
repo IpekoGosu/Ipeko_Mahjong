@@ -1,28 +1,11 @@
 import {
     ScoreCalculation,
     RiichiResult,
+    WinContext,
 } from '@src/modules/mahjong/interfaces/mahjong.types'
 import { Player } from './player.class'
 import Riichi from 'riichi'
 import { Logger } from '@nestjs/common'
-
-export interface WinContext {
-    bakaze: string // '1z', '2z', etc.
-    seatWind: string // '1z', '2z', etc.
-    dora: string[] // List of dora tiles (e.g. ['1m'])
-    isTsumo: boolean
-    isRiichi?: boolean
-    isDoubleRiichi?: boolean
-    isIppatsu?: boolean
-    isHaitei?: boolean
-    isHoutei?: boolean
-    isRinshan?: boolean
-    isChankan?: boolean
-    isTenhou?: boolean
-    isChiihou?: boolean
-    winningTile?: string // Required for Ron
-    uradora?: string[]
-}
 
 export class RuleManager {
     private static readonly logger = new Logger(RuleManager.name)

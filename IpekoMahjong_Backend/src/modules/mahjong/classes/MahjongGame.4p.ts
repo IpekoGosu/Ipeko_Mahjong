@@ -4,10 +4,11 @@ import { TurnManager } from './managers/TurnManager'
 import { ActionManager4p } from './managers/ActionManager.4p'
 import { Wall4p } from './Wall.4p'
 import { AbstractWall } from './AbstractWall'
+import { MahjongAI } from '@src/modules/mahjong/classes/ai/MahjongAI'
 
 export class MahjongGame extends AbstractMahjongGame {
     constructor(
-        playerInfos: { id: string; isAi: boolean }[],
+        playerInfos: { id: string; isAi: boolean; ai?: MahjongAI }[],
         roundManager: RoundManager4p,
         turnManager: TurnManager,
         actionManager: ActionManager4p,

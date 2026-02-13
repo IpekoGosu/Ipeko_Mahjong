@@ -10,6 +10,8 @@ import { RoundManagerSanma } from './classes/managers/RoundManager.Sanma'
 import { TurnManager } from './classes/managers/TurnManager'
 import { ActionManager4p } from './classes/managers/ActionManager.4p'
 import { ActionManagerSanma } from './classes/managers/ActionManager.Sanma'
+import { SimpleAI } from './classes/ai/simple.ai'
+import { MahjongAI } from '@src/modules/mahjong/classes/ai/MahjongAI'
 
 @Module({
     imports: [AuthModule],
@@ -26,6 +28,10 @@ import { ActionManagerSanma } from './classes/managers/ActionManager.Sanma'
         TurnManager,
         ActionManager4p,
         ActionManagerSanma,
+        {
+            provide: MahjongAI,
+            useClass: SimpleAI,
+        },
     ],
     exports: [GameRoomService],
 })

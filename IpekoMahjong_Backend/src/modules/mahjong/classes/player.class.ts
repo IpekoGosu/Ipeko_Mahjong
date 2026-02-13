@@ -1,7 +1,7 @@
 import { Tile } from './tile.class'
 import { Meld } from '../interfaces/mahjong.types'
-import { MahjongAI } from '../ai/mahjong-ai.interface'
 import { Logger } from '@nestjs/common'
+import { MahjongAI } from '@src/modules/mahjong/classes/ai/MahjongAI'
 
 export class Player {
     private readonly logger = new Logger(Player.name)

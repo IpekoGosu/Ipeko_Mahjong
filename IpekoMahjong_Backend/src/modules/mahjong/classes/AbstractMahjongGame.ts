@@ -1,30 +1,20 @@
 import { AbstractWall } from './AbstractWall'
 import { Player } from './player.class'
 import { Tile } from './tile.class'
-import { PossibleActions, ScoreCalculation } from '../interfaces/mahjong.types'
-import { SimpleAI } from '../ai/simple.ai'
-import { GameObservation } from '../ai/mahjong-ai.interface'
+import {
+    PossibleActions,
+    ScoreCalculation,
+    GameUpdate,
+} from '../interfaces/mahjong.types'
 import { RuleManager } from './rule.manager'
 import { Logger } from '@nestjs/common'
 import { AbstractRoundManager } from './managers/AbstractRoundManager'
 import { TurnManager } from './managers/TurnManager'
 import { AbstractActionManager } from './managers/AbstractActionManager'
-
-/**
- * 게임 내에서 발생하는 모든 상태 변화를 담는 객체.
- * 게이트웨이는 이 객체를 받아 클라이언트에게 어떤 이벤트를 보낼지 결정합니다.
- */
-export interface GameUpdate {
-    roomId: string
-    isGameOver: boolean
-    reason?: 'tsumo' | 'ryuukyoku' | 'player-disconnected' | 'ron'
-    events: {
-        eventName: string
-        payload: Record<string, unknown>
-        to: 'all' | 'player'
-        playerId?: string
-    }[]
-}
+import { MahjongAI } from '@src/modules/mahjong/classes/ai/MahjongAI'
+import { GameObservation } from '@src/modules/mahjong/interfaces/mahjong-ai.interface'
+import { CommonError } from '@src/common/error/common.error'
+import { ERROR_STATUS } from '@src/common/error/error.status'
 
 /**
  * AbstractMahjongGame 클래스는 한 판의 마작 게임에 대한 모든 규칙과 상태를 관리합니다.
@@ -128,7 +118,7 @@ export abstract class AbstractMahjongGame {
     }
 
     constructor(
-        playerInfos: { id: string; isAi: boolean }[],
+        playerInfos: { id: string; isAi: boolean; ai?: MahjongAI }[],
         roundManager: AbstractRoundManager,
         turnManager: TurnManager,
         actionManager: AbstractActionManager,
@@ -145,10 +135,15 @@ export abstract class AbstractMahjongGame {
 
     protected abstract createWall(): AbstractWall
 
-    protected createPlayer(info: { id: string; isAi: boolean }): Player {
+    protected createPlayer(info: {
+        id: string
+        isAi: boolean
+        ai?: MahjongAI
+    }): Player {
         const player = new Player(info.id, false, info.isAi) // isOya set later
         if (info.isAi) {
-            player.ai = new SimpleAI()
+            if (!info.ai) throw new CommonError(ERROR_STATUS.AI_NOT_PROVIDED)
+            player.ai = info.ai
         }
         return player
     }
