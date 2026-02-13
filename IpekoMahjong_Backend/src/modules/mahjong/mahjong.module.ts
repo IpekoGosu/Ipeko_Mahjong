@@ -13,10 +13,11 @@ import { ActionManagerSanma } from '@src/modules/mahjong/classes/managers/Action
 import { SimpleAI } from '@src/modules/mahjong/classes/ai/simple.ai'
 import { MahjongAI } from '@src/modules/mahjong/classes/ai/MahjongAI'
 import { RuleEffectManager } from '@src/modules/mahjong/classes/managers/RuleEffectManager'
+import { RuleManager } from '@src/modules/mahjong/classes/managers/RuleManager'
 
 const createTransientProvider = <T>(token: Type<T>) => ({
     provide: token,
-    useFactory: () => new token(),
+    useClass: token,
     scope: Scope.TRANSIENT,
 })
 
@@ -30,6 +31,7 @@ const createTransientProvider = <T>(token: Type<T>) => ({
         },
         WinstonLoggerService,
         MahjongFactory,
+        RuleManager,
         createTransientProvider(RoundManager4p),
         createTransientProvider(RoundManagerSanma),
         createTransientProvider(TurnManager),

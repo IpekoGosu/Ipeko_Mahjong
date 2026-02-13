@@ -5,11 +5,13 @@ import {
 } from '@src/modules/mahjong/interfaces/mahjong.types'
 import { Player } from '@src/modules/mahjong/classes/player.class'
 import Riichi from 'riichi'
-import { Logger } from '@nestjs/common'
+import { Injectable, Logger } from '@nestjs/common'
 
+@Injectable()
 export class RuleManager {
-    private static readonly logger = new Logger(RuleManager.name)
-    static getActualDora(indicator: string): string {
+    private readonly logger = new Logger(RuleManager.name)
+
+    getActualDora(indicator: string): string {
         const rank = parseInt(indicator[0])
         const suit = indicator[1]
 
@@ -29,7 +31,7 @@ export class RuleManager {
         }
     }
 
-    static getRiichiDiscards(player: Player): string[] {
+    getRiichiDiscards(player: Player): string[] {
         if (!player.isHandClosed() || player.isRiichi) return []
 
         const hand = player.getHand()
@@ -56,7 +58,7 @@ export class RuleManager {
                     validDiscards.push(tileStr)
                 }
             } catch (e) {
-                RuleManager.logger.error(
+                this.logger.error(
                     `Error calculating shanten for tile ${tileStr}:`,
                     e,
                 )
@@ -66,7 +68,7 @@ export class RuleManager {
         return validDiscards
     }
 
-    static getAnkanOptions(player: Player): string[] {
+    getAnkanOptions(player: Player): string[] {
         const hand = player.getHand()
         const counts: Record<string, number> = {}
         hand.forEach((t) => {
@@ -118,7 +120,7 @@ export class RuleManager {
                     }
                     currentWaits = Array.from(new Set(currentWaits)).sort()
                 } catch (e) {
-                    RuleManager.logger.error(
+                    this.logger.error(
                         'Error calculating current waits for Ankan check',
                         e,
                     )
@@ -175,7 +177,7 @@ export class RuleManager {
 
                     return true
                 } catch (e) {
-                    RuleManager.logger.error('Error simulating Ankan waits', e)
+                    this.logger.error('Error simulating Ankan waits', e)
                     return false
                 }
             })
@@ -184,7 +186,7 @@ export class RuleManager {
         return possibleAnkans
     }
 
-    static getKakanOptions(player: Player): string[] {
+    getKakanOptions(player: Player): string[] {
         if (player.isRiichi) return [] // Cannot Kakan in Riichi
 
         const hand = player.getHand()
@@ -212,7 +214,7 @@ export class RuleManager {
         return options
     }
 
-    static calculateFuriten(player: Player): boolean {
+    calculateFuriten(player: Player): boolean {
         const hand = player.getHand().map((t) => t.toString())
         const handStr = this.convertTilesToRiichiString(hand)
         const result = new Riichi(handStr).calc() as RiichiResult
@@ -229,7 +231,7 @@ export class RuleManager {
         return false
     }
 
-    static getWaits(player: Player): string[] {
+    getWaits(player: Player): string[] {
         let handStr = player.getHandStringForRiichi()
         const melds = player.getMelds()
         if (melds.length > 0) {
@@ -258,7 +260,7 @@ export class RuleManager {
             }
             return Array.from(new Set(waits))
         } catch (e) {
-            RuleManager.logger.error(
+            this.logger.error(
                 `Error getting waits for player ${player.getId()}:`,
                 e,
             )
@@ -266,7 +268,7 @@ export class RuleManager {
         }
     }
 
-    static countTerminalsAndHonors(player: Player): number {
+    countTerminalsAndHonors(player: Player): number {
         const hand = player.getHand()
         const uniqueTiles = new Set<string>()
 
@@ -283,11 +285,11 @@ export class RuleManager {
         return uniqueTiles.size
     }
 
-    static getActualDoraList(indicators: string[]): string[] {
+    getActualDoraList(indicators: string[]): string[] {
         return indicators.map((indicator) => this.getActualDora(indicator))
     }
 
-    static isTenpai(player: Player): boolean {
+    isTenpai(player: Player): boolean {
         // Construct hand string including melds
         let handStr = player.getHandStringForRiichi()
         const melds = player.getMelds()
@@ -312,7 +314,7 @@ export class RuleManager {
                 (result.hairi7and13?.now ?? 100) === 0
             )
         } catch (e) {
-            RuleManager.logger.error(
+            this.logger.error(
                 `Error checking Tenpai for player ${player.getId()}:`,
                 e,
             )
@@ -320,7 +322,7 @@ export class RuleManager {
         }
     }
 
-    private static convertTilesToRiichiString(tiles: string[]): string {
+    private convertTilesToRiichiString(tiles: string[]): string {
         const groups: Record<string, string[]> = { m: [], p: [], s: [], z: [] }
         tiles.forEach((t) => {
             const rank = t[0]
@@ -337,7 +339,7 @@ export class RuleManager {
         return result
     }
 
-    static calculateScore(
+    calculateScore(
         player: Player,
         context: WinContext,
     ): ScoreCalculation | null {
@@ -365,7 +367,7 @@ export class RuleManager {
         // This sets isTsumo = false in the library constructor automatically
         if (!context.isTsumo) {
             if (!context.winningTile) {
-                RuleManager.logger.error('Winning tile required for Ron')
+                this.logger.error('Winning tile required for Ron')
                 return null
             }
             handStr += `+${context.winningTile}`
@@ -427,7 +429,7 @@ export class RuleManager {
         }
     }
 
-    static verifyWin(
+    verifyWin(
         player: Player,
         tileString: string,
         context: WinContext,

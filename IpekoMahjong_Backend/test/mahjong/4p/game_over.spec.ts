@@ -1,10 +1,7 @@
 import { MahjongGame } from '@src/modules/mahjong/classes/MahjongGame.4p'
 import { GameUpdate } from '@src/modules/mahjong/interfaces/mahjong.types'
-import { RoundManager4p } from '@src/modules/mahjong/classes/managers/RoundManager.4p'
-import { TurnManager } from '@src/modules/mahjong/classes/managers/TurnManager'
-import { ActionManager4p } from '@src/modules/mahjong/classes/managers/ActionManager.4p'
-import { RuleEffectManager } from '@src/modules/mahjong/classes/managers/RuleEffectManager'
 import { SimpleAI } from '@src/modules/mahjong/classes/ai/simple.ai'
+import { createTestGame } from '../test_utils'
 
 interface FinalRankingEntry {
     id: string
@@ -21,18 +18,12 @@ describe('MahjongGame - Game Over and Ranking', () => {
         // Create game with specific IDs to test tie-breaking
         // Seating order will be randomized in startGame, but we'll use IDs to track.
         const ai = new SimpleAI()
-        game = new MahjongGame(
-            [
-                { id: 'p1', isAi: false },
-                { id: 'p2', isAi: true, ai },
-                { id: 'p3', isAi: true, ai },
-                { id: 'p4', isAi: true, ai },
-            ],
-            new RoundManager4p(),
-            new TurnManager(),
-            new ActionManager4p(),
-            new RuleEffectManager(),
-        )
+        game = createTestGame([
+            { id: 'p1', isAi: false },
+            { id: 'p2', isAi: true, ai },
+            { id: 'p3', isAi: true, ai },
+            { id: 'p4', isAi: true, ai },
+        ])
         game.startGame(roomId)
     })
 

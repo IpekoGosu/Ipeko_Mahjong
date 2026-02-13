@@ -48,6 +48,22 @@ export interface RiichiResult {
     wait?: string
 }
 
+export interface GameState {
+    bakaze: '1z' | '2z' | '3z' | '4z'
+    kyoku: number
+    honba: number
+    kyotaku: number
+    oyaIndex: number
+    currentTurnIndex: number
+    turnCounter: number
+    isSuddenDeath: boolean
+    wallCount: number
+    deadWallCount: number
+    doraIndicators: string[]
+    actualDora: string[]
+    gameMode: '4p' | 'sanma'
+}
+
 export interface GameUpdate {
     roomId: string
     isGameOver: boolean

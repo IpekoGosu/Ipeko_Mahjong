@@ -1,11 +1,9 @@
 import { MahjongGame } from '@src/modules/mahjong/classes/MahjongGame.4p'
-import { RoundManager4p } from '@src/modules/mahjong/classes/managers/RoundManager.4p'
-import { TurnManager } from '@src/modules/mahjong/classes/managers/TurnManager'
-import { ActionManager4p } from '@src/modules/mahjong/classes/managers/ActionManager.4p'
-import { RuleEffectManager } from '@src/modules/mahjong/classes/managers/RuleEffectManager'
 import { Tile } from '@src/modules/mahjong/classes/tile.class'
 import { Player } from '@src/modules/mahjong/classes/player.class'
 import { SimpleAI } from '@src/modules/mahjong/classes/ai/simple.ai'
+import { createTestManagers } from '../test_utils'
+import { DEFAULT_4P_RULES } from '@src/modules/mahjong/interfaces/game-rules.config'
 
 class TestPlayer extends Player {
     public forceSetHandLast(tile: Tile) {
@@ -23,7 +21,7 @@ class TestMahjongGame extends MahjongGame {
         return player
     }
 
-    private getTestPlayer(id: string): TestPlayer {
+    public getTestPlayer(id: string): TestPlayer {
         return this.getPlayer(id) as TestPlayer
     }
 
@@ -38,6 +36,7 @@ describe('Suufuu Renda (Four Winds Discard)', () => {
 
     beforeEach(() => {
         roomId = 'test-room'
+        const managers = createTestManagers()
         game = new TestMahjongGame(
             [
                 { id: 'p1', isAi: false },
@@ -45,10 +44,12 @@ describe('Suufuu Renda (Four Winds Discard)', () => {
                 { id: 'p3', isAi: false },
                 { id: 'p4', isAi: false },
             ],
-            new RoundManager4p(),
-            new TurnManager(),
-            new ActionManager4p(),
-            new RuleEffectManager(),
+            managers.roundManager,
+            managers.turnManager,
+            managers.actionManager,
+            managers.ruleEffectManager,
+            managers.ruleManager,
+            DEFAULT_4P_RULES,
         )
         game.startGame(roomId)
     })

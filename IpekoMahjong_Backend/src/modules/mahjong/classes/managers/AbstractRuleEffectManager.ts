@@ -1,9 +1,7 @@
 import { Player } from '@src/modules/mahjong/classes/player.class'
 import { AbstractWall } from '@src/modules/mahjong/classes/wall/AbstractWall'
 import { TurnManager } from '@src/modules/mahjong/classes/managers/TurnManager'
-import { Injectable } from '@nestjs/common'
 
-@Injectable()
 export abstract class AbstractRuleEffectManager {
     public abstract handleRiichi(
         player: Player,

@@ -4,13 +4,18 @@ import {
     PossibleActions,
     ActionResult,
     ScoreCalculation,
-    MeldType,
     WinContext,
 } from '@src/modules/mahjong/interfaces/mahjong.types'
 import { RuleManager } from '@src/modules/mahjong/classes/managers/RuleManager'
 import { AbstractActionManager } from '@src/modules/mahjong/classes/managers/AbstractActionManager'
+import { Injectable } from '@nestjs/common'
 
+@Injectable()
 export class ActionManager4p extends AbstractActionManager {
+    constructor(private readonly ruleManager: RuleManager) {
+        super()
+    }
+
     public getPossibleActions(
         discarderId: string,
         tileString: string,
@@ -91,8 +96,7 @@ export class ActionManager4p extends AbstractActionManager {
                 return
             }
 
-            const rank =
-                parseInt(tileString[0]) === 0 ? 5 : parseInt(tileString[0])
+            const rank = Tile.parseRank(tileString)
             const suit = tileString[1]
             const matches = hand.filter(
                 (t) => t.getRank() === rank && t.getSuit() === suit,
@@ -137,39 +141,7 @@ export class ActionManager4p extends AbstractActionManager {
         const playerIndex = players.indexOf(player)
 
         if (actionType === 'ron') {
-            if (this.potentialRonners.includes(playerId)) {
-                this.receivedRonCommands.push({ playerId, tileString })
-                this.processedRonners.push(playerId)
-
-                if (
-                    this.processedRonners.length ===
-                    this.potentialRonners.length
-                ) {
-                    // All ron decisions are made. Orchestrator will handle Ron processing.
-                    return {
-                        success: true,
-                        events: [],
-                        roundEnd: {
-                            reason: 'ron',
-                            winners: this.receivedRonCommands.map((cmd) => ({
-                                winnerId: cmd.playerId,
-                                // Orchestrator will need to recalculate score or we pass it
-                                // Better if Orchestrator calls verifyRon again or we pass them here.
-                                score: {} as ScoreCalculation, // Placeholder, Orchestrator will fill
-                            })),
-                            loserId: this.activeDiscard?.playerId,
-                        },
-                    }
-                } else {
-                    return { success: true, events: [] }
-                }
-            } else {
-                return {
-                    success: false,
-                    error: 'Invalid Ron attempt',
-                    events: [],
-                }
-            }
+            return this.handleRonAction(playerId, tileString)
         }
 
         if (this.potentialRonners.length > 0) {
@@ -197,120 +169,13 @@ export class ActionManager4p extends AbstractActionManager {
             }
         }
 
-        this.pendingActions = {}
-        players.forEach((p) => (p.ippatsuEligible = false))
-        this.anyCallDeclared = true
-
-        let tilesToMove: string[] = []
-        let meldTiles: Tile[] = []
-        let stolenFromId: string | undefined = undefined
-
-        if (actionType === 'ankan') {
-            const rank =
-                parseInt(tileString[0]) === 0 ? 5 : parseInt(tileString[0])
-            const suit = tileString[1]
-            const matches = player
-                .getHand()
-                .filter((t) => t.getRank() === rank && t.getSuit() === suit)
-            if (matches.length < 4)
-                return { success: false, error: 'Not enough tiles', events: [] }
-
-            meldTiles = matches.slice(0, 4)
-            tilesToMove = meldTiles.map((t) => t.toString())
-            player.removeTiles(tilesToMove)
-            player.addMeld({ type: 'ankan', tiles: meldTiles, opened: false })
-            this.pendingDoraReveal = true
-            this.rinshanFlag = true
-        } else if (actionType === 'kakan') {
-            const rank =
-                parseInt(tileString[0]) === 0 ? 5 : parseInt(tileString[0])
-            const suit = tileString[1]
-            const tile = player
-                .getHand()
-                .find((t) => t.getRank() === rank && t.getSuit() === suit)
-            if (!tile)
-                return { success: false, error: 'Tile not in hand', events: [] }
-
-            const ponMeld = player
-                .getMelds()
-                .find(
-                    (m) =>
-                        m.type === 'pon' &&
-                        m.tiles[0].getRank() === rank &&
-                        m.tiles[0].getSuit() === suit,
-                )
-            if (!ponMeld)
-                return {
-                    success: false,
-                    error: 'Corresponding Pon not found',
-                    events: [],
-                }
-
-            player.removeFromHand(tile.toString())
-            ponMeld.type = 'kakan'
-            ponMeld.tiles.push(tile)
-            tilesToMove = [tile.toString()]
-            meldTiles = ponMeld.tiles
-            this.pendingDoraReveal = true
-            this.rinshanFlag = true
-        } else {
-            if (!this.activeDiscard) {
-                return {
-                    success: false,
-                    error: 'No active discard to call',
-                    events: [],
-                }
-            }
-            stolenFromId = this.activeDiscard.playerId
-            const stolenTile = this.activeDiscard.tile
-
-            const removedTiles = player.removeTiles(consumedTiles)
-            if (removedTiles.length !== consumedTiles.length) {
-                return {
-                    success: false,
-                    error: 'Invalid consumed tiles',
-                    events: [],
-                }
-            }
-
-            meldTiles = [...removedTiles, stolenTile]
-            player.addMeld({
-                type: actionType as MeldType,
-                tiles: meldTiles,
-                opened: true,
-            })
-            tilesToMove = consumedTiles
-            this.activeDiscard = null
-        }
-
-        const events: ActionResult['events'] = [
-            {
-                eventName: 'update-meld',
-                payload: {
-                    playerId,
-                    type: actionType,
-                    tiles: meldTiles.map((t) => t.toString()),
-                    stolenFrom: stolenFromId,
-                    consumedTiles: tilesToMove,
-                },
-                to: 'all',
-            },
-        ]
-
-        let needsReplacementTile = false
-        if (
-            actionType === 'ankan' ||
-            actionType === 'kakan' ||
-            actionType === 'kan'
-        ) {
-            needsReplacementTile = true
-        }
-
-        return {
-            success: true,
-            events,
-            needsReplacementTile,
-        }
+        return this.handleMeldAction(
+            player,
+            actionType,
+            tileString,
+            consumedTiles,
+            players,
+        )
     }
 
     public skipAction(
@@ -356,9 +221,11 @@ export class ActionManager4p extends AbstractActionManager {
             isHoutei: context.isHoutei,
             dora: context.dora,
             uradora: context.uradora,
+            isRiichi: player.isRiichi,
+            isDoubleRiichi: player.isDoubleRiichi,
         }
 
-        return RuleManager.verifyWin(player, tileString, winCtx)
+        return this.ruleManager.verifyWin(player, tileString, winCtx)
     }
 
     public verifyTsumo(
@@ -388,14 +255,14 @@ export class ActionManager4p extends AbstractActionManager {
             uradora: context.uradora,
         }
 
-        return RuleManager.verifyWin(player, lastTile.toString(), winCtx)
+        return this.ruleManager.verifyWin(player, lastTile.toString(), winCtx)
     }
 
     public checkChi(player: Player, tileString: string): string[][] {
         const suit = tileString[1]
         if (suit === 'z') return []
 
-        const rank = parseInt(tileString[0]) === 0 ? 5 : parseInt(tileString[0])
+        const rank = Tile.parseRank(tileString)
         const hand = player.getHand()
 
         const options: string[][] = []

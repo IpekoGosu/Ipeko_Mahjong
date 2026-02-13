@@ -5,9 +5,16 @@ import {
 } from '@src/modules/mahjong/interfaces/mahjong.types'
 import { RuleManager } from '@src/modules/mahjong/classes/managers/RuleManager'
 import { AbstractRoundManager } from '@src/modules/mahjong/classes/managers/AbstractRoundManager'
+import { Injectable } from '@nestjs/common'
+import { DEFAULT_4P_RULES } from '@src/modules/mahjong/interfaces/game-rules.config'
 
+@Injectable()
 export class RoundManager4p extends AbstractRoundManager {
     public readonly playerCount = 4
+
+    constructor(private readonly ruleManager: RuleManager) {
+        super()
+    }
 
     public endRound(
         roomId: string,
@@ -119,7 +126,9 @@ export class RoundManager4p extends AbstractRoundManager {
                 nextHonba++
             } else {
                 const tenpaiList = players.filter(
-                    (p) => p.getHand().length <= 13 && RuleManager.isTenpai(p),
+                    (p) =>
+                        p.getHand().length <= 13 &&
+                        this.ruleManager.isTenpai(p),
                 )
                 const notenList = players.filter((p) => !tenpaiList.includes(p))
 
@@ -270,19 +279,15 @@ export class RoundManager4p extends AbstractRoundManager {
         events: GameUpdate['events'],
     ): GameUpdate {
         const sortedPlayers = this.getSortedPlayers(players)
+        const { returnPoints, uma, oka } = DEFAULT_4P_RULES
 
         const finalScores = sortedPlayers.map((p, idx) => {
-            let uma = 0
-            if (idx === 0) uma = 20000
-            if (idx === 1) uma = 10000
-            if (idx === 2) uma = -10000
-            if (idx === 3) uma = -20000
-
-            const finalPoint = p.points - 30000 + uma
+            const playerUma = uma[idx]
+            const finalPoint = p.points - returnPoints + playerUma
             return {
                 id: p.getId(),
                 points: p.points,
-                finalScore: idx === 0 ? finalPoint + 20000 : finalPoint,
+                finalScore: idx === 0 ? finalPoint + oka : finalPoint,
                 rank: idx + 1,
             }
         })

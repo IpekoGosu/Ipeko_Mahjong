@@ -5,6 +5,7 @@ import {
     PossibleActions,
     ScoreCalculation,
     GameUpdate,
+    GameState,
 } from '@src/modules/mahjong/interfaces/mahjong.types'
 import { RuleManager } from '@src/modules/mahjong/classes/managers/RuleManager'
 import { Logger } from '@nestjs/common'
@@ -16,6 +17,7 @@ import { MahjongAI } from '@src/modules/mahjong/classes/ai/MahjongAI'
 import { GameObservation } from '@src/modules/mahjong/interfaces/mahjong-ai.interface'
 import { CommonError } from '@src/common/error/common.error'
 import { ERROR_STATUS } from '@src/common/error/error.status'
+import { GameRulesConfig } from '@src/modules/mahjong/interfaces/game-rules.config'
 
 /**
  * AbstractMahjongGame 클래스는 한 판의 마작 게임에 대한 모든 규칙과 상태를 관리합니다.
@@ -31,6 +33,8 @@ export abstract class AbstractMahjongGame {
     public turnManager: TurnManager
     public actionManager: AbstractActionManager
     public ruleEffectManager: AbstractRuleEffectManager
+    public ruleManager: RuleManager
+    public gameRulesConfig: GameRulesConfig
 
     // Delegated State
     protected get currentTurnIndex() {
@@ -125,16 +129,22 @@ export abstract class AbstractMahjongGame {
         turnManager: TurnManager,
         actionManager: AbstractActionManager,
         ruleEffectManager: AbstractRuleEffectManager,
+        ruleManager: RuleManager,
+        gameRulesConfig: GameRulesConfig,
     ) {
         this.roundManager = roundManager
         this.turnManager = turnManager
         this.actionManager = actionManager
         this.ruleEffectManager = ruleEffectManager
+        this.ruleManager = ruleManager
+        this.gameRulesConfig = gameRulesConfig
         this.wall = this.createWall()
         // Wall shuffling moved to startKyoku
 
         this.players = playerInfos.map((info) => this.createPlayer(info))
-        // dealInitialHands removed from constructor
+        this.players.forEach(
+            (p) => (p.points = this.gameRulesConfig.startPoints),
+        )
     }
 
     protected abstract createWall(): AbstractWall
@@ -202,7 +212,7 @@ export abstract class AbstractMahjongGame {
 
         // 5. Generate round-started events (Everyone has 13 tiles)
         const doraIndicators = this.getDora().map((t) => t.toString())
-        const actualDora = RuleManager.getActualDoraList(doraIndicators)
+        const actualDora = this.ruleManager.getActualDoraList(doraIndicators)
 
         const startEvents: GameUpdate['events'] = this.players.map((p) => ({
             eventName: 'round-started',
@@ -221,7 +231,7 @@ export abstract class AbstractMahjongGame {
                     points: pl.points,
                     jikaze: this.getSeatWind(pl),
                 })),
-                waits: RuleManager.getWaits(p),
+                waits: this.ruleManager.getWaits(p),
             },
             to: 'player',
             playerId: p.getId(),
@@ -306,13 +316,12 @@ export abstract class AbstractMahjongGame {
 
         // Kuikae prevention
         if (player.forbiddenDiscard.length > 0) {
-            const rank =
-                parseInt(tileString[0]) === 0 ? 5 : parseInt(tileString[0])
+            const rank = Tile.parseRank(tileString)
             const suit = tileString[1]
 
             // Check for both same tile and opposite end (for Chi)
             const isForbidden = player.forbiddenDiscard.some((f) => {
-                const fRank = parseInt(f[0]) === 0 ? 5 : parseInt(f[0])
+                const fRank = Tile.parseRank(f)
                 const fSuit = f[1]
                 return rank === fRank && suit === fSuit
             })
@@ -340,7 +349,8 @@ export abstract class AbstractMahjongGame {
             this.wall.revealDora()
             this.pendingDoraReveal = false
             const doraIndicators = this.getDora().map((t) => t.toString())
-            const actualDora = RuleManager.getActualDoraList(doraIndicators)
+            const actualDora =
+                this.ruleManager.getActualDoraList(doraIndicators)
             doraRevealedEvent = {
                 eventName: 'dora-revealed',
                 payload: {
@@ -466,7 +476,7 @@ export abstract class AbstractMahjongGame {
             {
                 eventName: 'update-waits',
                 payload: {
-                    waits: RuleManager.getWaits(player),
+                    waits: this.ruleManager.getWaits(player),
                 },
                 to: 'player',
                 playerId: player.getId(),
@@ -617,15 +627,14 @@ export abstract class AbstractMahjongGame {
         const player = this.getPlayer(playerId)!
 
         if (actionType === 'pon' || actionType === 'chi') {
-            const stolenRank =
-                parseInt(tileString[0]) === 0 ? 5 : parseInt(tileString[0])
+            const stolenRank = Tile.parseRank(tileString)
             const suit = tileString[1]
             const forbidden: string[] = [tileString]
 
             if (actionType === 'chi') {
                 // Determine if it was a side-wait or middle-wait Chi
                 const ranks = consumedTiles
-                    .map((t) => (parseInt(t[0]) === 0 ? 5 : parseInt(t[0])))
+                    .map((t) => Tile.parseRank(t))
                     .sort((a, b) => a - b)
                 // If we Chi 3m with 1m-2m, stolen is 3, ranks are 1,2. Sequence is 1-2-3.
                 // forbidden is 3m (same tile) and NOTHING else.
@@ -685,7 +694,8 @@ export abstract class AbstractMahjongGame {
                 this.wall.revealDora()
                 this.pendingDoraReveal = false
                 const doraIndicators = this.getDora().map((t) => t.toString())
-                const actualDora = RuleManager.getActualDoraList(doraIndicators)
+                const actualDora =
+                    this.ruleManager.getActualDoraList(doraIndicators)
                 events.push({
                     eventName: 'dora-revealed',
                     payload: {
@@ -875,6 +885,25 @@ export abstract class AbstractMahjongGame {
         // East=1z, South=2z, West=3z, North=4z
         const relativePos = (playerIndex - this.oyaIndex + 4) % 4
         return `${relativePos + 1}z`
+    }
+
+    public getGameState(): GameState {
+        const doraIndicators = this.getDora().map((t) => t.toString())
+        return {
+            bakaze: this.bakaze,
+            kyoku: this.kyokuNum,
+            honba: this.honba,
+            kyotaku: this.kyotaku,
+            oyaIndex: this.oyaIndex,
+            currentTurnIndex: this.currentTurnIndex,
+            turnCounter: this.turnCounter,
+            isSuddenDeath: this.isSuddenDeath,
+            wallCount: this.wall.getRemainingTiles(),
+            deadWallCount: this.wall.getRemainingDeadWall(),
+            doraIndicators: doraIndicators,
+            actualDora: this.ruleManager.getActualDoraList(doraIndicators),
+            gameMode: this.players.length === 4 ? '4p' : 'sanma',
+        }
     }
 
     // #endregion

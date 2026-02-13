@@ -1,12 +1,10 @@
 import { MahjongGame } from '@src/modules/mahjong/classes/MahjongGame.4p'
-import { RoundManager4p } from '@src/modules/mahjong/classes/managers/RoundManager.4p'
-import { TurnManager } from '@src/modules/mahjong/classes/managers/TurnManager'
-import { ActionManager4p } from '@src/modules/mahjong/classes/managers/ActionManager.4p'
-import { RuleEffectManager } from '@src/modules/mahjong/classes/managers/RuleEffectManager'
 import { RuleManager } from '@src/modules/mahjong/classes/managers/RuleManager'
 import { Tile } from '@src/modules/mahjong/classes/tile.class'
 import { Player } from '@src/modules/mahjong/classes/player.class'
 import { SimpleAI } from '@src/modules/mahjong/classes/ai/simple.ai'
+import { createTestManagers } from '../test_utils'
+import { DEFAULT_4P_RULES } from '@src/modules/mahjong/interfaces/game-rules.config'
 
 class TestPlayer extends Player {
     public setHand(tiles: Tile[]) {
@@ -37,9 +35,12 @@ class TestMahjongGame extends MahjongGame {
 describe('Advanced Mahjong Mechanics', () => {
     let game: TestMahjongGame
     let roomId: string
+    let ruleManager: RuleManager
 
     beforeEach(() => {
         roomId = 'test-room'
+        const managers = createTestManagers()
+        ruleManager = managers.ruleManager
         game = new TestMahjongGame(
             [
                 { id: 'p1', isAi: false },
@@ -47,10 +48,12 @@ describe('Advanced Mahjong Mechanics', () => {
                 { id: 'p3', isAi: false },
                 { id: 'p4', isAi: false },
             ],
-            new RoundManager4p(),
-            new TurnManager(),
-            new ActionManager4p(),
-            new RuleEffectManager(),
+            managers.roundManager,
+            managers.turnManager,
+            managers.actionManager,
+            managers.ruleEffectManager,
+            managers.ruleManager,
+            DEFAULT_4P_RULES,
         )
         game.startGame(roomId)
     })
@@ -136,7 +139,7 @@ describe('Advanced Mahjong Mechanics', () => {
             p1.setHand(hand)
             p1.lastDrawnTile = hand[3] // 1m
 
-            const ankanOptions = RuleManager.getAnkanOptions(p1)
+            const ankanOptions = ruleManager.getAnkanOptions(p1)
             expect(ankanOptions).toContain('1m')
         })
 
@@ -165,7 +168,7 @@ describe('Advanced Mahjong Mechanics', () => {
             p1.setHand(hand)
             p1.lastDrawnTile = hand[13] // 1m
 
-            const ankanOptions = RuleManager.getAnkanOptions(p1)
+            const ankanOptions = ruleManager.getAnkanOptions(p1)
             expect(ankanOptions).not.toContain('1m')
         })
     })

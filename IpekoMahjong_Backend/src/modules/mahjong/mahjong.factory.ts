@@ -12,6 +12,11 @@ import { AbstractRoundManager } from '@src/modules/mahjong/classes/managers/Abst
 import { AbstractActionManager } from '@src/modules/mahjong/classes/managers/AbstractActionManager'
 import { RuleEffectManager } from '@src/modules/mahjong/classes/managers/RuleEffectManager'
 import { AbstractRuleEffectManager } from '@src/modules/mahjong/classes/managers/AbstractRuleEffectManager'
+import { RuleManager } from '@src/modules/mahjong/classes/managers/RuleManager'
+import {
+    DEFAULT_4P_RULES,
+    DEFAULT_3P_RULES,
+} from '@src/modules/mahjong/interfaces/game-rules.config'
 
 @Injectable()
 export class MahjongFactory {
@@ -30,6 +35,7 @@ export class MahjongFactory {
             await this.moduleRef.resolve<AbstractRuleEffectManager>(
                 RuleEffectManager,
             )
+        const ruleManager = await this.moduleRef.resolve(RuleManager)
 
         const playersWithAI = await this.createPlayersWithAI(playerInfos)
 
@@ -39,6 +45,8 @@ export class MahjongFactory {
             turnManager,
             actionManager,
             ruleEffectManager,
+            ruleManager,
+            DEFAULT_4P_RULES,
         )
     }
 
@@ -58,6 +66,7 @@ export class MahjongFactory {
             await this.moduleRef.resolve<AbstractRuleEffectManager>(
                 RuleEffectManager,
             )
+        const ruleManager = await this.moduleRef.resolve(RuleManager)
 
         const playersWithAI = await this.createPlayersWithAI(playerInfos)
 
@@ -67,6 +76,8 @@ export class MahjongFactory {
             turnManager,
             actionManager,
             ruleEffectManager,
+            ruleManager,
+            DEFAULT_3P_RULES,
         )
     }
 

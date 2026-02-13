@@ -1,3 +1,11 @@
+// Game Mode
+export type GameMode = '4p' | 'sanma'
+
+// Event: 'start-game' (Sent from client)
+export interface StartGamePayload {
+    gameMode?: GameMode // Default to '4p'
+}
+
 // Tile string format: "{number}{suit}"
 // Suits: 'm' (man), 'p' (pin), 's' (sou), 'z' (zihai - 1:East, 2:South, 3:West, 4:North, 5:White, 6:Green, 7:Red)
 export type TileString = string // e.g., "1m", "5z"
@@ -122,6 +130,13 @@ export interface UpdateMeldPayload {
     waits?: TileString[]
 }
 
+export interface RankingEntry {
+    id: string
+    points: number
+    finalScore: number
+    rank: number
+}
+
 // Event: 'game-over'
 export interface GameOverPayload {
     reason: 'tsumo' | 'ron' | 'ryuukyoku' | 'player-disconnected'
@@ -139,6 +154,7 @@ export interface GameOverPayload {
         text: string
     }
     scores?: number[] // Final scores
+    finalRanking?: RankingEntry[]
 }
 
 // Event: 'error'
@@ -187,6 +203,7 @@ export interface GameState {
     user: User | null
     token: string | null
     isConnected: boolean
+    gameMode: GameMode | null
     roomId: string | null
     myPlayerId: string | null
     myHand: string[] // List of tile strings.

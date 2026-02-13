@@ -125,8 +125,7 @@ export class Player {
     }
 
     upgradePonToKan(tileToUpgrade: string, addedTile: Tile): Meld | null {
-        const rank =
-            parseInt(tileToUpgrade[0]) === 0 ? 5 : parseInt(tileToUpgrade[0])
+        const rank = Tile.parseRank(tileToUpgrade)
         const suit = tileToUpgrade[1]
 
         const meldIndex = this.melds.findIndex(
