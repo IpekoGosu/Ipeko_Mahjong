@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common'
+import { Module, Scope, Type } from '@nestjs/common'
 import { MahjongGateway } from './mahjong.gateway'
 import { GameRoomService } from './service/game-room.service'
 import { GameRoomServiceImpl } from './service/impl/game-room.service.impl'
@@ -12,7 +12,12 @@ import { ActionManager4p } from './classes/managers/ActionManager.4p'
 import { ActionManagerSanma } from './classes/managers/ActionManager.Sanma'
 import { SimpleAI } from './classes/ai/simple.ai'
 import { MahjongAI } from '@src/modules/mahjong/classes/ai/MahjongAI'
-import { Scope } from '@nestjs/common'
+
+const createTransientProvider = <T>(token: Type<T>) => ({
+    provide: token,
+    useFactory: () => new token(),
+    scope: Scope.TRANSIENT,
+})
 
 @Module({
     imports: [AuthModule],
@@ -24,31 +29,11 @@ import { Scope } from '@nestjs/common'
         },
         WinstonLoggerService,
         MahjongFactory,
-        {
-            provide: RoundManager4p,
-            useFactory: () => new RoundManager4p(),
-            scope: Scope.TRANSIENT,
-        },
-        {
-            provide: RoundManagerSanma,
-            useFactory: () => new RoundManagerSanma(),
-            scope: Scope.TRANSIENT,
-        },
-        {
-            provide: TurnManager,
-            useFactory: () => new TurnManager(),
-            scope: Scope.TRANSIENT,
-        },
-        {
-            provide: ActionManager4p,
-            useFactory: () => new ActionManager4p(),
-            scope: Scope.TRANSIENT,
-        },
-        {
-            provide: ActionManagerSanma,
-            useFactory: () => new ActionManagerSanma(),
-            scope: Scope.TRANSIENT,
-        },
+        createTransientProvider(RoundManager4p),
+        createTransientProvider(RoundManagerSanma),
+        createTransientProvider(TurnManager),
+        createTransientProvider(ActionManager4p),
+        createTransientProvider(ActionManagerSanma),
         {
             provide: MahjongAI,
             useClass: SimpleAI,

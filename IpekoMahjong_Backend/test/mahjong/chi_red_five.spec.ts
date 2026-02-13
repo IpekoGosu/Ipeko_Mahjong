@@ -1,8 +1,10 @@
 import { MahjongGame } from '@src/modules/mahjong/classes/MahjongGame.4p'
 import { Player } from '@src/modules/mahjong/classes/player.class'
 import { Tile } from '@src/modules/mahjong/classes/tile.class'
-import { RoundManager4p } from '@src/modules/mahjong/classes/managers/RoundManager.4p'
+import { AbstractRoundManager } from '@src/modules/mahjong/classes/managers/AbstractRoundManager'
 import { TurnManager } from '@src/modules/mahjong/classes/managers/TurnManager'
+import { AbstractActionManager } from '@src/modules/mahjong/classes/managers/AbstractActionManager'
+import { RoundManager4p } from '@src/modules/mahjong/classes/managers/RoundManager.4p'
 import { ActionManager4p } from '@src/modules/mahjong/classes/managers/ActionManager.4p'
 
 describe('Chi Logic with Red Fives', () => {
@@ -38,7 +40,8 @@ describe('Chi Logic with Red Fives', () => {
         expect(player.getHand().map((t) => t.toString())).toContain('0s')
         expect(player.getHand().map((t) => t.toString())).toContain('7s')
 
-        const options = game.getActionManager().checkChi(player, '6s')
+        const actions = game.getPossibleActions('p2', '6s')
+        const options = actions['p1']?.chiOptions || []
 
         // Expect option to use '0s' and '7s'
         expect(options).toHaveLength(1)
@@ -52,7 +55,8 @@ describe('Chi Logic with Red Fives', () => {
         player.draw(normal5s)
         player.draw(tile7s)
 
-        const options = game.getActionManager().checkChi(player, '6s')
+        const actions = game.getPossibleActions('p2', '6s')
+        const options = actions['p1']?.chiOptions || []
 
         expect(options).toHaveLength(1)
         expect(options[0]).toEqual(expect.arrayContaining(['5s', '7s']))
@@ -67,7 +71,8 @@ describe('Chi Logic with Red Fives', () => {
         player.draw(normal5s)
         player.draw(tile7s)
 
-        const options = game.getActionManager().checkChi(player, '6s')
+        const actions = game.getPossibleActions('p2', '6s')
+        const options = actions['p1']?.chiOptions || []
 
         // Expect options: [0s, 7s] and [5s, 7s]
         expect(options).toHaveLength(2)
@@ -83,7 +88,8 @@ describe('Chi Logic with Red Fives', () => {
         player.draw(tile4s)
         player.draw(tile6s)
 
-        const options = game.getActionManager().checkChi(player, '0s')
+        const actions = game.getPossibleActions('p2', '0s')
+        const options = actions['p1']?.chiOptions || []
 
         expect(options).toHaveLength(1)
         expect(options[0]).toEqual(expect.arrayContaining(['4s', '6s']))

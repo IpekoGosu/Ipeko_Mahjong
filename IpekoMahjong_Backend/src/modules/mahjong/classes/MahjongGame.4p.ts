@@ -6,8 +6,6 @@ import { MahjongAI } from '@src/modules/mahjong/classes/ai/MahjongAI'
 import { AbstractRoundManager } from './managers/AbstractRoundManager'
 import { AbstractActionManager } from './managers/AbstractActionManager'
 
-import { ActionManager4p } from './managers/ActionManager.4p'
-
 export class MahjongGame extends AbstractMahjongGame {
     constructor(
         playerInfos: { id: string; isAi: boolean; ai?: MahjongAI }[],
@@ -20,9 +18,5 @@ export class MahjongGame extends AbstractMahjongGame {
 
     protected createWall(): AbstractWall {
         return new Wall4p()
-    }
-
-    public getActionManager(): ActionManager4p {
-        return this.actionManager as ActionManager4p
     }
 }
