@@ -1,4 +1,4 @@
-import { GameRoom } from '../interfaces/mahjong.types'
+import { GameRoom } from '@src/modules/mahjong/interfaces/mahjong.types'
 
 /**
  * GameRoomService는 게임 룸의 생명주기(생성, 삭제)와

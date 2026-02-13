@@ -3,7 +3,7 @@ import {
     RiichiResult,
     WinContext,
 } from '@src/modules/mahjong/interfaces/mahjong.types'
-import { Player } from './player.class'
+import { Player } from '@src/modules/mahjong/classes/player.class'
 import Riichi from 'riichi'
 import { Logger } from '@nestjs/common'
 

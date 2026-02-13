@@ -1,7 +1,7 @@
-import { Player } from '../player.class'
-import { AbstractWall } from '../AbstractWall'
-import { GameUpdate } from '../../interfaces/mahjong.types'
-import { RuleManager } from '../rule.manager'
+import { Player } from '@src/modules/mahjong/classes/player.class'
+import { AbstractWall } from '@src/modules/mahjong/classes/wall/AbstractWall'
+import { GameUpdate } from '@src/modules/mahjong/interfaces/mahjong.types'
+import { RuleManager } from '@src/modules/mahjong/classes/managers/RuleManager'
 import { Logger } from '@nestjs/common'
 
 export class TurnManager {

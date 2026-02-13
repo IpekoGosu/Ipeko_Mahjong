@@ -4,6 +4,7 @@ import { Tile } from '@src/modules/mahjong/classes/tile.class'
 import { TurnManager } from '@src/modules/mahjong/classes/managers/TurnManager'
 import { RoundManager4p } from '@src/modules/mahjong/classes/managers/RoundManager.4p'
 import { ActionManager4p } from '@src/modules/mahjong/classes/managers/ActionManager.4p'
+import { RuleEffectManager } from '@src/modules/mahjong/classes/managers/RuleEffectManager'
 
 describe('Chi Logic with Red Fives', () => {
     let game: MahjongGame
@@ -18,6 +19,7 @@ describe('Chi Logic with Red Fives', () => {
             new RoundManager4p(),
             new TurnManager(),
             new ActionManager4p(),
+            new RuleEffectManager(),
         )
         player = game.getPlayer('p1')!
         // Clear hand for setup

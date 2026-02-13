@@ -1,13 +1,10 @@
-import { Player } from '../player.class'
-import { AbstractWall } from '../AbstractWall'
-import { Tile } from '../tile.class'
+import { Player } from '@src/modules/mahjong/classes/player.class'
+import { Tile } from '@src/modules/mahjong/classes/tile.class'
 import {
     PossibleActions,
-    GameUpdate,
+    ActionResult,
     ScoreCalculation,
-} from '../../interfaces/mahjong.types'
-import { AbstractRoundManager } from './AbstractRoundManager'
-import { TurnManager } from './TurnManager'
+} from '@src/modules/mahjong/interfaces/mahjong.types'
 import { Logger, Injectable } from '@nestjs/common'
 
 @Injectable()
@@ -39,46 +36,55 @@ export abstract class AbstractActionManager {
         discarderId: string,
         tileString: string,
         players: Player[],
-        wall: AbstractWall,
-        roundManager: AbstractRoundManager,
+        context: {
+            bakaze: string
+            dora: string[]
+            playerContexts: {
+                playerId: string
+                seatWind: string
+                uradora: string[]
+            }[]
+            isHoutei: boolean
+        },
         isKakan?: boolean,
     ): Record<string, PossibleActions>
 
     public abstract performAction(
-        roomId: string,
         playerId: string,
         actionType: string,
         tileString: string,
         consumedTiles: string[],
         players: Player[],
-        wall: AbstractWall,
-        roundManager: AbstractRoundManager,
-        turnManager: TurnManager,
-    ): GameUpdate
+        currentPlayerIndex: number,
+    ): ActionResult
 
     public abstract skipAction(
-        roomId: string,
         playerId: string,
         players: Player[],
-        turnManager: TurnManager,
-        _roundManager: AbstractRoundManager,
-        _wall: AbstractWall,
-    ): { shouldProceed: boolean; update?: GameUpdate }
+    ): { shouldProceed: boolean; actionsRemaining: boolean }
 
     public abstract verifyRon(
         player: Player,
         tileString: string,
-        wall: AbstractWall,
-        roundManager: AbstractRoundManager,
-        players: Player[],
+        context: {
+            bakaze: string
+            seatWind: string
+            dora: string[]
+            uradora: string[]
+            isHoutei: boolean
+        },
         isKakan?: boolean,
     ): { isAgari: boolean; score?: ScoreCalculation }
 
     public abstract verifyTsumo(
         player: Player,
-        wall: AbstractWall,
-        roundManager: AbstractRoundManager,
-        turnManager: TurnManager,
-        players: Player[],
+        context: {
+            bakaze: string
+            seatWind: string
+            dora: string[]
+            uradora: string[]
+            isHaitei: boolean
+            rinshanFlag: boolean
+        },
     ): { isAgari: boolean; score?: ScoreCalculation }
 }

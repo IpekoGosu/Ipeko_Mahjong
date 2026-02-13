@@ -1,5 +1,5 @@
-import { Player } from '../player.class'
-import { ScoreCalculation, GameUpdate } from '../../interfaces/mahjong.types'
+import { Player } from '@src/modules/mahjong/classes/player.class'
+import { ScoreCalculation, GameUpdate } from '@src/modules/mahjong/interfaces/mahjong.types'
 import { Logger, Injectable } from '@nestjs/common'
 
 @Injectable()

@@ -1,16 +1,17 @@
-import { AbstractWall } from './AbstractWall'
-import { Player } from './player.class'
-import { Tile } from './tile.class'
+import { AbstractWall } from '@src/modules/mahjong/classes/wall/AbstractWall'
+import { Player } from '@src/modules/mahjong/classes/player.class'
+import { Tile } from '@src/modules/mahjong/classes/tile.class'
 import {
     PossibleActions,
     ScoreCalculation,
     GameUpdate,
-} from '../interfaces/mahjong.types'
-import { RuleManager } from './rule.manager'
+} from '@src/modules/mahjong/interfaces/mahjong.types'
+import { RuleManager } from '@src/modules/mahjong/classes/managers/RuleManager'
 import { Logger } from '@nestjs/common'
-import { AbstractRoundManager } from './managers/AbstractRoundManager'
-import { TurnManager } from './managers/TurnManager'
-import { AbstractActionManager } from './managers/AbstractActionManager'
+import { AbstractRoundManager } from '@src/modules/mahjong/classes/managers/AbstractRoundManager'
+import { TurnManager } from '@src/modules/mahjong/classes/managers/TurnManager'
+import { AbstractActionManager } from '@src/modules/mahjong/classes/managers/AbstractActionManager'
+import { AbstractRuleEffectManager } from '@src/modules/mahjong/classes/managers/AbstractRuleEffectManager'
 import { MahjongAI } from '@src/modules/mahjong/classes/ai/MahjongAI'
 import { GameObservation } from '@src/modules/mahjong/interfaces/mahjong-ai.interface'
 import { CommonError } from '@src/common/error/common.error'
@@ -29,6 +30,7 @@ export abstract class AbstractMahjongGame {
     public roundManager: AbstractRoundManager
     public turnManager: TurnManager
     public actionManager: AbstractActionManager
+    public ruleEffectManager: AbstractRuleEffectManager
 
     // Delegated State
     protected get currentTurnIndex() {
@@ -122,10 +124,12 @@ export abstract class AbstractMahjongGame {
         roundManager: AbstractRoundManager,
         turnManager: TurnManager,
         actionManager: AbstractActionManager,
+        ruleEffectManager: AbstractRuleEffectManager,
     ) {
         this.roundManager = roundManager
         this.turnManager = turnManager
         this.actionManager = actionManager
+        this.ruleEffectManager = ruleEffectManager
         this.wall = this.createWall()
         // Wall shuffling moved to startKyoku
 
@@ -247,33 +251,18 @@ export abstract class AbstractMahjongGame {
         if (!player) return { roomId, isGameOver: false, events: [] }
 
         if (type === 'kyuushu-kyuuhai') {
-            // Validate: First turn, no calls, 9+ terminals/honors
-            if (this.anyCallDeclared || player.getDiscards().length > 0) {
+            const check = this.ruleEffectManager.checkKyuushuKyuuhai(
+                player,
+                this.anyCallDeclared,
+            )
+            if (!check.success) {
                 return {
                     roomId,
                     isGameOver: false,
                     events: [
                         {
                             eventName: 'error',
-                            payload: {
-                                message: 'Too late for Kyuushu Kyuuhai',
-                            },
-                            to: 'player',
-                            playerId,
-                        },
-                    ],
-                }
-            }
-
-            const terminals = RuleManager.countTerminalsAndHonors(player)
-            if (terminals < 9) {
-                return {
-                    roomId,
-                    isGameOver: false,
-                    events: [
-                        {
-                            eventName: 'error',
-                            payload: { message: 'Not enough terminals/honors' },
+                            payload: { message: check.error },
                             to: 'player',
                             playerId,
                         },
@@ -334,18 +323,22 @@ export abstract class AbstractMahjongGame {
 
         // Handle Riichi Declaration
         if (isRiichi) {
-            // Rule: Must have 4+ tiles in wall (Tenhou rule)
-            if (this.wall.getRemainingTiles() < 4) {
+            const riichiResult = this.ruleEffectManager.handleRiichi(
+                player,
+                tileString,
+                this.turnCounter,
+                this.wall,
+                this.anyCallDeclared,
+            )
+
+            if (!riichiResult.success) {
                 return {
                     roomId,
                     isGameOver: false,
                     events: [
                         {
                             eventName: 'error',
-                            payload: {
-                                message:
-                                    'Cannot declare Riichi with less than 4 tiles remaining',
-                            },
+                            payload: { message: riichiResult.error },
                             to: 'player',
                             playerId,
                         },
@@ -353,47 +346,19 @@ export abstract class AbstractMahjongGame {
                 }
             }
 
-            const validRiichiDiscards = RuleManager.getRiichiDiscards(player)
-            if (
-                player.isRiichi ||
-                !player.isHandClosed() ||
-                !validRiichiDiscards.includes(tileString)
-            ) {
-                return {
-                    roomId,
-                    isGameOver: false,
-                    events: [
-                        {
-                            eventName: 'error',
-                            payload: { message: 'Invalid Riichi declaration' },
-                            to: 'player',
-                            playerId,
-                        },
-                    ],
-                }
-            }
+            this.kyotaku += 1
 
-            if (player.points < 1000) {
-                return {
-                    roomId,
-                    isGameOver: false,
-                    events: [
-                        {
-                            eventName: 'error',
-                            payload: {
-                                message: 'Not enough points for Riichi',
-                            },
-                            to: 'player',
-                            playerId,
-                        },
-                    ],
-                }
+            // Check Suucha Riichi (Four Riichi)
+            if (this.ruleEffectManager.checkSuuchaRiichi(this.players)) {
+                return this.endKyoku(roomId, {
+                    reason: 'ryuukyoku',
+                    abortReason: 'suucha-riichi',
+                })
             }
         }
 
         // Enforce Tsumogiri during Riichi (cannot discard other tiles)
         if (player.isRiichi && !isRiichi) {
-            // Already in Riichi (not the declaration discard)
             if (
                 player.lastDrawnTile &&
                 player.lastDrawnTile.toString() !== tileString
@@ -432,86 +397,28 @@ export abstract class AbstractMahjongGame {
             }
         }
 
-        // Reset Temporary Furiten on Discard
+        // Handle side effects after discard
         player.isTemporaryFuriten = false
-
-        if (isRiichi) {
-            player.isRiichi = true
-            player.ippatsuEligible = true
-            player.riichiDeclarationTurn = this.turnCounter
-            player.points -= 1000
-            this.kyotaku += 1
-
-            if (!this.anyCallDeclared && player.getDiscards().length === 1) {
-                player.isDoubleRiichi = true
-            }
-
-            // Check Suucha Riichi (Four Riichi)
-            if (this.players.every((p) => p.isRiichi)) {
-                return this.endKyoku(roomId, {
-                    reason: 'ryuukyoku',
-                    abortReason: 'suucha-riichi',
-                })
-            }
-        }
-
-        // Update Furiten status
-        // Furiten check: Waits in Discards (Standard) OR Temporary/Riichi Furiten
-        const standardFuriten = RuleManager.calculateFuriten(player)
-        player.isFuriten =
-            standardFuriten ||
-            player.isTemporaryFuriten ||
-            player.isRiichiFuriten
-
-        // Handle Ippatsu Expiration
-        if (player.isRiichi && player.ippatsuEligible) {
-            // If this is NOT the declaration turn, Ippatsu expires.
-            if (player.riichiDeclarationTurn !== this.turnCounter) {
-                player.ippatsuEligible = false
-            }
-        }
+        this.ruleEffectManager.updateFuritenStatus(player)
+        this.ruleEffectManager.handleIppatsuExpiration(player, this.turnCounter)
 
         // Clear Rinshan flag after discard
         this.rinshanFlag = false
-
         this.activeDiscard = { playerId, tile: discardedTile }
 
         // Check Suufuu Renda (Four Same Winds)
-        // Must be first turn (turnCounter < 4), no calls.
-        if (!this.anyCallDeclared && this.turnCounter < 4) {
-            const wind = tileString[1] === 'z' ? tileString : null
-
-            if (this.turnCounter === 0) {
-                // First player's discard
-                if (wind) {
-                    this.turnManager.firstTurnDiscards = {
-                        wind: tileString,
-                        count: 1,
-                    }
-                } else {
-                    this.turnManager.firstTurnDiscards = null
-                }
-            } else {
-                // Subsequent players
-                if (
-                    wind &&
-                    this.turnManager.firstTurnDiscards &&
-                    this.turnManager.firstTurnDiscards.wind === tileString
-                ) {
-                    this.turnManager.firstTurnDiscards.count++
-                } else {
-                    this.turnManager.firstTurnDiscards = null // Sequence broken
-                }
-            }
-
-            // console.log(`[Suufuu Check] New Count: ${this.turnManager.firstTurnDiscards?.count}`)
-
-            if (this.turnManager.firstTurnDiscards?.count === 4) {
-                return this.endKyoku(roomId, {
-                    reason: 'ryuukyoku',
-                    abortReason: 'suufuu-renda',
-                })
-            }
+        if (
+            this.ruleEffectManager.checkSuufuuRenda(
+                tileString,
+                this.turnCounter,
+                this.anyCallDeclared,
+                this.turnManager,
+            )
+        ) {
+            return this.endKyoku(roomId, {
+                reason: 'ryuukyoku',
+                abortReason: 'suufuu-renda',
+            })
         }
 
         // 턴을 넘기기 전, 버린 패 정보를 생성
@@ -582,13 +489,16 @@ export abstract class AbstractMahjongGame {
                 ],
             }
         }
-        const result = this.actionManager.verifyTsumo(
-            player,
-            this.wall,
-            this.roundManager,
-            this.turnManager,
-            this.players,
-        )
+        const result = this.actionManager.verifyTsumo(player, {
+            bakaze: this.bakaze,
+            seatWind: this.getSeatWind(player),
+            dora: this.getDora().map((t) => t.toString()),
+            uradora: player.isRiichi
+                ? this.wall.getUradora().map((t) => t.toString())
+                : [],
+            isHaitei: this.wall.getRemainingTiles() === 0,
+            rinshanFlag: this.rinshanFlag,
+        })
 
         if (result.isAgari) {
             return this.endKyoku(roomId, {
@@ -624,8 +534,18 @@ export abstract class AbstractMahjongGame {
             discarderId,
             tileString,
             this.players,
-            this.wall,
-            this.roundManager,
+            {
+                bakaze: this.bakaze,
+                dora: this.getDora().map((t) => t.toString()),
+                playerContexts: this.players.map((p) => ({
+                    playerId: p.getId(),
+                    seatWind: this.getSeatWind(p),
+                    uradora: p.isRiichi
+                        ? this.wall.getUradora().map((t) => t.toString())
+                        : [],
+                })),
+                isHoutei: this.wall.getRemainingTiles() === 0,
+            },
             isKakan,
         )
     }
@@ -638,17 +558,99 @@ export abstract class AbstractMahjongGame {
         tileString: string,
         consumedTiles: string[] = [],
     ): GameUpdate {
-        return this.actionManager.performAction(
-            roomId,
+        const result = this.actionManager.performAction(
             playerId,
             actionType,
             tileString,
             consumedTiles,
             this.players,
-            this.wall,
-            this.roundManager,
-            this.turnManager,
+            this.currentTurnIndex,
         )
+
+        if (!result.success) {
+            return {
+                roomId,
+                isGameOver: false,
+                events: [
+                    {
+                        eventName: 'error',
+                        payload: { message: result.error || 'Action failed' },
+                        to: 'player',
+                        playerId,
+                    },
+                ],
+            }
+        }
+
+        const events = [...result.events]
+
+        if (result.roundEnd) {
+            if (result.roundEnd.reason === 'ron') {
+                // Fill scores for Ron winners
+                const winners = result.roundEnd.winners!.map((w) => {
+                    const winner = this.getPlayer(w.winnerId)!
+                    const score = this.actionManager.verifyRon(
+                        winner,
+                        tileString,
+                        {
+                            bakaze: this.bakaze,
+                            seatWind: this.getSeatWind(winner),
+                            dora: this.getDora().map((t) => t.toString()),
+                            uradora: winner.isRiichi
+                                ? this.wall
+                                      .getUradora()
+                                      .map((t) => t.toString())
+                                : [],
+                            isHoutei: this.wall.getRemainingTiles() === 0,
+                        },
+                        actionType === 'kakan',
+                    ).score!
+                    return { winnerId: w.winnerId, score }
+                })
+                return this.endKyoku(roomId, {
+                    reason: 'ron',
+                    winners,
+                    loserId: result.roundEnd.loserId,
+                })
+            }
+        }
+
+        if (result.needsReplacementTile) {
+            const player = this.getPlayer(playerId)!
+            // When a call is made (chi/pon/kan), it becomes that player's turn.
+            // Actually only chi/pon/kan (daiminkan) do this. Ankan/Kakan don't change turn index (already their turn).
+            if (
+                actionType === 'chi' ||
+                actionType === 'pon' ||
+                actionType === 'kan'
+            ) {
+                const playerIndex = this.players.indexOf(player)
+                this.turnManager.currentTurnIndex = playerIndex
+            }
+
+            const replacementEvents = this.turnManager.drawTile(
+                this.wall,
+                player,
+            )
+            if (!replacementEvents) {
+                return this.endKyoku(roomId, { reason: 'ryuukyoku' })
+            }
+            events.push(...replacementEvents)
+        } else if (
+            actionType === 'chi' ||
+            actionType === 'pon' ||
+            actionType === 'kan'
+        ) {
+            // Update turn index for Chi/Pon/Daiminkan (not ending round)
+            const player = this.getPlayer(playerId)!
+            this.turnManager.currentTurnIndex = this.players.indexOf(player)
+        }
+
+        return {
+            roomId,
+            isGameOver: false,
+            events,
+        }
     }
 
     /** 다음 국으로 진행합니다. */
@@ -689,16 +691,10 @@ export abstract class AbstractMahjongGame {
         roomId: string,
         playerId: string,
     ): { shouldProceed: boolean; update?: GameUpdate } {
-        const result = this.actionManager.skipAction(
-            roomId,
-            playerId,
-            this.players,
-            this.turnManager,
-            this.roundManager,
-            this.wall,
-        )
+        const result = this.actionManager.skipAction(playerId, this.players)
 
         if (result.shouldProceed) {
+            this.turnManager.advanceTurn(this.players.length)
             const update = this.drawTileForCurrentPlayer(roomId)
             return { shouldProceed: true, update }
         }
@@ -730,13 +726,16 @@ export abstract class AbstractMahjongGame {
                 (e) => e.eventName === 'new-tile-drawn',
             )
             if (drawEvent && drawEvent.payload) {
-                const canTsumo = this.actionManager.verifyTsumo(
-                    currentPlayer,
-                    this.wall,
-                    this.roundManager,
-                    this.turnManager,
-                    this.players,
-                ).isAgari
+                const canTsumo = this.actionManager.verifyTsumo(currentPlayer, {
+                    bakaze: this.bakaze,
+                    seatWind: this.getSeatWind(currentPlayer),
+                    dora: this.getDora().map((t) => t.toString()),
+                    uradora: currentPlayer.isRiichi
+                        ? this.wall.getUradora().map((t) => t.toString())
+                        : [],
+                    isHaitei: this.wall.getRemainingTiles() === 0,
+                    rinshanFlag: this.rinshanFlag,
+                }).isAgari
                 drawEvent.payload.canTsumo = canTsumo
             }
         }
@@ -834,13 +833,16 @@ export abstract class AbstractMahjongGame {
     checkCanTsumo(playerId: string): boolean {
         const player = this.getPlayer(playerId)
         if (!player) return false
-        const result = this.actionManager.verifyTsumo(
-            player,
-            this.wall,
-            this.roundManager,
-            this.turnManager,
-            this.players,
-        )
+        const result = this.actionManager.verifyTsumo(player, {
+            bakaze: this.bakaze,
+            seatWind: this.getSeatWind(player),
+            dora: this.getDora().map((t) => t.toString()),
+            uradora: player.isRiichi
+                ? this.wall.getUradora().map((t) => t.toString())
+                : [],
+            isHaitei: this.wall.getRemainingTiles() === 0,
+            rinshanFlag: this.rinshanFlag,
+        })
         return result.isAgari
     }
 

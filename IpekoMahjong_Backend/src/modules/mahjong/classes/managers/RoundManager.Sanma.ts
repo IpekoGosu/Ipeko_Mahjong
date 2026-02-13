@@ -1,7 +1,7 @@
-import { Player } from '../player.class'
-import { ScoreCalculation, GameUpdate } from '../../interfaces/mahjong.types'
-import { RuleManager } from '../rule.manager'
-import { AbstractRoundManager } from './AbstractRoundManager'
+import { Player } from '@src/modules/mahjong/classes/player.class'
+import { ScoreCalculation, GameUpdate } from '@src/modules/mahjong/interfaces/mahjong.types'
+import { RuleManager } from '@src/modules/mahjong/classes/managers/RuleManager'
+import { AbstractRoundManager } from '@src/modules/mahjong/classes/managers/AbstractRoundManager'
 
 export class RoundManagerSanma extends AbstractRoundManager {
     public readonly playerCount = 3

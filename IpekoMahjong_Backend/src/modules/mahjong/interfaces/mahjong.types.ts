@@ -1,5 +1,5 @@
-import { Tile } from '../classes/tile.class'
-import type { AbstractMahjongGame } from '../classes/AbstractMahjongGame'
+import { Tile } from '@src/modules/mahjong/classes/tile.class'
+import type { AbstractMahjongGame } from '@src/modules/mahjong/classes/AbstractMahjongGame'
 
 export type Suit = 'm' | 'p' | 's' | 'z'
 
@@ -83,4 +83,23 @@ export interface GameRoom {
     readonly mahjongGame: AbstractMahjongGame
     gameStatus: 'in-progress' | 'finished'
     timer?: NodeJS.Timeout
+}
+
+export type ActionType = 'chi' | 'pon' | 'kan' | 'ron' | 'ankan' | 'kakan'
+
+export interface ActionResult {
+    success: boolean
+    events: GameUpdate['events']
+    needsReplacementTile?: boolean
+    roundEnd?: RoundEndResult
+    error?: string
+}
+
+export interface RoundEndResult {
+    reason: 'ron' | 'tsumo' | 'ryuukyoku'
+    winners?: { winnerId: string; score: ScoreCalculation }[]
+    winnerId?: string
+    loserId?: string
+    score?: ScoreCalculation
+    abortReason?: string
 }

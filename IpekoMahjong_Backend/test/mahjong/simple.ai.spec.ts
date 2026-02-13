@@ -4,6 +4,7 @@ import { MahjongGame } from '@src/modules/mahjong/classes/MahjongGame.4p'
 import { RoundManager4p } from '@src/modules/mahjong/classes/managers/RoundManager.4p'
 import { TurnManager } from '@src/modules/mahjong/classes/managers/TurnManager'
 import { ActionManager4p } from '@src/modules/mahjong/classes/managers/ActionManager.4p'
+import { RuleEffectManager } from '@src/modules/mahjong/classes/managers/RuleEffectManager'
 
 describe('SimpleAI', () => {
     let ai: SimpleAI
@@ -21,6 +22,7 @@ describe('SimpleAI', () => {
             new RoundManager4p(),
             new TurnManager(),
             new ActionManager4p(),
+            new RuleEffectManager(),
         )
         game.startGame('room1')
     })

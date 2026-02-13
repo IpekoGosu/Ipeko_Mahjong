@@ -1,15 +1,17 @@
 import { Injectable } from '@nestjs/common'
 import { ModuleRef } from '@nestjs/core'
-import { MahjongGame } from './classes/MahjongGame.4p'
-import { SanmaMahjongGame } from './classes/MahjongGame.Sanma'
-import { RoundManager4p } from './classes/managers/RoundManager.4p'
-import { RoundManagerSanma } from './classes/managers/RoundManager.Sanma'
-import { TurnManager } from './classes/managers/TurnManager'
-import { ActionManager4p } from './classes/managers/ActionManager.4p'
-import { ActionManagerSanma } from './classes/managers/ActionManager.Sanma'
+import { MahjongGame } from '@src/modules/mahjong/classes/MahjongGame.4p'
+import { SanmaMahjongGame } from '@src/modules/mahjong/classes/MahjongGame.Sanma'
+import { RoundManager4p } from '@src/modules/mahjong/classes/managers/RoundManager.4p'
+import { RoundManagerSanma } from '@src/modules/mahjong/classes/managers/RoundManager.Sanma'
+import { TurnManager } from '@src/modules/mahjong/classes/managers/TurnManager'
+import { ActionManager4p } from '@src/modules/mahjong/classes/managers/ActionManager.4p'
+import { ActionManagerSanma } from '@src/modules/mahjong/classes/managers/ActionManager.Sanma'
 import { MahjongAI } from '@src/modules/mahjong/classes/ai/MahjongAI'
-import { AbstractRoundManager } from './classes/managers/AbstractRoundManager'
-import { AbstractActionManager } from './classes/managers/AbstractActionManager'
+import { AbstractRoundManager } from '@src/modules/mahjong/classes/managers/AbstractRoundManager'
+import { AbstractActionManager } from '@src/modules/mahjong/classes/managers/AbstractActionManager'
+import { RuleEffectManager } from '@src/modules/mahjong/classes/managers/RuleEffectManager'
+import { AbstractRuleEffectManager } from '@src/modules/mahjong/classes/managers/AbstractRuleEffectManager'
 
 @Injectable()
 export class MahjongFactory {
@@ -24,6 +26,10 @@ export class MahjongFactory {
         const turnManager = await this.moduleRef.resolve(TurnManager)
         const actionManager =
             await this.moduleRef.resolve<AbstractActionManager>(ActionManager4p)
+        const ruleEffectManager =
+            await this.moduleRef.resolve<AbstractRuleEffectManager>(
+                RuleEffectManager,
+            )
 
         const playersWithAI = await this.createPlayersWithAI(playerInfos)
 
@@ -32,6 +38,7 @@ export class MahjongFactory {
             roundManager,
             turnManager,
             actionManager,
+            ruleEffectManager,
         )
     }
 
@@ -47,6 +54,10 @@ export class MahjongFactory {
             await this.moduleRef.resolve<AbstractActionManager>(
                 ActionManagerSanma,
             )
+        const ruleEffectManager =
+            await this.moduleRef.resolve<AbstractRuleEffectManager>(
+                RuleEffectManager,
+            )
 
         const playersWithAI = await this.createPlayersWithAI(playerInfos)
 
@@ -55,6 +66,7 @@ export class MahjongFactory {
             roundManager,
             turnManager,
             actionManager,
+            ruleEffectManager,
         )
     }
 

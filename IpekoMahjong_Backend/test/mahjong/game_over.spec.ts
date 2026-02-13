@@ -3,6 +3,7 @@ import { GameUpdate } from '@src/modules/mahjong/interfaces/mahjong.types'
 import { RoundManager4p } from '@src/modules/mahjong/classes/managers/RoundManager.4p'
 import { TurnManager } from '@src/modules/mahjong/classes/managers/TurnManager'
 import { ActionManager4p } from '@src/modules/mahjong/classes/managers/ActionManager.4p'
+import { RuleEffectManager } from '@src/modules/mahjong/classes/managers/RuleEffectManager'
 import { SimpleAI } from '@src/modules/mahjong/classes/ai/simple.ai'
 
 interface FinalRankingEntry {
@@ -30,6 +31,7 @@ describe('MahjongGame - Game Over and Ranking', () => {
             new RoundManager4p(),
             new TurnManager(),
             new ActionManager4p(),
+            new RuleEffectManager(),
         )
         game.startGame(roomId)
     })

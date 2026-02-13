@@ -1,9 +1,10 @@
 import { MahjongGame } from '@src/modules/mahjong/classes/MahjongGame.4p'
 import { ScoreCalculation } from '@src/modules/mahjong/interfaces/mahjong.types'
-import { RuleManager } from '@src/modules/mahjong/classes/rule.manager'
+import { RuleManager } from '@src/modules/mahjong/classes/managers/RuleManager'
 import { RoundManager4p } from '@src/modules/mahjong/classes/managers/RoundManager.4p'
 import { TurnManager } from '@src/modules/mahjong/classes/managers/TurnManager'
 import { ActionManager4p } from '@src/modules/mahjong/classes/managers/ActionManager.4p'
+import { RuleEffectManager } from '@src/modules/mahjong/classes/managers/RuleEffectManager'
 import { SimpleAI } from '@src/modules/mahjong/classes/ai/simple.ai'
 
 class TestMahjongGame extends MahjongGame {
@@ -51,6 +52,7 @@ describe('MahjongGame - Dobon (Bankruptcy) Rules', () => {
             new RoundManager4p(),
             new TurnManager(),
             new ActionManager4p(),
+            new RuleEffectManager(),
         )
         game.startGame(roomId)
         // Reset points to standard for predictable tests
