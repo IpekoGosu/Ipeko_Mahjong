@@ -123,9 +123,9 @@ describe('Advanced Mahjong Rules', () => {
         it('should trigger Suucha Riichi when all 4 players declare riichi', () => {
             const p4 = game.getTestPlayer('p4')
             const players = game.getPlayers()
-            
+
             // Make all but p4 riichi
-            players.forEach(p => {
+            players.forEach((p) => {
                 if (p.getId() !== p4.getId()) {
                     p.isRiichi = true
                 }
@@ -296,18 +296,32 @@ describe('Advanced Mahjong Rules', () => {
             game.setOyaIndex(0)
             game.roundManager.honba = 1
             game.roundManager.kyotaku = 1
-            players.forEach(p => p.points = 25000)
+            players.forEach((p) => (p.points = 25000))
 
             // p2 and p3 both win Ron from p1 (Oya)
             // p2 is closer to p1 in turn order (p1 -> p2 -> p3 -> p4)
             // So p2 is head-bump winner
-            const result = game.callEndKyoku(roomId, {
+            game.callEndKyoku(roomId, {
                 reason: 'ron',
                 winners: [
-                    { winnerId: players[1].getId(), score: { ten: 8000, oya: [8000], ko: [0] } as any },
-                    { winnerId: players[2].getId(), score: { ten: 8000, oya: [8000], ko: [0] } as any }
+                    {
+                        winnerId: players[1].getId(),
+                        score: {
+                            ten: 8000,
+                            oya: [8000],
+                            ko: [0],
+                        } as unknown as ScoreCalculation,
+                    },
+                    {
+                        winnerId: players[2].getId(),
+                        score: {
+                            ten: 8000,
+                            oya: [8000],
+                            ko: [0],
+                        } as unknown as ScoreCalculation,
+                    },
                 ],
-                loserId: players[0].getId()
+                loserId: players[0].getId(),
             })
 
             // p2 (Head-bump): 25000 + 8000 (base) + 300 (honba) + 1000 (kyotaku) = 34300
@@ -357,7 +371,9 @@ describe('Advanced Mahjong Rules', () => {
             const gameOverEvent = result.events.find(
                 (e) => e.eventName === 'game-over',
             )
-            const ranking = gameOverEvent?.payload.finalRanking
+            const ranking = gameOverEvent?.payload.finalRanking as {
+                id: string
+            }[]
             // p[0] is Rank 1
             // p[2] and p[3] tied at 25000. p[2] was earlier in order.
             expect(ranking[0].id).toBe(players[0].getId())

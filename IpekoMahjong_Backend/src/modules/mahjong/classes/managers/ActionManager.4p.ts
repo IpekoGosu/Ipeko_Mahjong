@@ -60,8 +60,11 @@ export class ActionManager4p extends AbstractActionManager {
                 },
                 isKakan,
             )
-            
-            const isFuriten = player.isFuriten || player.isTemporaryFuriten || player.isRiichiFuriten
+
+            const isFuriten =
+                player.isFuriten ||
+                player.isTemporaryFuriten ||
+                player.isRiichiFuriten
 
             if (result.isAgari && !isFuriten) {
                 possibleActions.ron = true
