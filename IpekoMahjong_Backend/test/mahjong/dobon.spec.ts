@@ -57,7 +57,7 @@ describe('MahjongGame - Dobon (Bankruptcy) Rules', () => {
         game.getPlayers().forEach((p) => (p.points = 25000))
     })
 
-    it('should end the game and give kyotaku to Oya when a player goes below 0 points after Ron (by a non-oya)', () => {
+    it('should end the game and give kyotaku to the game winner when a player goes below 0 points after Ron (by a non-oya)', () => {
         const players = game.getPlayers()
         const p1 = players[0] // Oya
         const p2 = players[1] // Ko
@@ -87,13 +87,13 @@ describe('MahjongGame - Dobon (Bankruptcy) Rules', () => {
         expect(result.isGameOver).toBe(true)
         expect(p2.points).toBe(-500)
 
-        // Winner (p3) gets Ron points only: 25000 + 1000 = 26000
-        expect(p3.points).toBe(26000)
-        // Oya (p1) gets kyotaku points: 25000 + 1000 = 26000
-        expect(p1.points).toBe(26000)
+        // Winner (p3) gets Ron points (1000) + kyotaku points (1000): 25000 + 2000 = 27000
+        expect(p3.points).toBe(27000)
+        // Oya (p1) stays at 25000
+        expect(p1.points).toBe(25000)
     })
 
-    it('should give kyotaku points to the oya when game ends by dobon in Ryuukyoku', () => {
+    it('should give kyotaku points to the game winner when game ends by dobon in Ryuukyoku', () => {
         const players = game.getPlayers()
         const p1 = players[0] // Oya
         const p2 = players[1] // Noten dobon
@@ -113,6 +113,7 @@ describe('MahjongGame - Dobon (Bankruptcy) Rules', () => {
         expect(result.isGameOver).toBe(true)
         expect(p2.points).toBe(-2500) // Pays 3000 total (1000 each to p1, p3, p4)
 
+        // p1, p3, p4 all have 26000. p1 is first in array.
         // p1 (Oya) was Tenpai: 25000 + 1000 (Tenpai) + 2000 (Kyotaku) = 28000
         expect(p1.points).toBe(28000)
     })
@@ -151,7 +152,7 @@ describe('MahjongGame - Dobon (Bankruptcy) Rules', () => {
         expect(p1.points).toBe(25000)
     })
 
-    it('should give kyotaku to Oya if game ends by dobon in multiple Ron', () => {
+    it('should give kyotaku to the top player if game ends by dobon in multiple Ron', () => {
         const players = game.getPlayers()
         const p1 = players[0] // Oya
         const p2 = players[1] // Loser (p2)
@@ -187,15 +188,15 @@ describe('MahjongGame - Dobon (Bankruptcy) Rules', () => {
         // p2: 500 - 2000 = -1500
         expect(p2.points).toBe(-1500)
 
-        // Winner 1 (p3) gets 1000 only
-        expect(p3.points).toBe(26000)
-        // Winner 2 (p4) gets 1000 only
+        // Winner 1 (p3) gets 1000 (Ron) + 1000 (Kyotaku) = 27000
+        expect(p3.points).toBe(27000)
+        // Winner 2 (p4) gets 1000 only = 26000
         expect(p4.points).toBe(26000)
-        // Oya (p1) gets kyotaku 1000
-        expect(p1.points).toBe(26000)
+        // Oya (p1) stays at 25000
+        expect(p1.points).toBe(25000)
     })
 
-    it('should give kyotaku to Oya if game ends by dobon in Tsumo', () => {
+    it('should give kyotaku to game winner if game ends by dobon in Tsumo', () => {
         const players = game.getPlayers()
         const p1 = players[0] // Oya
         const p2 = players[1] // Ko
@@ -223,7 +224,9 @@ describe('MahjongGame - Dobon (Bankruptcy) Rules', () => {
         })
 
         expect(result.isGameOver).toBe(true)
-        // Oya (p1) gets kyotaku 1000, but paid 500 for Tsumo. Net +500.
-        expect(p1.points).toBe(25500)
+        // p3 (Winner) gets Tsumo (1100) + kyotaku 1000. Net 25000 + 2100 = 27100.
+        expect(p3.points).toBe(27100)
+        // Oya (p1) paid 500 for Tsumo. Net 24500.
+        expect(p1.points).toBe(24500)
     })
 })

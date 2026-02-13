@@ -156,7 +156,8 @@ export class RoundManagerSanma extends AbstractRoundManager {
 
         if (isGameOver) {
             if (this.kyotaku > 0) {
-                players[this.oyaIndex].points += this.kyotaku * 1000
+                const topPlayer = this.getSortedPlayers(players)[0]
+                topPlayer.points += this.kyotaku * 1000
                 nextKyotaku = 0
             }
         } else if (stickClaimer) {
@@ -213,7 +214,7 @@ export class RoundManagerSanma extends AbstractRoundManager {
         players: Player[],
         events: GameUpdate['events'],
     ): GameUpdate {
-        const sorted = [...players].sort((a, b) => b.points - a.points)
+        const sorted = this.getSortedPlayers(players)
         const finalRanking = sorted.map((p, idx) => ({
             id: p.getId(),
             points: p.points,

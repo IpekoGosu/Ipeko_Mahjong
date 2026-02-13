@@ -1,9 +1,7 @@
 import { MahjongGame } from '@src/modules/mahjong/classes/MahjongGame.4p'
 import { Player } from '@src/modules/mahjong/classes/player.class'
 import { Tile } from '@src/modules/mahjong/classes/tile.class'
-import { AbstractRoundManager } from '@src/modules/mahjong/classes/managers/AbstractRoundManager'
 import { TurnManager } from '@src/modules/mahjong/classes/managers/TurnManager'
-import { AbstractActionManager } from '@src/modules/mahjong/classes/managers/AbstractActionManager'
 import { RoundManager4p } from '@src/modules/mahjong/classes/managers/RoundManager.4p'
 import { ActionManager4p } from '@src/modules/mahjong/classes/managers/ActionManager.4p'
 

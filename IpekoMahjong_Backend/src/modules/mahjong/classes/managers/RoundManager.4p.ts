@@ -183,9 +183,7 @@ export class RoundManager4p extends AbstractRoundManager {
 
         if (isGameOver) {
             if (this.kyotaku > 0) {
-                const topPlayer = players.reduce((a, b) =>
-                    a.points > b.points ? a : b,
-                )
+                const topPlayer = this.getSortedPlayers(players)[0]
                 topPlayer.points += this.kyotaku * 1000
                 nextKyotaku = 0
             }
@@ -268,12 +266,7 @@ export class RoundManager4p extends AbstractRoundManager {
         players: Player[],
         events: GameUpdate['events'],
     ): GameUpdate {
-        const sortedPlayers = [...players].sort((a, b) => {
-            if (b.points !== a.points) return b.points - a.points
-            const idxA = this.initialPlayerOrder.indexOf(a.getId())
-            const idxB = this.initialPlayerOrder.indexOf(b.getId())
-            return idxA - idxB
-        })
+        const sortedPlayers = this.getSortedPlayers(players)
 
         const finalScores = sortedPlayers.map((p, idx) => {
             let uma = 0

@@ -35,6 +35,15 @@ export abstract class AbstractRoundManager {
         return `${relativePos + 1}z`
     }
 
+    public getSortedPlayers(players: Player[]): Player[] {
+        return [...players].sort((a, b) => {
+            if (b.points !== a.points) return b.points - a.points
+            const idxA = this.initialPlayerOrder.indexOf(a.getId())
+            const idxB = this.initialPlayerOrder.indexOf(b.getId())
+            return idxA - idxB
+        })
+    }
+
     public abstract endRound(
         roomId: string,
         players: Player[],
