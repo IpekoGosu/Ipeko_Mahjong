@@ -1,6 +1,9 @@
-import { MahjongGame } from '@src/modules/mahjong/classes/mahjong.game.class'
+import { MahjongGame } from '@src/modules/mahjong/classes/MahjongGame.4p'
 import { Tile } from '@src/modules/mahjong/classes/tile.class'
 import { Suit } from '@src/modules/mahjong/interfaces/mahjong.types'
+import { RoundManager4p } from '@src/modules/mahjong/classes/managers/RoundManager.4p'
+import { TurnManager } from '@src/modules/mahjong/classes/managers/TurnManager'
+import { ActionManager4p } from '@src/modules/mahjong/classes/managers/ActionManager.4p'
 
 describe('Seat Wind Calculation', () => {
     let game: MahjongGame
@@ -12,7 +15,12 @@ describe('Seat Wind Calculation', () => {
             { id: 'player2', isAi: false },
             { id: 'player3', isAi: false },
         ]
-        game = new MahjongGame(playerInfos)
+        game = new MahjongGame(
+            playerInfos,
+            new RoundManager4p(),
+            new TurnManager(),
+            new ActionManager4p(),
+        )
         // Set Oya to player 0 (default)
         // startGame will shuffle, but we can manually set state for testing
         // or just use the game instance after startGame

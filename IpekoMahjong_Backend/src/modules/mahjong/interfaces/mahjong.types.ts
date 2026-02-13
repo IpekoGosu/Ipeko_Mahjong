@@ -1,8 +1,9 @@
 import { Tile } from '../classes/tile.class'
+import type { AbstractMahjongGame } from '../classes/AbstractMahjongGame'
 
 export type Suit = 'm' | 'p' | 's' | 'z'
 
-export type MeldType = 'chi' | 'pon' | 'kan' | 'chakan'
+export type MeldType = 'chi' | 'pon' | 'kan' | 'chakan' | 'ankan' | 'kakan'
 
 export interface Meld {
     type: MeldType
@@ -45,4 +46,41 @@ export interface RiichiResult {
     hairi?: { now: number; wait: Record<string, number> }
     hairi7and13?: { now: number; wait: Record<string, number> }
     wait?: string
+}
+
+export interface GameUpdate {
+    roomId: string
+    isGameOver: boolean
+    reason?: 'tsumo' | 'ryuukyoku' | 'player-disconnected' | 'ron'
+    events: {
+        eventName: string
+        payload: Record<string, unknown>
+        to: 'all' | 'player'
+        playerId?: string
+    }[]
+}
+
+export interface WinContext {
+    bakaze: string // '1z', '2z', etc.
+    seatWind: string // '1z', '2z', etc.
+    dora: string[] // List of dora tiles (e.g. ['1m'])
+    isTsumo: boolean
+    isRiichi?: boolean
+    isDoubleRiichi?: boolean
+    isIppatsu?: boolean
+    isHaitei?: boolean
+    isHoutei?: boolean
+    isRinshan?: boolean
+    isChankan?: boolean
+    isTenhou?: boolean
+    isChiihou?: boolean
+    winningTile?: string // Required for Ron
+    uradora?: string[]
+}
+
+export interface GameRoom {
+    readonly roomId: string
+    readonly mahjongGame: AbstractMahjongGame
+    gameStatus: 'in-progress' | 'finished'
+    timer?: NodeJS.Timeout
 }

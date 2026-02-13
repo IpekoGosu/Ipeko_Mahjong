@@ -46,7 +46,7 @@ export class UserController {
     @ApiOperation({ summary: 'Create a new user' })
     @ApiSuccessResponse(UserDto, 'created')
     @HttpCode(HttpStatus.CREATED)
-    async create(@Body() userCreateDto: UserCreateDto) {
+    public async create(@Body() userCreateDto: UserCreateDto) {
         const data = await this.userService.create(userCreateDto)
         return new CommonSuccessResponse(data)
     }
@@ -55,7 +55,7 @@ export class UserController {
     @ApiOperation({ summary: 'User login' })
     @ApiSuccessResponse(JwtDto)
     @HttpCode(HttpStatus.OK)
-    async login(
+    public async login(
         @Body() userLogDto: UserLoginDto,
         @Res({ passthrough: true }) res: express.Response,
     ) {
@@ -80,7 +80,7 @@ export class UserController {
     @ApiOperation({ summary: 'Get current user profile' })
     @ApiSuccessResponse(UserDto)
     @HttpCode(HttpStatus.OK)
-    async getMe(@CurrentUser() user: { userId: number; email: string }) {
+    public async getMe(@CurrentUser() user: { userId: number; email: string }) {
         const data = await this.userService.findById(user.userId)
         return new CommonSuccessResponse(data)
     }
@@ -99,7 +99,7 @@ export class UserController {
             },
         },
     })
-    async test(@UploadedFile() file: Express.Multer.File) {
+    public async test(@UploadedFile() file: Express.Multer.File) {
         try {
             const updloadedFileName = await uploadFileToGoogleStorage(
                 file.originalname,
@@ -115,7 +115,7 @@ export class UserController {
 
     @Get('test')
     @ApiQuery({ name: 'fileName', type: 'string' })
-    async test2(
+    public async test2(
         @Query('fileName') fileName: string,
         @Res() res: express.Response,
     ) {

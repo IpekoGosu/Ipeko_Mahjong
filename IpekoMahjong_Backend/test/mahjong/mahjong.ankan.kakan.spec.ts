@@ -1,22 +1,32 @@
-import { MahjongGame } from '@src/modules/mahjong/classes/mahjong.game.class'
+import { MahjongGame } from '@src/modules/mahjong/classes/MahjongGame.4p'
 import { Tile } from '@src/modules/mahjong/classes/tile.class'
 import { RuleManager } from '@src/modules/mahjong/classes/rule.manager'
 import { Player } from '@src/modules/mahjong/classes/player.class'
 import { Meld } from '@src/modules/mahjong/interfaces/mahjong.types'
+import { RoundManager4p } from '@src/modules/mahjong/classes/managers/RoundManager.4p'
+import { TurnManager } from '@src/modules/mahjong/classes/managers/TurnManager'
+import { ActionManager4p } from '@src/modules/mahjong/classes/managers/ActionManager.4p'
+import { SimpleAI } from '@src/modules/mahjong/classes/ai/simple.ai'
 
 describe('Ankan and Kakan Logic', () => {
     let game: MahjongGame
     let player: Player
 
     beforeEach(() => {
-        game = new MahjongGame([
-            { id: 'p1', isAi: false },
-            { id: 'p2', isAi: true },
-            { id: 'p3', isAi: true },
-            { id: 'p4', isAi: true },
-        ])
+        const ai = new SimpleAI()
+        game = new MahjongGame(
+            [
+                { id: 'p1', isAi: false },
+                { id: 'p2', isAi: true, ai },
+                { id: 'p3', isAi: true, ai },
+                { id: 'p4', isAi: true, ai },
+            ],
+            new RoundManager4p(),
+            new TurnManager(),
+            new ActionManager4p(),
+        )
         game.startGame('room1')
-        player = game.getPlayer('p1')!
+        player = game.getCurrentTurnPlayer()
         player.resetKyokuState()
     })
 
@@ -61,11 +71,11 @@ describe('Ankan and Kakan Logic', () => {
         player.draw(new Tile('s', 2, false, 3))
         player.draw(new Tile('z', 1, false, 4))
 
-        game.performAction('room1', 'p1', 'ankan', '2s')
+        game.performAction('room1', player.getId(), 'ankan', '2s')
 
         // Check meld
         expect(player.getMelds().length).toBe(1)
-        expect(player.getMelds()[0].type).toBe('kan')
+        expect(player.getMelds()[0].type).toBe('ankan')
         expect(player.getMelds()[0].opened).toBe(false)
         expect(player.getMelds()[0].tiles.length).toBe(4)
 
@@ -91,11 +101,11 @@ describe('Ankan and Kakan Logic', () => {
         player.draw(new Tile('z', 5, false, 3))
         player.draw(new Tile('m', 1, false, 4))
 
-        game.performAction('room1', 'p1', 'kakan', '5z')
+        game.performAction('room1', player.getId(), 'kakan', '5z')
 
         // Check meld updated
         expect(player.getMelds().length).toBe(1)
-        expect(player.getMelds()[0].type).toBe('kan')
+        expect(player.getMelds()[0].type).toBe('kakan')
         expect(player.getMelds()[0].tiles.length).toBe(4)
 
         // Check hand reduced (1 removed, 1 replacement drawn)

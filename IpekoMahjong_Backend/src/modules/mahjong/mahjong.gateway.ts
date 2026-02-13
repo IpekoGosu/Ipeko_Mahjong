@@ -7,10 +7,10 @@ import {
 } from '@nestjs/websockets'
 import { Server, Socket } from 'socket.io'
 import { GameRoomService } from './service/game-room.service'
-import { GameUpdate } from './classes/mahjong.game.class'
+import { GameUpdate } from './interfaces/mahjong.types'
 import { WinstonLoggerService } from '@src/common/logger/winston.logger.service'
 import { RuleManager } from './classes/rule.manager'
-import { SimpleAI } from './ai/simple.ai'
+import { SimpleAI } from './classes/ai/simple.ai'
 import { UseGuards } from '@nestjs/common'
 import { JwtAuthGuard } from '../authorization/jwt-auth.guard'
 import { JwtService } from '@nestjs/jwt'
@@ -111,7 +111,7 @@ export class MahjongGateway {
 
     @SubscribeMessage('start-game')
     async handleStartGame(@ConnectedSocket() client: Socket): Promise<void> {
-        const room = this.gameRoomService.createRoom(client.id)
+        const room = await this.gameRoomService.createRoom(client.id)
         await client.join(room.roomId)
 
         // 1. Initialize round logic (deals 13 tiles)
@@ -345,6 +345,19 @@ export class MahjongGateway {
             await this.checkAndNotifyActions(roomId, discarderId, tileString)
         }
 
+        const meldEvent = update.events.find(
+            (e) => e.eventName === 'update-meld',
+        )
+        if (meldEvent && meldEvent.payload.type === 'kakan') {
+            const playerId = meldEvent.payload.playerId as string
+            // For kakan, the added tile is the one being robbed.
+            // ActionManager should have stored which tile was added, or we can infer it.
+            // In ActionManager.4p, tilesToMove contains the added tile for kakan.
+            const addedTiles = meldEvent.payload.consumedTiles as string[]
+            const addedTile = addedTiles[0]
+            await this.checkAndNotifyActions(roomId, playerId, addedTile, true)
+        }
+
         const turnEvent = update.events.find(
             (e) => e.eventName === 'turn-changed',
         )
@@ -361,6 +374,7 @@ export class MahjongGateway {
         roomId: string,
         discarderId: string,
         tileString: string,
+        isKakan: boolean = false,
     ): Promise<void> {
         const room = this.gameRoomService.getRoom(roomId)
         if (!room) return
@@ -368,6 +382,7 @@ export class MahjongGateway {
         const actions = room.mahjongGame.getPossibleActions(
             discarderId,
             tileString,
+            isKakan,
         )
         const hasActions = Object.keys(actions).length > 0
 

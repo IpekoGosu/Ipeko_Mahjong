@@ -1,7 +1,7 @@
 import { Tile } from './tile.class'
 import { Meld } from '../interfaces/mahjong.types'
-import { MahjongAI } from '../ai/mahjong-ai.interface'
 import { Logger } from '@nestjs/common'
+import { MahjongAI } from '@src/modules/mahjong/classes/ai/MahjongAI'
 
 export class Player {
     private readonly logger = new Logger(Player.name)
@@ -21,6 +21,7 @@ export class Player {
     public isTemporaryFuriten: boolean = false
     public isRiichiFuriten: boolean = false
     public points: number = 25000
+    public initialSeatIndex?: number
 
     constructor(id: string, isOya: boolean = false, isAi: boolean = false) {
         this.id = id
@@ -101,6 +102,14 @@ export class Player {
             }
         }
         return removed
+    }
+
+    removeFromHand(tileString: string): Tile | null {
+        const idx = this.hand.findIndex((t) => t.toString() === tileString)
+        if (idx !== -1) {
+            return this.hand.splice(idx, 1)[0]
+        }
+        return null
     }
 
     removeDiscard(tileString: string): Tile | null {
