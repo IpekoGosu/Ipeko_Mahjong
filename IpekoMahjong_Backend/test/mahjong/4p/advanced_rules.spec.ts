@@ -367,16 +367,21 @@ describe('Advanced Mahjong Rules', () => {
                 tile: new Tile('m', 1, false, 0),
             }
             // Populate pendingActions so performAction is allowed
-            game.actionManager.getPossibleActions('p1', '1m', game.getPlayers(), {
-                bakaze: '1z',
-                dora: [],
-                playerContexts: game.getPlayers().map(p => ({
-                    playerId: p.getId(),
-                    seatWind: '1z',
-                    uradora: []
-                })),
-                isHoutei: false
-            })
+            game.actionManager.getPossibleActions(
+                'p1',
+                '1m',
+                game.getPlayers(),
+                {
+                    bakaze: '1z',
+                    dora: [],
+                    playerContexts: game.getPlayers().map((p) => ({
+                        playerId: p.getId(),
+                        seatWind: '1z',
+                        uradora: [],
+                    })),
+                    isHoutei: false,
+                },
+            )
 
             // Use performAction to simulate stealing (Pon)
             game.performAction(roomId, 'p2', 'pon', '1m', ['1m', '1m'])

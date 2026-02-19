@@ -54,10 +54,10 @@ class TestSanmaMahjongGame extends SanmaMahjongGame {
         yakumanName: string,
         responsiblePlayerId: string,
     ) {
-        let paoMap = (this as any).paoStatus.get(winnerId)
+        let paoMap = this.paoStatus.get(winnerId)
         if (!paoMap) {
             paoMap = new Map<string, string>()
-            ;(this as any).paoStatus.set(winnerId, paoMap)
+            this.paoStatus.set(winnerId, paoMap)
         }
         paoMap.set(yakumanName, responsiblePlayerId)
     }
@@ -164,7 +164,9 @@ describe('Mahjong Sanma - Pao (Responsibility Payment) Rules', () => {
 
         // p3 (responsible) should pay all 48000
         expect(p1.points).toBe(83000)
-        expect(players.find((p) => p.getId() === 'p3')?.points).toBe(35000 - 48000) // -13000
+        expect(players.find((p) => p.getId() === 'p3')?.points).toBe(
+            35000 - 48000,
+        ) // -13000
         expect(players.find((p) => p.getId() === 'p2')?.points).toBe(35000)
     })
 })
