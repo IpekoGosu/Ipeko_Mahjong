@@ -31,16 +31,16 @@ export class LoggerMiddleware implements NestMiddleware {
 
         // 응답이 끝난 후 로깅
         res.on('finish', () => {
-            let Response = {
+            const responseLog: { Response: string; Body: unknown } = {
                 Response: `${res.statusCode} ${req.originalUrl}`,
-                Body: JSON.parse(res.locals.body),
+                Body: null,
             }
-            if (res.locals.body instanceof Buffer)
-                Response = {
-                    Response: `${res.statusCode} ${req.originalUrl}`,
-                    Body: 'File Buffer',
-                }
-            this.logger.log(Response)
+            if (res.locals.body instanceof Buffer) {
+                responseLog.Body = 'File Buffer'
+            } else {
+                responseLog.Body = JSON.parse(res.locals.body)
+            }
+            this.logger.log(responseLog)
         })
 
         next()
