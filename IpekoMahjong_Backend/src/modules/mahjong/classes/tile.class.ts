@@ -1,10 +1,10 @@
 import { Suit } from '@src/modules/mahjong/interfaces/mahjong.types'
 
 export class Tile {
-    readonly id: string
+    private readonly id: string
     private readonly suit: Suit
     private readonly rank: number
-    readonly isRed: boolean
+    private readonly isRed: boolean
 
     constructor(
         suit: Suit,
@@ -24,6 +24,14 @@ export class Tile {
 
     getRank(): number {
         return this.rank
+    }
+
+    getId(): string {
+        return this.id
+    }
+
+    getIsRed(): boolean {
+        return this.isRed
     }
 
     static parseRank(tileString: string): number {

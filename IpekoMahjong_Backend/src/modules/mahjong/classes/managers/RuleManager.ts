@@ -81,7 +81,7 @@ export class RuleManager {
                 // Current waits
                 // We need waits for the 13-tile hand (before drawing the 4th tile)
                 const currentHand = hand.filter(
-                    (t) => t.id !== player.lastDrawnTile!.id,
+                    (t) => t.getId() !== player.lastDrawnTile?.getId(),
                 )
                 const currentHandStr = this.convertTilesToRiichiString(
                     currentHand.map((t) => t.toString()),
