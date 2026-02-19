@@ -90,7 +90,12 @@ export abstract class AbstractActionManager {
         } else if (actionType === 'kakan') {
             result = this.handleAddedKan(player, tileString)
         } else {
-            result = this.handleOpenMeld(player, actionType, consumedTiles)
+            result = this.handleOpenMeld(
+                player,
+                actionType,
+                consumedTiles,
+                players,
+            )
         }
 
         if (!result.success) {
@@ -197,6 +202,7 @@ export abstract class AbstractActionManager {
         player: Player,
         actionType: 'chi' | 'pon' | 'kan',
         consumedTiles: string[],
+        players: Player[],
     ): {
         success: boolean
         error?: string
@@ -219,6 +225,12 @@ export abstract class AbstractActionManager {
                 success: false,
                 error: 'Invalid consumed tiles',
             }
+        }
+
+        // Remove from discarder's discard pile
+        const discarder = players.find((p) => p.getId() === stolenFromId)
+        if (discarder) {
+            discarder.removeDiscard(stolenTile.toString())
         }
 
         const meldTiles = [...removedTiles, stolenTile]

@@ -164,6 +164,183 @@ describe('Advanced Mahjong Rules', () => {
             )
             expect(endEvent?.payload.abortReason).toBe('suucha-riichi')
         })
+
+        it('should trigger Suukan Settsu when 4 kans are made by multiple players', () => {
+            const players = game.getPlayers()
+            // Player 1 and 2 make 2 kans each
+            players[0].addMeld({
+                type: 'ankan',
+                tiles: [
+                    new Tile('m', 1, false, 0),
+                    new Tile('m', 1, false, 1),
+                    new Tile('m', 1, false, 2),
+                    new Tile('m', 1, false, 3),
+                ],
+                opened: false,
+            })
+            players[0].addMeld({
+                type: 'ankan',
+                tiles: [
+                    new Tile('m', 2, false, 0),
+                    new Tile('m', 2, false, 1),
+                    new Tile('m', 2, false, 2),
+                    new Tile('m', 2, false, 3),
+                ],
+                opened: false,
+            })
+            players[1].addMeld({
+                type: 'ankan',
+                tiles: [
+                    new Tile('m', 3, false, 0),
+                    new Tile('m', 3, false, 1),
+                    new Tile('m', 3, false, 2),
+                    new Tile('m', 3, false, 3),
+                ],
+                opened: false,
+            })
+
+            // Now p2 makes the 4th kan
+            // We need to simulate the action that triggers the 4th kan.
+            const p2 = game.getTestPlayer('p2')
+            p2.setHand([
+                new Tile('m', 4, false, 0),
+                new Tile('m', 4, false, 1),
+                new Tile('m', 4, false, 2),
+                new Tile('m', 4, false, 3),
+            ])
+            game.turnManager.currentTurnIndex = 1
+
+            // p2 declares ankan
+            game.turnManager.currentTurnIndex = game.getPlayers().indexOf(p2)
+            const result = game.performAction('room1', 'p2', 'ankan', '4m', [])
+
+            expect(result.reason).toBe('ryuukyoku')
+            const endEvent = result.events.find(
+                (e) => e.eventName === 'round-ended',
+            )
+            expect(endEvent?.payload.abortReason).toBe('suukan-settsu')
+        })
+
+        it('should NOT trigger Suukan Settsu if all 4 kans are made by the same player', () => {
+            const p1 = game.getTestPlayer('p1')
+            // p1 makes 3 kans already
+            for (let i = 1; i <= 3; i++) {
+                p1.addMeld({
+                    type: 'ankan',
+                    tiles: [
+                        new Tile('m', i, false, 0),
+                        new Tile('m', i, false, 1),
+                        new Tile('m', i, false, 2),
+                        new Tile('m', i, false, 3),
+                    ],
+                    opened: false,
+                })
+            }
+
+            p1.setHand([
+                new Tile('m', 4, false, 0),
+                new Tile('m', 4, false, 1),
+                new Tile('m', 4, false, 2),
+                new Tile('m', 4, false, 3),
+            ])
+            game.turnManager.currentTurnIndex = game.getPlayers().indexOf(p1)
+
+            // p1 declares 4th ankan
+            const result = game.performAction('room1', 'p1', 'ankan', '4m', [])
+
+            // Should NOT be ryuukyoku (going for Suukantsu)
+            expect(result.reason).not.toBe('ryuukyoku')
+            expect(p1.getMelds().length).toBe(4)
+        })
+
+        it('should process Triple Ron when 3 players declare Ron on the same tile', () => {
+            const players = game.getPlayers()
+            // p1 discards, p2, p3, p4 all Ron
+            const p1 = players[0]
+            const p2 = players[1]
+            const p3 = players[2]
+            const p4 = players[3]
+
+            game.turnManager.currentTurnIndex = 0
+            p1.setHand([new Tile('m', 1, false, 0)])
+
+            // Setup potential ronners in actionManager
+            game.actionManager.activeDiscard = {
+                playerId: 'p1',
+                tile: new Tile('m', 1, false, 0),
+            }
+            game.actionManager.potentialRonners = ['p2', 'p3', 'p4']
+
+            // Mock score calculation for Ron
+            const mockScore = {
+                ten: 8000,
+                oya: [8000],
+                ko: [8000],
+            } as any
+
+            // Since game.performAction calls verifyRon internally, we should mock it or provide real Tenpai hands.
+            // But game.performAction handles the winners list correctly.
+            // Let's mock verifyRon for this test.
+            jest.spyOn(game.actionManager, 'verifyRon').mockReturnValue({
+                isAgari: true,
+                score: mockScore,
+            })
+
+            // p2, p3 declare Ron
+            game.performAction('room1', 'p2', 'ron', '1m', [])
+            game.performAction('room1', 'p3', 'ron', '1m', [])
+
+            // p4 declares Ron - this should NOT trigger abortive draw, but endKyoku with 3 winners.
+            const result = game.performAction('room1', 'p4', 'ron', '1m', [])
+
+            expect(result.reason).toBe('ron')
+            const endEvent = result.events.find(
+                (e) => e.eventName === 'round-ended',
+            )
+            expect(endEvent?.payload.reason).toBe('ron')
+            expect(endEvent?.payload.allWinners).toHaveLength(3)
+        })
+    })
+
+    describe('Nagashi Mangan', () => {
+        it('should trigger Nagashi Mangan at the end of Kyoku if a player has only terminal/honors in discards and none were called', () => {
+            const players = game.getPlayers()
+            const p1 = game.getTestPlayer('p1')
+
+            // Setup p1 discards with only terminals/honors
+            p1.resetKyokuState()
+            p1.setHand([
+                new Tile('m', 1, false, 0),
+                new Tile('m', 9, false, 1),
+                new Tile('z', 1, false, 2),
+            ])
+            p1.discard('1m')
+            p1.discard('9m')
+            p1.discard('1z')
+
+            // Others discard regular tiles
+            const p2 = game.getTestPlayer('p2')
+            p2.setHand([new Tile('m', 2, false, 0)])
+            p2.discard('2m')
+
+            // Manually set points to see the effect
+            players.forEach((p) => (p.points = 25000))
+
+            // Trigger ryuukyoku (wall empty)
+            const result = game.callEndKyoku(roomId, { reason: 'ryuukyoku' })
+
+            const endEvent = result.events.find(
+                (e) => e.eventName === 'round-ended',
+            )
+            expect(endEvent?.payload.reason).toBe('ryuukyoku')
+            // p1 is Ko (p2 is oya if not set, let's check oya)
+            // If p1 is Ko, they get 2000 from each Ko and 4000 from Oya = 8000
+            expect(p1.points).toBeGreaterThan(25000)
+            const scoreUpdate = result.events.find(
+                (e) => e.eventName === 'score-update',
+            )
+            expect(scoreUpdate?.payload.reason).toBe('nagashi-mangan')
+        })
     })
 
     describe('Riichi Requirements', () => {

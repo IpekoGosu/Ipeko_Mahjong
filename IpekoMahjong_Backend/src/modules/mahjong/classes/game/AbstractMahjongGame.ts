@@ -729,6 +729,17 @@ export abstract class AbstractMahjongGame {
                 this.turnManager.currentTurnIndex = playerIndex
             }
 
+            // Check Suukan Settsu (Four Kans)
+            if (
+                this.ruleEffectManager.checkSuukanSettsu(this.players)
+                    .isAbortive
+            ) {
+                return this.endKyoku(roomId, {
+                    reason: 'ryuukyoku',
+                    abortReason: 'suukan-settsu',
+                })
+            }
+
             const replacementEvents = this.turnManager.drawTile(
                 this.wall,
                 player,

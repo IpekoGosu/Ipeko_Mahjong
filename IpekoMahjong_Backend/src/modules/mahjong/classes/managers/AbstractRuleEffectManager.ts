@@ -31,4 +31,10 @@ export abstract class AbstractRuleEffectManager {
         player: Player,
         anyCallDeclared: boolean,
     ): { success: boolean; error?: string }
+
+    public abstract checkSuukanSettsu(players: Player[]): {
+        isAbortive: boolean
+    }
+
+    public abstract checkSanchahou(winnersCount: number): boolean
 }

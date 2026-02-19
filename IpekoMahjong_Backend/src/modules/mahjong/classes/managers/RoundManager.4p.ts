@@ -125,27 +125,72 @@ export class RoundManager4p extends AbstractRoundManager {
                 renchan = true
                 nextHonba++
             } else {
-                const tenpaiList = players.filter(
-                    (p) =>
-                        p.getHand().length <= 13 &&
-                        this.ruleManager.isTenpai(p),
-                )
-                const notenList = players.filter((p) => !tenpaiList.includes(p))
+                // 1. Check Nagashi Mangan
+                const nagashiWinners = players.filter((p) => {
+                    const discards = p.getDiscards()
+                    if (discards.length === 0) return false
+                    return discards.every((t) => {
+                        const rank = t.getRank()
+                        const suit = t.getSuit()
+                        return suit === 'z' || rank === 1 || rank === 9
+                    })
+                })
 
-                if (tenpaiList.length > 0 && notenList.length > 0) {
-                    const flow = 3000
-                    const payReceive = flow / tenpaiList.length
-                    const payGive = flow / notenList.length
-
-                    tenpaiList.forEach((p) => (p.points += payReceive))
-                    notenList.forEach((p) => (p.points -= payGive))
-                }
-
-                const oya = players[this.oyaIndex]
-                if (tenpaiList.includes(oya)) {
-                    renchan = true
+                if (nagashiWinners.length > 0) {
+                    for (const winner of nagashiWinners) {
+                        const otherPlayers = players.filter((p) => p !== winner)
+                        let totalNagashi = 0
+                        if (winner.isOya) {
+                            const payment = 4000 // Oya Mangan Tsumo: 4000 all
+                            otherPlayers.forEach((p) => (p.points -= payment))
+                            totalNagashi = payment * 3
+                            renchan = true
+                        } else {
+                            otherPlayers.forEach((p) => {
+                                const payment = p.isOya ? 4000 : 2000
+                                p.points -= payment
+                                totalNagashi += payment
+                            })
+                        }
+                        winner.points += totalNagashi
+                        events.push({
+                            eventName: 'score-update',
+                            payload: {
+                                winnerId: winner.getId(),
+                                score: totalNagashi,
+                                reason: 'nagashi-mangan',
+                            },
+                            to: 'all',
+                        })
+                    }
+                    if (nagashiWinners.some((p) => p.isOya)) {
+                        renchan = true
+                    }
                     nextHonba++
                 } else {
+                    // 2. Regular Tenpai/Noten payments
+                    const tenpaiList = players.filter(
+                        (p) =>
+                            p.getHand().length <= 13 &&
+                            this.ruleManager.isTenpai(p),
+                    )
+                    const notenList = players.filter(
+                        (p) => !tenpaiList.includes(p),
+                    )
+
+                    if (tenpaiList.length > 0 && notenList.length > 0) {
+                        const flow = 3000
+                        const payReceive = flow / tenpaiList.length
+                        const payGive = flow / notenList.length
+
+                        tenpaiList.forEach((p) => (p.points += payReceive))
+                        notenList.forEach((p) => (p.points -= payGive))
+                    }
+
+                    const oya = players[this.oyaIndex]
+                    if (tenpaiList.includes(oya)) {
+                        renchan = true
+                    }
                     nextHonba++
                 }
             }

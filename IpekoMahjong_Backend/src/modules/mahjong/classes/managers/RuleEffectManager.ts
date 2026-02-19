@@ -123,4 +123,37 @@ export class RuleEffectManager extends AbstractRuleEffectManager {
 
         return { success: true }
     }
+
+    public checkSuukanSettsu(players: Player[]): { isAbortive: boolean } {
+        const playerKans = players.map((p) => {
+            const kans = p
+                .getMelds()
+                .filter(
+                    (m) =>
+                        m.type === 'kan' ||
+                        m.type === 'ankan' ||
+                        m.type === 'kakan',
+                )
+            return kans.length
+        })
+
+        const totalKans = playerKans.reduce((a, b) => a + b, 0)
+
+        // Rule: 4 kans by multiple players OR 5th kan by any player
+        if (totalKans === 4) {
+            // Check if all 4 kans are by the same player
+            const singlePlayerKans = playerKans.some((count) => count === 4)
+            if (!singlePlayerKans) {
+                return { isAbortive: true }
+            }
+        } else if (totalKans >= 5) {
+            return { isAbortive: true }
+        }
+
+        return { isAbortive: false }
+    }
+
+    public checkSanchahou(winnersCount: number): boolean {
+        return winnersCount >= 3
+    }
 }
