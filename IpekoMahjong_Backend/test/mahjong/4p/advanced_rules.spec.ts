@@ -15,7 +15,7 @@ class TestPlayer extends Player {
     }
 }
 
-class TestMahjongGame extends MahjongGame {
+class TestMahjongGameAdvanced extends MahjongGame {
     protected createPlayer(info: { id: string; isAi: boolean }): Player {
         const player = new TestPlayer(info.id, false, info.isAi)
         if (info.isAi) {
@@ -66,13 +66,13 @@ class TestMahjongGame extends MahjongGame {
 }
 
 describe('Advanced Mahjong Rules', () => {
-    let game: TestMahjongGame
+    let game: TestMahjongGameAdvanced
     let roomId: string
 
     beforeEach(() => {
         roomId = 'test-room'
         const managers = createTestManagers()
-        game = new TestMahjongGame(
+        game = new TestMahjongGameAdvanced(
             [
                 { id: 'p1', isAi: false },
                 { id: 'p2', isAi: false },
@@ -323,8 +323,8 @@ describe('Advanced Mahjong Rules', () => {
 
             // Others discard regular tiles
             const p2 = game.getTestPlayer('p2')
-            p2.setHand([new Tile('m', 1, false, 1), new Tile('m', 1, false, 2)])
-            p2.discard('2m') // Placeholder
+            p2.setHand([new Tile('m', 2, false, 0)])
+            p2.discard('2m')
 
             // Manually set points to see the effect
             players.forEach((p) => (p.points = 25000))
@@ -367,24 +367,20 @@ describe('Advanced Mahjong Rules', () => {
                 tile: new Tile('m', 1, false, 0),
             }
             // Populate pendingActions so performAction is allowed
-            game.actionManager.getPossibleActions(
-                'p1',
-                '1m',
-                game.getPlayers(),
-                {
-                    bakaze: '1z',
-                    dora: [],
-                    playerContexts: game.getPlayers().map((p) => ({
-                        playerId: p.getId(),
-                        seatWind: '1z',
-                        uradora: [],
-                    })),
-                    isHoutei: false,
-                },
-            )
+            game.actionManager.pendingActions = {
+                'p2': { pon: true }
+            }
+
+            // Setup p2 hand for Pon (update all instances to handle potential mismatch)
+            game.getPlayers().forEach(p => {
+                if (p.getId() === 'p2') {
+                    (p as TestPlayer).setHand([new Tile('m', 1, false, 1), new Tile('m', 1, false, 2)])
+                }
+            })
 
             // Use performAction to simulate stealing (Pon)
-            game.performAction(roomId, 'p2', 'pon', '1m', ['1m', '1m'])
+            const actionResult = game.performAction(roomId, 'p2', 'pon', '1m', ['1m', '1m'])
+            expect(actionResult.events.some(e => e.eventName === 'error')).toBe(false)
 
             // Manually set points
             players.forEach((p) => (p.points = 25000))
