@@ -186,7 +186,7 @@ export abstract class AbstractMahjongGame {
         }
 
         // Initialize RoundManager with new seat order
-        this.roundManager.initialize(this.players.map((p) => p.getId()))
+        this.roundManager.initialize(this.players.map((p) => p.id))
 
         return this.startKyoku(roomId)
     }
@@ -205,8 +205,7 @@ export abstract class AbstractMahjongGame {
 
         // 2. Reset Players (Hands, Discards, Melds, Flags)
         this.players.forEach((player) => {
-            player.isOya =
-                player.getId() === this.players[this.oyaIndex].getId()
+            player.isOya = player.id === this.players[this.oyaIndex].id
             player.resetKyokuState()
         })
         this.paoStatus.clear()
@@ -228,7 +227,7 @@ export abstract class AbstractMahjongGame {
         const startEvents: GameUpdate['events'] = this.players.map((p) => ({
             eventName: 'round-started',
             payload: {
-                hand: p.getHand().map((t) => t.toString()),
+                hand: p.hand.map((t) => t.toString()),
                 dora: doraIndicators,
                 actualDora: actualDora,
                 wallCount: this.wall.getRemainingTiles(),
@@ -236,16 +235,16 @@ export abstract class AbstractMahjongGame {
                 kyoku: this.kyokuNum,
                 honba: this.honba,
                 kyotaku: this.kyotaku,
-                oyaId: this.players[this.oyaIndex].getId(),
+                oyaId: this.players[this.oyaIndex].id,
                 scores: this.players.map((pl) => ({
-                    id: pl.getId(),
+                    id: pl.id,
                     points: pl.points,
                     jikaze: this.getSeatWind(pl),
                 })),
                 waits: this.ruleManager.getWaits(p),
             },
             to: 'player',
-            playerId: p.getId(),
+            playerId: p.id,
         }))
 
         // Kyuushu Kyuuhai is declared by client action.
@@ -492,7 +491,7 @@ export abstract class AbstractMahjongGame {
                     waits: this.ruleManager.getWaits(player),
                 },
                 to: 'player',
-                playerId: player.getId(),
+                playerId: player.id,
             },
         ]
 
@@ -592,7 +591,7 @@ export abstract class AbstractMahjongGame {
                 bakaze: this.bakaze,
                 dora: this.getDora().map((t) => t.toString()),
                 playerContexts: this.players.map((p) => ({
-                    playerId: p.getId(),
+                    playerId: p.id,
                     seatWind: this.getSeatWind(p),
                     uradora: p.isRiichi
                         ? this.wall.getUradora().map((t) => t.toString())
@@ -601,6 +600,7 @@ export abstract class AbstractMahjongGame {
                 isHoutei: this.wall.getRemainingTiles() === 0,
             },
             isKakan,
+            this.isSanma,
         )
     }
 
@@ -687,7 +687,7 @@ export abstract class AbstractMahjongGame {
             actionType === 'kan' ||
             actionType === 'kakan'
         ) {
-            const latestMeld = player.getMelds().slice(-1)[0]
+            const latestMeld = player.melds.slice(-1)[0]
             const paoCheck = this.ruleEffectManager.checkPao(player, latestMeld)
             if (paoCheck) {
                 if (!this.paoStatus.has(playerId)) {
@@ -719,6 +719,7 @@ export abstract class AbstractMahjongGame {
                             isHoutei: this.wall.getRemainingTiles() === 0,
                         },
                         actionType === 'kakan',
+                        this.isSanma,
                     ).score!
                     return { winnerId: w.winnerId, score }
                 })
@@ -906,7 +907,7 @@ export abstract class AbstractMahjongGame {
                         : [],
                     isHaitei: this.wall.getRemainingTiles() === 0,
                     rinshanFlag: this.rinshanFlag,
-                }).isAgari
+                }, this.isSanma).isAgari
                 drawEvent.payload.canTsumo = canTsumo
             }
         }
@@ -924,14 +925,14 @@ export abstract class AbstractMahjongGame {
     public createGameObservation(player: Player): GameObservation {
         const myIndex = this.players.indexOf(player)
         return {
-            myHand: player.getHand().map((t) => t.toString()),
+            myHand: player.hand.map((t) => t.toString()),
             myLastDraw: player.lastDrawnTile?.toString() || null,
             myIndex: myIndex,
             players: this.players.map((p, idx) => ({
-                id: p.getId(),
-                handCount: p.getHand().length,
-                discards: p.getDiscards().map((t) => t.toString()),
-                melds: p.getMelds().map((m) => ({
+                id: p.id,
+                handCount: p.hand.length,
+                discards: p.discards.map((t) => t.toString()),
+                melds: p.melds.map((m) => ({
                     type: m.type,
                     tiles: m.tiles.map((t) => t.toString()),
                     opened: m.opened,
@@ -1004,7 +1005,7 @@ export abstract class AbstractMahjongGame {
     }
 
     getPlayer(id: string): Player | undefined {
-        return this.players.find((p) => p.getId() === id)
+        return this.players.find((p) => p.id === id)
     }
 
     getCurrentTurnPlayer(): Player {
@@ -1035,7 +1036,7 @@ export abstract class AbstractMahjongGame {
                 : [],
             isHaitei: this.wall.getRemainingTiles() === 0,
             rinshanFlag: this.rinshanFlag,
-        })
+        }, this.isSanma)
         return result.isAgari
     }
 

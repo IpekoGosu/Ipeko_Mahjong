@@ -14,7 +14,7 @@ describe('Chi Logic with Red Fives', () => {
         ])
         player = game.getPlayer('p1')!
         // Clear hand for setup
-        const hand = player.getHand()
+        const hand = player.hand
         if (hand.length > 0) {
             player.removeTiles(hand.map((t) => t.toString()))
         }
@@ -28,8 +28,8 @@ describe('Chi Logic with Red Fives', () => {
         player.draw(tile7s)
 
         // Verify setup
-        expect(player.getHand().map((t) => t.toString())).toContain('0s')
-        expect(player.getHand().map((t) => t.toString())).toContain('7s')
+        expect(player.hand.map((t) => t.toString())).toContain('0s')
+        expect(player.hand.map((t) => t.toString())).toContain('7s')
 
         const actions = game.getPossibleActions('p2', '6s')
         const options = actions['p1']?.chiOptions || []

@@ -77,7 +77,7 @@ export class GameRoomServiceImpl
         return Array.from(this.rooms.values()).find((room) =>
             room.mahjongGame
                 .getPlayers()
-                .some((player) => player.getId() === socketId),
+                .some((player) => player.id === socketId),
         )
     }
 

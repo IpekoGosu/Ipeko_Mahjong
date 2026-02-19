@@ -8,7 +8,7 @@ import { DEFAULT_4P_RULES } from '@src/modules/mahjong/interfaces/game-rules.con
 
 class TestPlayer extends Player {
     public setHand(tiles: Tile[]) {
-        this.hand = tiles
+        this._hand = tiles
     }
 }
 
@@ -71,11 +71,11 @@ describe('Advanced Mahjong Mechanics', () => {
                 new Tile('m', 1, false, 3),
                 new Tile('z', 1, false, 4),
             ])
-            p1.lastDrawnTile = p1.getHand()[0]
+            p1.lastDrawnTile = p1.hand[0]
 
             const initialDoraCount = game.getDora().length
 
-            game.performAction(roomId, p1.getId(), 'ankan', '1m', [])
+            game.performAction(roomId, p1.id, 'ankan', '1m', [])
 
             // Dora should have increased
             expect(game.getDora().length).toBe(initialDoraCount + 1)
@@ -100,13 +100,13 @@ describe('Advanced Mahjong Mechanics', () => {
             const initialDoraCount = game.getDora().length
 
             // Perform Kakan
-            game.performAction(roomId, p1.getId(), 'kakan', '1m', [])
+            game.performAction(roomId, p1.id, 'kakan', '1m', [])
 
             // Dora should NOT be revealed yet
             expect(game.getDora().length).toBe(initialDoraCount)
 
             // Now discard a tile
-            game.discardTile(roomId, p1.getId(), '1z')
+            game.discardTile(roomId, p1.id, '1z')
 
             // Dora should be revealed now
             expect(game.getDora().length).toBe(initialDoraCount + 1)
@@ -182,10 +182,10 @@ describe('Advanced Mahjong Mechanics', () => {
             // p2 (index 1) discards 1m
             const discardedTile = new Tile('m', 1, false, 99)
             game.actionManager.activeDiscard = {
-                playerId: p2.getId(),
+                playerId: p2.id,
                 tile: discardedTile,
             }
-            game.actionManager.pendingActions[p1.getId()] = { pon: true }
+            game.actionManager.pendingActions[p1.id] = { pon: true }
 
             // Hand has THREE 1m tiles. Uses two for Pon, one remains.
             p1.setHand([
@@ -196,10 +196,10 @@ describe('Advanced Mahjong Mechanics', () => {
             ])
 
             // Perform Pon (using 1m_0 and 1m_1)
-            game.performAction(roomId, p1.getId(), 'pon', '1m', ['1m', '1m'])
+            game.performAction(roomId, p1.id, 'pon', '1m', ['1m', '1m'])
 
             // Try to discard the remaining 1m (Forbidden)
-            const result = game.discardTile(roomId, p1.getId(), '1m')
+            const result = game.discardTile(roomId, p1.id, '1m')
             expect(result.events.some((e) => e.eventName === 'error')).toBe(
                 true,
             )
@@ -214,10 +214,10 @@ describe('Advanced Mahjong Mechanics', () => {
             // Case 1: Same tile (Chi 3m with 1m-2m, then try to discard 3m)
             const discardedTile1 = new Tile('m', 3, false, 99)
             game.actionManager.activeDiscard = {
-                playerId: players[pKamichaIndex].getId(),
+                playerId: players[pKamichaIndex].id,
                 tile: discardedTile1,
             }
-            game.actionManager.pendingActions[p1.getId()] = {
+            game.actionManager.pendingActions[p1.id] = {
                 chi: true,
                 chiOptions: [['1m', '2m']],
             }
@@ -229,9 +229,9 @@ describe('Advanced Mahjong Mechanics', () => {
                 new Tile('m', 3, false, 2),
                 new Tile('z', 1, false, 3),
             ])
-            game.performAction(roomId, p1.getId(), 'chi', '3m', ['1m', '2m'])
+            game.performAction(roomId, p1.id, 'chi', '3m', ['1m', '2m'])
 
-            const result1 = game.discardTile(roomId, p1.getId(), '3m')
+            const result1 = game.discardTile(roomId, p1.id, '3m')
             expect(result1.events.some((e) => e.eventName === 'error')).toBe(
                 true,
             )
@@ -240,10 +240,10 @@ describe('Advanced Mahjong Mechanics', () => {
             p1.resetKyokuState()
             const discardedTile2 = new Tile('m', 3, false, 100)
             game.actionManager.activeDiscard = {
-                playerId: players[pKamichaIndex].getId(),
+                playerId: players[pKamichaIndex].id,
                 tile: discardedTile2,
             }
-            game.actionManager.pendingActions[p1.getId()] = {
+            game.actionManager.pendingActions[p1.id] = {
                 chi: true,
                 chiOptions: [['4m', '5m']],
             }
@@ -255,9 +255,9 @@ describe('Advanced Mahjong Mechanics', () => {
                 new Tile('m', 6, false, 2),
                 new Tile('z', 1, false, 3),
             ])
-            game.performAction(roomId, p1.getId(), 'chi', '3m', ['4m', '5m'])
+            game.performAction(roomId, p1.id, 'chi', '3m', ['4m', '5m'])
 
-            const result2 = game.discardTile(roomId, p1.getId(), '6m')
+            const result2 = game.discardTile(roomId, p1.id, '6m')
             expect(result2.events.some((e) => e.eventName === 'error')).toBe(
                 true,
             )
@@ -268,7 +268,7 @@ describe('Advanced Mahjong Mechanics', () => {
         it('should NOT allow calling (Pon/Chi/Kan) on the very last tile of the wall', () => {
             const players = game.getPlayers()
             const p1 = game.getTestPlayer('p1')
-            const p2 = players.find((p) => p.getId() !== p1.getId())!
+            const p2 = players.find((p) => p.id !== p1.id)!
 
             // Set wall to 0 tiles remaining
             game.setWallCount(0)
@@ -281,17 +281,17 @@ describe('Advanced Mahjong Mechanics', () => {
             ])
 
             // p2 discards 1m
-            const actions = game.getPossibleActions(p2.getId(), '1m')
+            const actions = game.getPossibleActions(p2.id, '1m')
 
             // p1 should NOT have Pon/Chi options because it's Houtei
-            expect(actions[p1.getId()]?.pon).toBeFalsy()
-            expect(actions[p1.getId()]?.chi).toBeFalsy()
+            expect(actions[p1.id]?.pon).toBeFalsy()
+            expect(actions[p1.id]?.chi).toBeFalsy()
         })
 
         it('should STILL allow Ron on the very last tile (Houtei Raoyue)', () => {
             const players = game.getPlayers()
             const p1 = game.getTestPlayer('p1')
-            const p2 = players.find((p) => p.getId() !== p1.getId())!
+            const p2 = players.find((p) => p.id !== p1.id)!
 
             game.setWallCount(0)
 
@@ -313,8 +313,8 @@ describe('Advanced Mahjong Mechanics', () => {
             ])
 
             // p2 discards 1z
-            const actions = game.getPossibleActions(p2.getId(), '1z')
-            expect(actions[p1.getId()]?.ron).toBe(true)
+            const actions = game.getPossibleActions(p2.id, '1z')
+            expect(actions[p1.id]?.ron).toBe(true)
         })
     })
 
@@ -322,10 +322,8 @@ describe('Advanced Mahjong Mechanics', () => {
         it('should NOT allow Ron if player is in same-turn furiten (passed a winning tile)', () => {
             const players = game.getPlayers()
             const p1 = game.getTestPlayer('p1')
-            const p2 = players.find((p) => p.getId() !== p1.getId())!
-            const p3 = players.find(
-                (p) => p.getId() !== p1.getId() && p.getId() !== p2.getId(),
-            )!
+            const p2 = players.find((p) => p.id !== p1.id)!
+            const p3 = players.find((p) => p.id !== p1.id && p.id !== p2.id)!
 
             // p1 is waiting for 1z or 2z
             p1.setHand([
@@ -345,16 +343,16 @@ describe('Advanced Mahjong Mechanics', () => {
             ])
 
             // p2 discards 1z. p1 is eligible for Ron.
-            const actions1 = game.getPossibleActions(p2.getId(), '1z')
-            expect(actions1[p1.getId()]?.ron).toBe(true)
+            const actions1 = game.getPossibleActions(p2.id, '1z')
+            expect(actions1[p1.id]?.ron).toBe(true)
 
             // p1 skips the action
-            game.skipAction(roomId, p1.getId())
+            game.skipAction(roomId, p1.id)
             expect(p1.isTemporaryFuriten).toBe(true)
 
             // In the SAME TURN, p3 discards 2z. p1 should NOT be able to Ron because of same-turn furiten.
-            const actions2 = game.getPossibleActions(p3.getId(), '2z')
-            expect(actions2[p1.getId()]?.ron).toBeFalsy()
+            const actions2 = game.getPossibleActions(p3.id, '2z')
+            expect(actions2[p1.id]?.ron).toBeFalsy()
         })
     })
 })

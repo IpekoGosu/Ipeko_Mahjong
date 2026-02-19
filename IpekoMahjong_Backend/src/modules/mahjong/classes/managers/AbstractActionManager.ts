@@ -110,7 +110,7 @@ export abstract class AbstractActionManager {
             {
                 eventName: 'update-meld',
                 payload: {
-                    playerId: player.getId(),
+                    playerId: player.id,
                     type: actionType,
                     tiles: meldTiles.map((t) => t.toString()),
                     stolenFrom: stolenFromId,
@@ -142,9 +142,7 @@ export abstract class AbstractActionManager {
         tilesToMove?: string[]
     } {
         const targetTile = Tile.fromString(tileString)
-        const matches = player
-            .getHand()
-            .filter((t) => t.equalsIgnoreRed(targetTile))
+        const matches = player.hand.filter((t) => t.equalsIgnoreRed(targetTile))
         if (matches.length < 4)
             return { success: false, error: 'Not enough tiles' }
 
@@ -167,15 +165,13 @@ export abstract class AbstractActionManager {
         tilesToMove?: string[]
     } {
         const targetTile = Tile.fromString(tileString)
-        const tile = player.getHand().find((t) => t.equalsIgnoreRed(targetTile))
+        const tile = player.hand.find((t) => t.equalsIgnoreRed(targetTile))
         if (!tile) return { success: false, error: 'Tile not in hand' }
 
-        const ponMeld = player
-            .getMelds()
-            .find(
-                (m) =>
-                    m.type === 'pon' && m.tiles[0].equalsIgnoreRed(targetTile),
-            )
+        const ponMeld = player.melds.find(
+            (m) => m.type === 'pon' && m.tiles[0].equalsIgnoreRed(targetTile),
+        )
+
         if (!ponMeld)
             return {
                 success: false,
@@ -222,7 +218,7 @@ export abstract class AbstractActionManager {
         }
 
         // Remove from discarder's discard pile
-        const discarder = players.find((p) => p.getId() === stolenFromId)
+        const discarder = players.find((p) => p.id === stolenFromId)
         if (discarder) {
             discarder.removeDiscard(stolenTile.toString())
             discarder.isNagashiEligible = false

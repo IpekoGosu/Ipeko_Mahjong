@@ -45,10 +45,10 @@ export class RuleEffectManager extends AbstractRuleEffectManager {
         player.riichiDeclarationTurn = turnCounter
         player.points -= 1000
 
-        if (!anyCallDeclared && player.getDiscards().length === 0) {
+        if (!anyCallDeclared && player.discards.length === 0) {
             // This is before the current discard is added to p.discards
             // AbstractMahjongGame calls player.discard() after handleRiichi or similar
-            // Actually player.getDiscards().length === 1 if we call it after player.discard()
+            // Actually player.discards.length === 1 if we call it after player.discard()
             // In AbstractMahjongGame, discardTile calls player.discard() AFTER some checks.
             player.isDoubleRiichi = true
         }
@@ -113,7 +113,7 @@ export class RuleEffectManager extends AbstractRuleEffectManager {
         player: Player,
         anyCallDeclared: boolean,
     ): { success: boolean; error?: string } {
-        if (anyCallDeclared || player.getDiscards().length > 0) {
+        if (anyCallDeclared || player.discards.length > 0) {
             return { success: false, error: 'Too late for Kyuushu Kyuuhai' }
         }
 
@@ -127,14 +127,12 @@ export class RuleEffectManager extends AbstractRuleEffectManager {
 
     public checkSuukanSettsu(players: Player[]): { isAbortive: boolean } {
         const playerKans = players.map((p) => {
-            const kans = p
-                .getMelds()
-                .filter(
-                    (m) =>
-                        m.type === 'kan' ||
-                        m.type === 'ankan' ||
-                        m.type === 'kakan',
-                )
+            const kans = p.melds.filter(
+                (m) =>
+                    m.type === 'kan' ||
+                    m.type === 'ankan' ||
+                    m.type === 'kakan',
+            )
             return kans.length
         })
 
@@ -164,7 +162,7 @@ export class RuleEffectManager extends AbstractRuleEffectManager {
     ): { responsiblePlayerId: string; yakumanName: string } | null {
         if (!meld.opened || !meld.stolenFrom) return null
 
-        const melds = player.getMelds()
+        const melds = player.melds
 
         // 1. Daisangen (Big Three Dragons)
         const dragonTiles = ['5z', '6z', '7z']

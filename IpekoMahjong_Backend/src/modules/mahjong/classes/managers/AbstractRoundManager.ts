@@ -40,8 +40,8 @@ export abstract class AbstractRoundManager {
     public getSortedPlayers(players: Player[]): Player[] {
         return [...players].sort((a, b) => {
             if (b.points !== a.points) return b.points - a.points
-            const idxA = this.initialPlayerOrder.indexOf(a.getId())
-            const idxB = this.initialPlayerOrder.indexOf(b.getId())
+            const idxA = this.initialPlayerOrder.indexOf(a.id)
+            const idxB = this.initialPlayerOrder.indexOf(b.id)
             return idxA - idxB
         })
     }

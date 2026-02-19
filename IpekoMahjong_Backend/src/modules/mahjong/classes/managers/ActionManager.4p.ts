@@ -32,7 +32,7 @@ export class ActionManager4p extends AbstractActionManager {
         },
         isKakan: boolean = false,
     ): Record<string, PossibleActions> {
-        const discarder = players.find((p) => p.getId() === discarderId)
+        const discarder = players.find((p) => p.id === discarderId)
         if (!discarder) return {}
 
         this.potentialRonners = []
@@ -43,14 +43,14 @@ export class ActionManager4p extends AbstractActionManager {
         const actions: Record<string, PossibleActions> = {}
 
         players.forEach((player, index) => {
-            if (player.getId() === discarderId) return
+            if (player.id === discarderId) return
 
-            const hand = player.getHand()
+            const hand = player.hand
             const possibleActions: PossibleActions = {}
             let hasAction = false
 
             const playerCtx = context.playerContexts.find(
-                (c) => c.playerId === player.getId(),
+                (c) => c.playerId === player.id,
             )!
 
             const result = this.verifyRon(
@@ -74,25 +74,25 @@ export class ActionManager4p extends AbstractActionManager {
             if (result.isAgari && !isFuriten) {
                 possibleActions.ron = true
                 hasAction = true
-                this.potentialRonners.push(player.getId())
+                this.potentialRonners.push(player.id)
             }
 
             // Chankan (Ron on Kakan) is only Ron. No Pon/Chi/Kan allowed on Kakan.
             if (isKakan) {
-                if (hasAction) actions[player.getId()] = possibleActions
+                if (hasAction) actions[player.id] = possibleActions
                 return
             }
 
             // Houtei restriction: cannot call last tile except for Ron
             if (context.isHoutei) {
                 if (possibleActions.ron) {
-                    actions[player.getId()] = { ron: true }
+                    actions[player.id] = { ron: true }
                 }
                 return
             }
 
             if (player.isRiichi) {
-                if (hasAction) actions[player.getId()] = possibleActions
+                if (hasAction) actions[player.id] = possibleActions
                 return
             }
 
@@ -118,7 +118,7 @@ export class ActionManager4p extends AbstractActionManager {
             }
 
             if (hasAction) {
-                actions[player.getId()] = possibleActions
+                actions[player.id] = possibleActions
             }
         })
 
@@ -134,7 +134,7 @@ export class ActionManager4p extends AbstractActionManager {
         players: Player[],
         currentPlayerIndex: number,
     ): ActionResult {
-        const player = players.find((p) => p.getId() === playerId)!
+        const player = players.find((p) => p.id === playerId)!
         const playerIndex = players.indexOf(player)
 
         if (actionType === 'ron') {
@@ -181,7 +181,7 @@ export class ActionManager4p extends AbstractActionManager {
     ): { shouldProceed: boolean; actionsRemaining: boolean } {
         const pending = this.pendingActions[playerId]
         if (pending && pending.ron) {
-            const player = players.find((p) => p.getId() === playerId)
+            const player = players.find((p) => p.id === playerId)
             if (player) {
                 player.isTemporaryFuriten = true
                 if (player.isRiichi) player.isRiichiFuriten = true
@@ -236,7 +236,7 @@ export class ActionManager4p extends AbstractActionManager {
             rinshanFlag: boolean
         },
     ): { isAgari: boolean; score?: ScoreCalculation } {
-        const lastTile = player.getHand().slice(-1)[0]
+        const lastTile = player.hand.slice(-1)[0]
         const winCtx: WinContext = {
             bakaze: context.bakaze,
             seatWind: context.seatWind,
@@ -260,12 +260,12 @@ export class ActionManager4p extends AbstractActionManager {
         if (suit === 'z') return []
 
         const rank = Tile.parseRank(tileString)
-        const hand = player.getHand()
+        const hand = player.hand
 
         const options: string[][] = []
 
         const getTilesOfRank = (r: number) =>
-            hand.filter((t) => t.getSuit() === suit && t.getRank() === r)
+            hand.filter((t) => t.suit === suit && t.rank === r)
 
         const checkGroup = (r1: number, r2: number) => {
             const tiles1 = getTilesOfRank(r1)

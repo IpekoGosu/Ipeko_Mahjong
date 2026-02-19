@@ -56,7 +56,7 @@ export class TurnManager {
             {
                 eventName: 'turn-changed',
                 payload: {
-                    playerId: player.getId(),
+                    playerId: player.id,
                     wallCount: wall.getRemainingTiles(),
                     deadWallCount: wall.getRemainingDeadWall(),
                     dora: doraIndicators,
@@ -80,7 +80,7 @@ export class TurnManager {
                     kakanList,
                 },
                 to: 'player',
-                playerId: player.getId(),
+                playerId: player.id,
             })
         }
 

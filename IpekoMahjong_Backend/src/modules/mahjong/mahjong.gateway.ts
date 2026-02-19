@@ -141,16 +141,13 @@ export class MahjongGateway {
             client.emit('game-started', {
                 roomId: room.roomId,
                 yourPlayerId: client.id,
-                oyaId: room.mahjongGame
-                    .getPlayers()
-                    .find((p) => p.isOya)
-                    ?.getId(),
+                oyaId: room.mahjongGame.getPlayers().find((p) => p.isOya)?.id,
                 players: room.mahjongGame.getPlayers().map((p) => ({
-                    id: p.getId(),
+                    id: p.id,
                     isAi: p.isAi,
                     jikaze: room.mahjongGame.getSeatWind(p),
                 })),
-                hand: human.getHand().map((t) => t.toString()),
+                hand: human.hand.map((t) => t.toString()),
                 dora: doraIndicators,
                 actualDora: this.ruleManager.getActualDoraList(doraIndicators),
                 wallCount: room.mahjongGame.getWallCount(),
@@ -483,7 +480,7 @@ export class MahjongGateway {
                     tileToDiscard = await player.ai.decideDiscard(observation)
                 } else {
                     tileToDiscard = await SimpleAI.decideDiscard(
-                        player.getHand().map((t) => t.toString()),
+                        player.hand.map((t) => t.toString()),
                     )
                 }
             }

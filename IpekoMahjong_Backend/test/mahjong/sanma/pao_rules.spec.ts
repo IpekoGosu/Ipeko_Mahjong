@@ -130,8 +130,8 @@ describe('Mahjong Sanma - Pao (Responsibility Payment) Rules', () => {
         // p3: 35000 - 24000 = 11000
 
         expect(p1.points).toBe(83300)
-        expect(players.find((p) => p.getId() === 'p2')?.points).toBe(10700)
-        expect(players.find((p) => p.getId() === 'p3')?.points).toBe(11000)
+        expect(players.find((p) => p.id === 'p2')?.points).toBe(10700)
+        expect(players.find((p) => p.id === 'p3')?.points).toBe(11000)
     })
 
     it('should handle Tsumo Pao in Sanma', () => {
@@ -164,9 +164,7 @@ describe('Mahjong Sanma - Pao (Responsibility Payment) Rules', () => {
 
         // p3 (responsible) should pay all 48000
         expect(p1.points).toBe(83000)
-        expect(players.find((p) => p.getId() === 'p3')?.points).toBe(
-            35000 - 48000,
-        ) // -13000
-        expect(players.find((p) => p.getId() === 'p2')?.points).toBe(35000)
+        expect(players.find((p) => p.id === 'p3')?.points).toBe(35000 - 48000) // -13000
+        expect(players.find((p) => p.id === 'p2')?.points).toBe(35000)
     })
 })

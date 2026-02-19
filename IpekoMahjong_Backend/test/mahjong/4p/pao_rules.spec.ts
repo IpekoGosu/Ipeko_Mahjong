@@ -7,10 +7,10 @@ import { DEFAULT_4P_RULES } from '@src/modules/mahjong/interfaces/game-rules.con
 
 class TestPlayer extends Player {
     public setHand(tiles: Tile[]) {
-        this.hand = tiles
+        this._hand = tiles
     }
     public setPoints(p: number) {
-        this.points = p
+        this._points = p
     }
 }
 
@@ -152,9 +152,9 @@ describe('Mahjong - Pao (Responsibility Payment) Rules', () => {
 
         // p4 (responsible) should pay all 48000
         expect(p1.points).toBe(73000)
-        expect(players.find((p) => p.getId() === 'p4')?.points).toBe(-23000)
-        expect(players.find((p) => p.getId() === 'p2')?.points).toBe(25000)
-        expect(players.find((p) => p.getId() === 'p3')?.points).toBe(25000)
+        expect(players.find((p) => p.id === 'p4')?.points).toBe(-23000)
+        expect(players.find((p) => p.id === 'p2')?.points).toBe(25000)
+        expect(players.find((p) => p.id === 'p3')?.points).toBe(25000)
     })
 
     it('should split payment between discarder and responsible player for Ron in Pao', () => {
@@ -219,8 +219,8 @@ describe('Mahjong - Pao (Responsibility Payment) Rules', () => {
         // p2 (discarder): 25000 - 24000 = 1000
         // p4 (responsible): 25000 - 24000 = 1000
         expect(p1.points).toBe(73000)
-        expect(players.find((p) => p.getId() === 'p2')?.points).toBe(1000)
-        expect(players.find((p) => p.getId() === 'p4')?.points).toBe(1000)
+        expect(players.find((p) => p.id === 'p2')?.points).toBe(1000)
+        expect(players.find((p) => p.id === 'p4')?.points).toBe(1000)
     })
 
     it('should split payment between discarder and responsible player for Ron in Pao with honba', () => {
@@ -261,7 +261,7 @@ describe('Mahjong - Pao (Responsibility Payment) Rules', () => {
         // p4: 25000 - 24000 = 1000
 
         expect(p1.points).toBe(73300)
-        expect(players.find((p) => p.getId() === 'p2')?.points).toBe(700)
-        expect(players.find((p) => p.getId() === 'p4')?.points).toBe(1000)
+        expect(players.find((p) => p.id === 'p2')?.points).toBe(700)
+        expect(players.find((p) => p.id === 'p4')?.points).toBe(1000)
     })
 })

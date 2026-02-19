@@ -36,7 +36,7 @@ export class RoundManagerSanma extends AbstractRoundManager {
         },
     ): GameUpdate {
         const startScores: Record<string, number> = {}
-        players.forEach((p) => (startScores[p.getId()] = p.points))
+        players.forEach((p) => (startScores[p.id] = p.points))
 
         const events: GameUpdate['events'] = []
         let nextOyaIndex = this.oyaIndex
@@ -50,10 +50,10 @@ export class RoundManagerSanma extends AbstractRoundManager {
         let stickClaimer: Player | null = null
 
         if (result.reason === 'ron' && result.winners && result.loserId) {
-            const loser = players.find((p) => p.getId() === result.loserId)!
+            const loser = players.find((p) => p.id === result.loserId)!
             for (const [idx, winnerInfo] of result.winners.entries()) {
                 const winner = players.find(
-                    (p) => p.getId() === winnerInfo.winnerId,
+                    (p) => p.id === winnerInfo.winnerId,
                 )!
                 const isHeadbump = idx === 0
                 const honbaPoints = isHeadbump ? this.honba * 300 : 0
@@ -71,7 +71,7 @@ export class RoundManagerSanma extends AbstractRoundManager {
 
                 if (paoInfo) {
                     const responsiblePlayer = players.find(
-                        (p) => p.getId() === paoInfo.responsiblePlayerId,
+                        (p) => p.id === paoInfo.responsiblePlayerId,
                     )!
                     const halfBase = basePoints / 2
 
@@ -87,7 +87,7 @@ export class RoundManagerSanma extends AbstractRoundManager {
                         payload: {
                             winnerId: winnerInfo.winnerId,
                             loserId: result.loserId,
-                            responsiblePlayerId: responsiblePlayer.getId(),
+                            responsiblePlayerId: responsiblePlayer.id,
                             score: basePoints,
                             totalPoints:
                                 totalPoints +
@@ -125,7 +125,7 @@ export class RoundManagerSanma extends AbstractRoundManager {
             result.winnerId &&
             result.score
         ) {
-            const winner = players.find((p) => p.getId() === result.winnerId)!
+            const winner = players.find((p) => p.id === result.winnerId)!
             const honbaPoints = this.honba * 300
             const totalPoints = result.score.ten + honbaPoints
 
@@ -136,7 +136,7 @@ export class RoundManagerSanma extends AbstractRoundManager {
 
             if (paoInfo) {
                 const responsiblePlayer = players.find(
-                    (p) => p.getId() === paoInfo.responsiblePlayerId,
+                    (p) => p.id === paoInfo.responsiblePlayerId,
                 )!
 
                 winner.points += totalPoints
@@ -154,7 +154,7 @@ export class RoundManagerSanma extends AbstractRoundManager {
                     eventName: 'score-update',
                     payload: {
                         winnerId: result.winnerId,
-                        responsiblePlayerId: responsiblePlayer.getId(),
+                        responsiblePlayerId: responsiblePlayer.id,
                         score: result.score.ten,
                         totalPoints: totalPoints + this.kyotaku * 1000,
                         reason: 'tsumo-pao',
@@ -198,7 +198,7 @@ export class RoundManagerSanma extends AbstractRoundManager {
             // 1. Check Nagashi Mangan
             const nagashiWinners = players.filter((p) => {
                 if (!p.isNagashiEligible) return false
-                const discards = p.getDiscards()
+                const discards = p.discards
                 if (discards.length === 0) return false
                 return discards.every((t) => t.isTerminalOrHonor())
             })
@@ -223,7 +223,7 @@ export class RoundManagerSanma extends AbstractRoundManager {
                     events.push({
                         eventName: 'score-update',
                         payload: {
-                            winnerId: winner.getId(),
+                            winnerId: winner.id,
                             score: totalNagashi,
                             reason: 'nagashi-mangan',
                         },
@@ -298,7 +298,7 @@ export class RoundManagerSanma extends AbstractRoundManager {
 
         const scoreDeltas: Record<string, number> = {}
         players.forEach(
-            (p) => (scoreDeltas[p.getId()] = p.points - startScores[p.getId()]),
+            (p) => (scoreDeltas[p.id] = p.points - startScores[p.id]),
         )
 
         events.push({
@@ -306,7 +306,7 @@ export class RoundManagerSanma extends AbstractRoundManager {
             payload: {
                 reason: result.reason,
                 scores: players.map((p) => ({
-                    id: p.getId(),
+                    id: p.id,
                     points: p.points,
                 })),
                 scoreDeltas,
@@ -346,7 +346,7 @@ export class RoundManagerSanma extends AbstractRoundManager {
             const playerUma = uma[idx]
             const finalPoint = p.points - returnPoints + playerUma
             return {
-                id: p.getId(),
+                id: p.id,
                 points: p.points,
                 finalScore: idx === 0 ? finalPoint + oka : finalPoint,
                 rank: idx + 1,
@@ -356,6 +356,8 @@ export class RoundManagerSanma extends AbstractRoundManager {
         return {
             roomId,
             isGameOver: true,
+            reason: events.find((e) => e.eventName === 'round-ended')?.payload
+                .reason as any,
             events: [
                 ...events,
                 {

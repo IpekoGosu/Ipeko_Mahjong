@@ -7,8 +7,8 @@ import { DEFAULT_4P_RULES } from '@src/modules/mahjong/interfaces/game-rules.con
 
 class TestPlayer extends Player {
     public forceSetHandLast(tile: Tile) {
-        this.hand.pop()
-        this.hand.push(tile)
+        this._hand.pop()
+        this._hand.push(tile)
     }
 }
 
@@ -58,25 +58,25 @@ describe('Suufuu Renda (Four Winds Discard)', () => {
         game.startFirstTurn(roomId)
 
         // Turn 0
-        let currentPlayerId = game.getCurrentTurnPlayer().getId()
+        let currentPlayerId = game.getCurrentTurnPlayer().id
         game.setLastDrawnTile(currentPlayerId, new Tile('z', 1, false, 0))
         game.discardTile(roomId, currentPlayerId, '1z')
         game.proceedToNextTurn(roomId)
 
         // Turn 1
-        currentPlayerId = game.getCurrentTurnPlayer().getId()
+        currentPlayerId = game.getCurrentTurnPlayer().id
         game.setLastDrawnTile(currentPlayerId, new Tile('z', 1, false, 1))
         game.discardTile(roomId, currentPlayerId, '1z')
         game.proceedToNextTurn(roomId)
 
         // Turn 2
-        currentPlayerId = game.getCurrentTurnPlayer().getId()
+        currentPlayerId = game.getCurrentTurnPlayer().id
         game.setLastDrawnTile(currentPlayerId, new Tile('z', 1, false, 2))
         game.discardTile(roomId, currentPlayerId, '1z')
         game.proceedToNextTurn(roomId)
 
         // Turn 3
-        currentPlayerId = game.getCurrentTurnPlayer().getId()
+        currentPlayerId = game.getCurrentTurnPlayer().id
         game.setLastDrawnTile(currentPlayerId, new Tile('z', 1, false, 3))
         const result = game.discardTile(roomId, currentPlayerId, '1z')
 
@@ -90,12 +90,12 @@ describe('Suufuu Renda (Four Winds Discard)', () => {
     it('should NOT trigger Suufuu Renda if the wind sequence is broken', () => {
         game.startFirstTurn(roomId)
 
-        let currentPlayerId = game.getCurrentTurnPlayer().getId()
+        let currentPlayerId = game.getCurrentTurnPlayer().id
         game.setLastDrawnTile(currentPlayerId, new Tile('z', 1, false, 0))
         game.discardTile(roomId, currentPlayerId, '1z')
         game.proceedToNextTurn(roomId)
 
-        currentPlayerId = game.getCurrentTurnPlayer().getId()
+        currentPlayerId = game.getCurrentTurnPlayer().id
         game.setLastDrawnTile(currentPlayerId, new Tile('z', 2, false, 0))
         const result = game.discardTile(roomId, currentPlayerId, '2z')
 
@@ -105,7 +105,7 @@ describe('Suufuu Renda (Four Winds Discard)', () => {
     it('should NOT trigger Suufuu Renda if first player does not discard a wind', () => {
         game.startFirstTurn(roomId)
 
-        const currentPlayerId = game.getCurrentTurnPlayer().getId()
+        const currentPlayerId = game.getCurrentTurnPlayer().id
         game.setLastDrawnTile(currentPlayerId, new Tile('m', 1, false, 0))
         const result = game.discardTile(roomId, currentPlayerId, '1m')
         expect(result.reason).not.toBe('ryuukyoku')
@@ -117,22 +117,22 @@ describe('Suufuu Renda (Four Winds Discard)', () => {
         // Simulate a call happened (mocking property on ActionManager)
         game.actionManager.anyCallDeclared = true
 
-        let currentPlayerId = game.getCurrentTurnPlayer().getId()
+        let currentPlayerId = game.getCurrentTurnPlayer().id
         game.setLastDrawnTile(currentPlayerId, new Tile('z', 1, false, 0))
         game.discardTile(roomId, currentPlayerId, '1z')
         game.proceedToNextTurn(roomId)
 
-        currentPlayerId = game.getCurrentTurnPlayer().getId()
+        currentPlayerId = game.getCurrentTurnPlayer().id
         game.setLastDrawnTile(currentPlayerId, new Tile('z', 1, false, 1))
         game.discardTile(roomId, currentPlayerId, '1z')
         game.proceedToNextTurn(roomId)
 
-        currentPlayerId = game.getCurrentTurnPlayer().getId()
+        currentPlayerId = game.getCurrentTurnPlayer().id
         game.setLastDrawnTile(currentPlayerId, new Tile('z', 1, false, 2))
         game.discardTile(roomId, currentPlayerId, '1z')
         game.proceedToNextTurn(roomId)
 
-        currentPlayerId = game.getCurrentTurnPlayer().getId()
+        currentPlayerId = game.getCurrentTurnPlayer().id
         game.setLastDrawnTile(currentPlayerId, new Tile('z', 1, false, 3))
         const result = game.discardTile(roomId, currentPlayerId, '1z')
 

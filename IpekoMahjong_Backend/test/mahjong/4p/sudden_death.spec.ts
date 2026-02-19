@@ -82,8 +82,8 @@ describe('MahjongGame - Indefinite Sudden Death', () => {
 
         const result = game.callEndKyoku(roomId, {
             reason: 'ron',
-            winners: [{ winnerId: players[0].getId(), score: mockScore }],
-            loserId: players[1].getId(),
+            winners: [{ winnerId: players[0].id, score: mockScore }],
+            loserId: players[1].id,
         })
 
         expect(result.isGameOver).toBe(false)
@@ -115,8 +115,8 @@ describe('MahjongGame - Indefinite Sudden Death', () => {
 
         const result = game.callEndKyoku(roomId, {
             reason: 'ron',
-            winners: [{ winnerId: players[0].getId(), score: mockScore }],
-            loserId: players[1].getId(),
+            winners: [{ winnerId: players[0].id, score: mockScore }],
+            loserId: players[1].id,
         })
 
         expect(result.isGameOver).toBe(false)
@@ -147,8 +147,8 @@ describe('MahjongGame - Indefinite Sudden Death', () => {
 
         const result = game.callEndKyoku(roomId, {
             reason: 'ron',
-            winners: [{ winnerId: players[0].getId(), score: mockScore }],
-            loserId: players[1].getId(),
+            winners: [{ winnerId: players[0].id, score: mockScore }],
+            loserId: players[1].id,
         })
 
         expect(result.isGameOver).toBe(false)
@@ -181,8 +181,8 @@ describe('MahjongGame - Indefinite Sudden Death', () => {
 
         const result = game.callEndKyoku(roomId, {
             reason: 'ron',
-            winners: [{ winnerId: pWinner.getId(), score: mockScore }],
-            loserId: players[1].getId(),
+            winners: [{ winnerId: pWinner.id, score: mockScore }],
+            loserId: players[1].id,
         })
 
         expect(result.isGameOver).toBe(true)
@@ -214,8 +214,8 @@ describe('MahjongGame - Indefinite Sudden Death', () => {
 
         const result = game.callEndKyoku(roomId, {
             reason: 'ron',
-            winners: [{ winnerId: oya.getId(), score: mockScore }],
-            loserId: players[1].getId(),
+            winners: [{ winnerId: oya.id, score: mockScore }],
+            loserId: players[1].id,
         })
 
         expect(result.isGameOver).toBe(true) // Agari-yame

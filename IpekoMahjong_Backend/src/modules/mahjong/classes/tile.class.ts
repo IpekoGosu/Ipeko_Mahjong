@@ -1,10 +1,10 @@
 import { Suit } from '@src/modules/mahjong/interfaces/mahjong.types'
 
 export class Tile {
-    private readonly id: string
-    private readonly suit: Suit
-    private readonly rank: number
-    private readonly isRed: boolean
+    private readonly _id: string
+    private readonly _suit: Suit
+    private readonly _rank: number
+    private readonly _isRed: boolean
 
     constructor(
         suit: Suit,
@@ -12,26 +12,26 @@ export class Tile {
         isRed: boolean = false,
         index: number,
     ) {
-        this.suit = suit
-        this.rank = rank
-        this.isRed = isRed
-        this.id = `${suit}_${rank}_${index}`
+        this._suit = suit
+        this._rank = rank
+        this._isRed = isRed
+        this._id = `${suit}_${rank}_${index}`
     }
 
-    getSuit(): Suit {
-        return this.suit
+    get suit(): Suit {
+        return this._suit
     }
 
-    getRank(): number {
-        return this.rank
+    get rank(): number {
+        return this._rank
     }
 
-    getId(): string {
-        return this.id
+    get id(): string {
+        return this._id
     }
 
-    getIsRed(): boolean {
-        return this.isRed
+    get isRed(): boolean {
+        return this._isRed
     }
 
     static parseRank(tileString: string): number {
@@ -42,20 +42,20 @@ export class Tile {
     toString(): string {
         // Aka Dora (Red Five) is represented as '0' for rank in many riichi libraries,
         // including the one we use for calculation.
-        const displayRank = this.isRed ? '0' : this.rank
-        return `${displayRank}${this.suit}`
+        const displayRank = this._isRed ? '0' : this._rank
+        return `${displayRank}${this._suit}`
     }
 
     equals(other: Tile): boolean {
         return (
-            this.suit === other.suit &&
-            this.rank === other.rank &&
-            this.isRed === other.isRed
+            this._suit === other._suit &&
+            this._rank === other._rank &&
+            this._isRed === other._isRed
         )
     }
 
     equalsIgnoreRed(other: Tile): boolean {
-        return this.suit === other.suit && this.rank === other.rank
+        return this._suit === other._suit && this._rank === other._rank
     }
 
     static fromString(tileString: string, index: number = 0): Tile {
@@ -71,15 +71,15 @@ export class Tile {
      * e.g., both '0m' and '5m' will return '5m'.
      */
     toIgnoreRedString(): string {
-        return `${this.rank}${this.suit}`
+        return `${this._rank}${this._suit}`
     }
 
     isHonor(): boolean {
-        return this.suit === 'z'
+        return this._suit === 'z'
     }
 
     isTerminal(): boolean {
-        return this.suit !== 'z' && (this.rank === 1 || this.rank === 9)
+        return this._suit !== 'z' && (this._rank === 1 || this._rank === 9)
     }
 
     isTerminalOrHonor(): boolean {

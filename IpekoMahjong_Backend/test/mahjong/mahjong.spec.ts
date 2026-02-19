@@ -54,7 +54,7 @@ describe('Player', () => {
     it('should draw a tile and sort the hand', () => {
         player.draw(new Tile('m', 3, false, 0))
         player.draw(new Tile('m', 1, false, 1))
-        expect(player.getHand().map((t) => t.toString())).toEqual(['1m', '3m'])
+        expect(player.hand.map((t) => t.toString())).toEqual(['1m', '3m'])
     })
 
     it('should discard a tile', () => {
@@ -62,8 +62,8 @@ describe('Player', () => {
         player.draw(tile)
         const discarded = player.discard(tile.toString())
         expect(discarded).toEqual(tile)
-        expect(player.getHand().length).toBe(0)
-        expect(player.getDiscards().length).toBe(1)
+        expect(player.hand.length).toBe(0)
+        expect(player.discards.length).toBe(1)
     })
 
     it('should return the correct hand string', () => {

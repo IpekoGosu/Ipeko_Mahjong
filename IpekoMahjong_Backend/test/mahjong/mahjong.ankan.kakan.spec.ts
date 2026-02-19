@@ -66,17 +66,17 @@ describe('Ankan and Kakan Logic', () => {
         player.draw(new Tile('s', 2, false, 3))
         player.draw(new Tile('z', 1, false, 4))
 
-        game.performAction('room1', player.getId(), 'ankan', '2s')
+        game.performAction('room1', player.id, 'ankan', '2s')
 
         // Check meld
-        expect(player.getMelds().length).toBe(1)
-        expect(player.getMelds()[0].type).toBe('ankan')
-        expect(player.getMelds()[0].opened).toBe(false)
-        expect(player.getMelds()[0].tiles.length).toBe(4)
+        expect(player.melds.length).toBe(1)
+        expect(player.melds[0].type).toBe('ankan')
+        expect(player.melds[0].opened).toBe(false)
+        expect(player.melds[0].tiles.length).toBe(4)
 
         // Check hand reduced (4 removed, 1 replacement drawn)
         // Hand size: Started 5. Removed 4 -> 1. Drew 1 -> 2.
-        expect(player.getHand().length).toBe(2)
+        expect(player.hand.length).toBe(2)
     })
 
     it('should perform Kakan correctly', () => {
@@ -96,15 +96,15 @@ describe('Ankan and Kakan Logic', () => {
         player.draw(new Tile('z', 5, false, 3))
         player.draw(new Tile('m', 1, false, 4))
 
-        game.performAction('room1', player.getId(), 'kakan', '5z')
+        game.performAction('room1', player.id, 'kakan', '5z')
 
         // Check meld updated
-        expect(player.getMelds().length).toBe(1)
-        expect(player.getMelds()[0].type).toBe('kakan')
-        expect(player.getMelds()[0].tiles.length).toBe(4)
+        expect(player.melds.length).toBe(1)
+        expect(player.melds[0].type).toBe('kakan')
+        expect(player.melds[0].tiles.length).toBe(4)
 
         // Check hand reduced (1 removed, 1 replacement drawn)
         // Hand size: Started 2. Removed 1 -> 1. Drew 1 -> 2.
-        expect(player.getHand().length).toBe(2)
+        expect(player.hand.length).toBe(2)
     })
 })

@@ -8,10 +8,10 @@ import { DEFAULT_4P_RULES } from '@src/modules/mahjong/interfaces/game-rules.con
 
 class TestPlayer extends Player {
     public setHand(tiles: Tile[]) {
-        this.hand = tiles
+        this._hand = tiles
     }
     public setPoints(p: number) {
-        this.points = p
+        this._points = p
     }
 }
 
@@ -127,7 +127,7 @@ describe('Advanced Mahjong Rules', () => {
 
             // Make all but p4 riichi
             players.forEach((p) => {
-                if (p.getId() !== p4.getId()) {
+                if (p.id !== p4.id) {
                     p.isRiichi = true
                 }
             })
@@ -156,7 +156,7 @@ describe('Advanced Mahjong Rules', () => {
             p4.setPoints(10000)
             const tile = '2s'
 
-            const result = game.discardTile(roomId, p4.getId(), tile, true)
+            const result = game.discardTile(roomId, p4.id, tile, true)
 
             expect(result.reason).toBe('ryuukyoku')
             const endEvent = result.events.find(
@@ -250,7 +250,7 @@ describe('Advanced Mahjong Rules', () => {
 
             // Should NOT be ryuukyoku (going for Suukantsu)
             expect(result.reason).not.toBe('ryuukyoku')
-            expect(p1.getMelds().length).toBe(4)
+            expect(p1.melds.length).toBe(4)
         })
 
         it('should process Triple Ron when 3 players declare Ron on the same tile', () => {
@@ -373,7 +373,7 @@ describe('Advanced Mahjong Rules', () => {
 
             // Setup p2 hand for Pon (update all instances to handle potential mismatch)
             game.getPlayers().forEach((p) => {
-                if (p.getId() === 'p2') {
+                if (p.id === 'p2') {
                     ;(p as TestPlayer).setHand([
                         new Tile('m', 1, false, 1),
                         new Tile('m', 1, false, 2),
@@ -546,7 +546,7 @@ describe('Advanced Mahjong Rules', () => {
                 reason: 'ron',
                 winners: [
                     {
-                        winnerId: players[1].getId(),
+                        winnerId: players[1].id,
                         score: {
                             ten: 8000,
                             oya: [8000],
@@ -554,7 +554,7 @@ describe('Advanced Mahjong Rules', () => {
                         } as unknown as ScoreCalculation,
                     },
                     {
-                        winnerId: players[2].getId(),
+                        winnerId: players[2].id,
                         score: {
                             ten: 8000,
                             oya: [8000],
@@ -562,7 +562,7 @@ describe('Advanced Mahjong Rules', () => {
                         } as unknown as ScoreCalculation,
                     },
                 ],
-                loserId: players[0].getId(),
+                loserId: players[0].id,
             })
 
             // p2 (Head-bump): 25000 + 8000 (base) + 300 (honba) + 1000 (kyotaku) = 34300
@@ -584,7 +584,7 @@ describe('Advanced Mahjong Rules', () => {
             game.setOyaIndex(3)
 
             // Force initial seat order to match current players array
-            const playerIds = players.map((p) => p.getId())
+            const playerIds = players.map((p) => p.id)
             game.roundManager.initialPlayerOrder = playerIds
 
             // Give everyone same points
@@ -597,7 +597,7 @@ describe('Advanced Mahjong Rules', () => {
                 reason: 'ron',
                 winners: [
                     {
-                        winnerId: players[0].getId(),
+                        winnerId: players[0].id,
                         score: {
                             ten: 8000,
                             oya: [8000],
@@ -605,7 +605,7 @@ describe('Advanced Mahjong Rules', () => {
                         } as unknown as ScoreCalculation,
                     },
                 ],
-                loserId: players[1].getId(),
+                loserId: players[1].id,
             })
 
             expect(result.isGameOver).toBe(true)
@@ -617,10 +617,10 @@ describe('Advanced Mahjong Rules', () => {
             }[]
             // p[0] is Rank 1
             // p[2] and p[3] tied at 25000. p[2] was earlier in order.
-            expect(ranking[0].id).toBe(players[0].getId())
-            expect(ranking[1].id).toBe(players[2].getId()) // Rank 2
-            expect(ranking[2].id).toBe(players[3].getId()) // Rank 3
-            expect(ranking[3].id).toBe(players[1].getId()) // Rank 4
+            expect(ranking[0].id).toBe(players[0].id)
+            expect(ranking[1].id).toBe(players[2].id) // Rank 2
+            expect(ranking[2].id).toBe(players[3].id) // Rank 3
+            expect(ranking[3].id).toBe(players[1].id) // Rank 4
         })
     })
 })

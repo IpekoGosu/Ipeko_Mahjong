@@ -30,7 +30,7 @@ export class RoundManager4p extends AbstractRoundManager {
         },
     ): GameUpdate {
         const startScores: Record<string, number> = {}
-        players.forEach((p) => (startScores[p.getId()] = p.points))
+        players.forEach((p) => (startScores[p.id] = p.points))
 
         const events: GameUpdate['events'] = []
         let nextOyaIndex = this.oyaIndex
@@ -44,11 +44,11 @@ export class RoundManager4p extends AbstractRoundManager {
         let stickClaimer: Player | null = null
 
         if (result.reason === 'ron' && result.winners && result.loserId) {
-            const loser = players.find((p) => p.getId() === result.loserId)!
+            const loser = players.find((p) => p.id === result.loserId)!
 
             for (const [idx, winnerInfo] of result.winners.entries()) {
                 const winner = players.find(
-                    (p) => p.getId() === winnerInfo.winnerId,
+                    (p) => p.id === winnerInfo.winnerId,
                 )!
                 const isHeadbump = idx === 0
                 const honbaPoints = isHeadbump ? this.honba * 300 : 0
@@ -66,7 +66,7 @@ export class RoundManager4p extends AbstractRoundManager {
 
                 if (paoInfo) {
                     const responsiblePlayer = players.find(
-                        (p) => p.getId() === paoInfo.responsiblePlayerId,
+                        (p) => p.id === paoInfo.responsiblePlayerId,
                     )!
                     const halfBase = basePoints / 2
 
@@ -83,7 +83,7 @@ export class RoundManager4p extends AbstractRoundManager {
                         payload: {
                             winnerId: winnerInfo.winnerId,
                             loserId: result.loserId,
-                            responsiblePlayerId: responsiblePlayer.getId(),
+                            responsiblePlayerId: responsiblePlayer.id,
                             score: basePoints,
                             totalPoints: totalPoints + kyotakuPoints,
                             reason: 'ron-pao',
@@ -119,7 +119,7 @@ export class RoundManager4p extends AbstractRoundManager {
             result.winnerId &&
             result.score
         ) {
-            const winner = players.find((p) => p.getId() === result.winnerId)!
+            const winner = players.find((p) => p.id === result.winnerId)!
             const honbaPoints = this.honba * 300
             const totalPoints = result.score.ten + honbaPoints
 
@@ -130,7 +130,7 @@ export class RoundManager4p extends AbstractRoundManager {
 
             if (paoInfo) {
                 const responsiblePlayer = players.find(
-                    (p) => p.getId() === paoInfo.responsiblePlayerId,
+                    (p) => p.id === paoInfo.responsiblePlayerId,
                 )!
 
                 winner.points += totalPoints
@@ -148,7 +148,7 @@ export class RoundManager4p extends AbstractRoundManager {
                     eventName: 'score-update',
                     payload: {
                         winnerId: result.winnerId,
-                        responsiblePlayerId: responsiblePlayer.getId(),
+                        responsiblePlayerId: responsiblePlayer.id,
                         score: result.score.ten,
                         totalPoints:
                             totalPoints +
@@ -198,7 +198,7 @@ export class RoundManager4p extends AbstractRoundManager {
                 // 1. Check Nagashi Mangan
                 const nagashiWinners = players.filter((p) => {
                     if (!p.isNagashiEligible) return false
-                    const discards = p.getDiscards()
+                    const discards = p.discards
                     if (discards.length === 0) return false
                     return discards.every((t) => t.isTerminalOrHonor())
                 })
@@ -223,7 +223,7 @@ export class RoundManager4p extends AbstractRoundManager {
                         events.push({
                             eventName: 'score-update',
                             payload: {
-                                winnerId: winner.getId(),
+                                winnerId: winner.id,
                                 score: totalNagashi,
                                 reason: 'nagashi-mangan',
                             },
@@ -238,8 +238,7 @@ export class RoundManager4p extends AbstractRoundManager {
                     // 2. Regular Tenpai/Noten payments
                     const tenpaiList = players.filter(
                         (p) =>
-                            p.getHand().length <= 13 &&
-                            this.ruleManager.isTenpai(p),
+                            p.hand.length <= 13 && this.ruleManager.isTenpai(p),
                     )
                     const notenList = players.filter(
                         (p) => !tenpaiList.includes(p),
@@ -324,7 +323,7 @@ export class RoundManager4p extends AbstractRoundManager {
 
         const scoreDeltas: Record<string, number> = {}
         players.forEach((p) => {
-            scoreDeltas[p.getId()] = p.points - startScores[p.getId()]
+            scoreDeltas[p.id] = p.points - startScores[p.id]
         })
 
         let winScore = result.score
@@ -342,7 +341,7 @@ export class RoundManager4p extends AbstractRoundManager {
                 reason: result.reason,
                 abortReason: result.abortReason,
                 scores: players.map((p) => ({
-                    id: p.getId(),
+                    id: p.id,
                     points: p.points,
                 })),
                 scoreDeltas,
@@ -397,7 +396,7 @@ export class RoundManager4p extends AbstractRoundManager {
             const playerUma = uma[idx]
             const finalPoint = p.points - returnPoints + playerUma
             return {
-                id: p.getId(),
+                id: p.id,
                 points: p.points,
                 finalScore: idx === 0 ? finalPoint + oka : finalPoint,
                 rank: idx + 1,
@@ -407,6 +406,8 @@ export class RoundManager4p extends AbstractRoundManager {
         return {
             roomId,
             isGameOver: true,
+            reason: events.find((e) => e.eventName === 'round-ended')?.payload
+                .reason as any,
             events: [
                 ...events,
                 {

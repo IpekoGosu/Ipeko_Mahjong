@@ -63,7 +63,7 @@ describe('Sanma Scoring Logic', () => {
 
         game.triggerEndKyoku(roomId, {
             reason: 'tsumo',
-            winnerId: oya.getId(),
+            winnerId: oya.id,
             score,
         })
 
@@ -98,7 +98,7 @@ describe('Sanma Scoring Logic', () => {
 
         game.triggerEndKyoku(roomId, {
             reason: 'tsumo',
-            winnerId: winner.getId(),
+            winnerId: winner.id,
             score,
         })
 

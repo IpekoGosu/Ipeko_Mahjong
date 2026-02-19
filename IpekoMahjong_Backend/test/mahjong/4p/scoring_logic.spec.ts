@@ -71,8 +71,8 @@ describe('Mahjong Scoring Logic', () => {
         // Scenario 1: Ko wins from Oya
         game.triggerEndKyoku('test-room', {
             reason: 'ron',
-            winners: [{ winnerId: ko.getId(), score: scoreResult }],
-            loserId: oya.getId(),
+            winners: [{ winnerId: ko.id, score: scoreResult }],
+            loserId: oya.id,
         })
 
         expect(oya.points).toBe(25000 - 2000)
@@ -99,8 +99,8 @@ describe('Mahjong Scoring Logic', () => {
 
         game.triggerEndKyoku('test-room', {
             reason: 'ron',
-            winners: [{ winnerId: winner.getId(), score: scoreResult }],
-            loserId: loser.getId(),
+            winners: [{ winnerId: winner.id, score: scoreResult }],
+            loserId: loser.id,
         })
 
         expect(loser.points).toBe(25000 - 1300)
@@ -126,8 +126,8 @@ describe('Mahjong Scoring Logic', () => {
 
         game.triggerEndKyoku('test-room', {
             reason: 'ron',
-            winners: [{ winnerId: oya.getId(), score: scoreResult }],
-            loserId: ko.getId(),
+            winners: [{ winnerId: oya.id, score: scoreResult }],
+            loserId: ko.id,
         })
 
         expect(ko.points).toBe(25000 - 2000)
@@ -154,7 +154,7 @@ describe('Mahjong Scoring Logic', () => {
 
         game.triggerEndKyoku('test-room', {
             reason: 'tsumo',
-            winnerId: winner.getId(),
+            winnerId: winner.id,
             score: scoreResult,
         })
 
@@ -184,7 +184,7 @@ describe('Mahjong Scoring Logic', () => {
 
         game.triggerEndKyoku('test-room', {
             reason: 'tsumo',
-            winnerId: oya.getId(),
+            winnerId: oya.id,
             score: scoreResult,
         })
 
