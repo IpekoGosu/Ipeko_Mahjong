@@ -8,6 +8,8 @@ export class LoggerMiddleware implements NestMiddleware {
     constructor(private readonly logger: WinstonLoggerService) {}
 
     use(req: Request, res: Response, next: NextFunction) {
+        const startTime = Date.now()
+
         // 요청 정보 로깅
         const requestLog = {
             Request: `${req.method} ${req.originalUrl} - IP: ${req.ip} - User-Agent: ${req.headers['user-agent']}`,
@@ -31,14 +33,24 @@ export class LoggerMiddleware implements NestMiddleware {
 
         // 응답이 끝난 후 로깅
         res.on('finish', () => {
-            const responseLog: { Response: string; Body: unknown } = {
+            const duration = Date.now() - startTime
+            const responseLog: {
+                Response: string
+                Body: unknown
+                Duration: string
+            } = {
                 Response: `${res.statusCode} ${req.originalUrl}`,
                 Body: null,
+                Duration: `${duration}ms`,
             }
             if (res.locals.body instanceof Buffer) {
                 responseLog.Body = 'File Buffer'
             } else {
-                responseLog.Body = JSON.parse(res.locals.body)
+                try {
+                    responseLog.Body = JSON.parse(res.locals.body)
+                } catch (e) {
+                    responseLog.Body = res.locals.body
+                }
             }
             this.logger.log(responseLog)
         })
