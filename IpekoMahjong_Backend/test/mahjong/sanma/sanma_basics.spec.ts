@@ -1,4 +1,4 @@
-import { SanmaMahjongGame } from '@src/modules/mahjong/classes/MahjongGame.Sanma'
+import { SanmaMahjongGame } from '@src/modules/mahjong/classes/game/MahjongGame.Sanma'
 import { createTestSanmaGame } from '../test_utils'
 
 describe('Sanma Mahjong Game Basics', () => {

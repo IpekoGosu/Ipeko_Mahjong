@@ -1,5 +1,5 @@
 import { Tile } from '@src/modules/mahjong/classes/tile.class'
-import type { AbstractMahjongGame } from '@src/modules/mahjong/classes/AbstractMahjongGame'
+import type { AbstractMahjongGame } from '@src/modules/mahjong/classes/game/AbstractMahjongGame'
 
 export type Suit = 'm' | 'p' | 's' | 'z'
 

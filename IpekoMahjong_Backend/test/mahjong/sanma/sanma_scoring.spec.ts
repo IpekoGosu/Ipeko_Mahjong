@@ -1,4 +1,4 @@
-import { SanmaMahjongGame } from '@src/modules/mahjong/classes/MahjongGame.Sanma'
+import { SanmaMahjongGame } from '@src/modules/mahjong/classes/game/MahjongGame.Sanma'
 import { ScoreCalculation } from '@src/modules/mahjong/interfaces/mahjong.types'
 import { createTestSanmaManagers } from '../test_utils'
 import { DEFAULT_3P_RULES } from '@src/modules/mahjong/interfaces/game-rules.config'
