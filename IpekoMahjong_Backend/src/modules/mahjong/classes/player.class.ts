@@ -127,15 +127,12 @@ export class Player {
     }
 
     upgradePonToKan(tileToUpgrade: string, addedTile: Tile): Meld | null {
-        const rank = Tile.parseRank(tileToUpgrade)
-        const suit = tileToUpgrade[1]
+        const targetTile = Tile.fromString(tileToUpgrade)
 
         const meldIndex = this.melds.findIndex(
             (m) =>
                 m.type === 'pon' &&
-                m.tiles.some(
-                    (t) => t.getRank() === rank && t.getSuit() === suit,
-                ),
+                m.tiles.some((t) => t.equalsIgnoreRed(targetTile)),
         )
 
         if (meldIndex !== -1) {

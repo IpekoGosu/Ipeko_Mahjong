@@ -200,11 +200,7 @@ export class RoundManagerSanma extends AbstractRoundManager {
                 if (!p.isNagashiEligible) return false
                 const discards = p.getDiscards()
                 if (discards.length === 0) return false
-                return discards.every((t) => {
-                    const rank = t.getRank()
-                    const suit = t.getSuit()
-                    return suit === 'z' || rank === 1 || rank === 9
-                })
+                return discards.every((t) => t.isTerminalOrHonor())
             })
 
             if (nagashiWinners.length > 0) {

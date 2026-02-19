@@ -368,19 +368,27 @@ describe('Advanced Mahjong Rules', () => {
             }
             // Populate pendingActions so performAction is allowed
             game.actionManager.pendingActions = {
-                'p2': { pon: true }
+                p2: { pon: true },
             }
 
             // Setup p2 hand for Pon (update all instances to handle potential mismatch)
-            game.getPlayers().forEach(p => {
+            game.getPlayers().forEach((p) => {
                 if (p.getId() === 'p2') {
-                    (p as TestPlayer).setHand([new Tile('m', 1, false, 1), new Tile('m', 1, false, 2)])
+                    ;(p as TestPlayer).setHand([
+                        new Tile('m', 1, false, 1),
+                        new Tile('m', 1, false, 2),
+                    ])
                 }
             })
 
             // Use performAction to simulate stealing (Pon)
-            const actionResult = game.performAction(roomId, 'p2', 'pon', '1m', ['1m', '1m'])
-            expect(actionResult.events.some(e => e.eventName === 'error')).toBe(false)
+            const actionResult = game.performAction(roomId, 'p2', 'pon', '1m', [
+                '1m',
+                '1m',
+            ])
+            expect(
+                actionResult.events.some((e) => e.eventName === 'error'),
+            ).toBe(false)
 
             // Manually set points
             players.forEach((p) => (p.points = 25000))

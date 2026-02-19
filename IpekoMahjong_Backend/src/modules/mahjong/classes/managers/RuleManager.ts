@@ -4,6 +4,7 @@ import {
     WinContext,
 } from '@src/modules/mahjong/interfaces/mahjong.types'
 import { Player } from '@src/modules/mahjong/classes/player.class'
+import { Tile } from '@src/modules/mahjong/classes/tile.class'
 import Riichi from 'riichi'
 import { Injectable, Logger } from '@nestjs/common'
 
@@ -11,24 +12,8 @@ import { Injectable, Logger } from '@nestjs/common'
 export class RuleManager {
     private readonly logger = new Logger(RuleManager.name)
 
-    getActualDora(indicator: string): string {
-        const rank = parseInt(indicator[0])
-        const suit = indicator[1]
-
-        if (suit === 'z') {
-            if (rank <= 4) {
-                // Winds: E->S->W->N->E (1->2->3->4->1)
-                return `${(rank % 4) + 1}z`
-            } else {
-                // Dragons: White->Green->Red->White (5->6->7->5)
-                return rank === 7 ? '5z' : `${rank + 1}z`
-            }
-        } else {
-            // Numbers: 1-9-1
-            // Handle aka dora indicator (0) - technically doesn't happen but safe to handle as 5
-            const actualRank = rank === 0 ? 5 : rank
-            return `${(actualRank % 9) + 1}${suit}`
-        }
+    getActualDora(indicator: string, isSanma: boolean = false): string {
+        return Tile.getDoraFromIndicator(indicator, isSanma)
     }
 
     getRiichiDiscards(player: Player): string[] {
@@ -199,13 +184,9 @@ export class RuleManager {
         ponMelds.forEach((pon) => {
             // Pon tiles are all same, take first
             const ponTile = pon.tiles[0]
-            const rank = ponTile.getRank()
-            const suit = ponTile.getSuit()
 
             // Check if we have the 4th tile in hand
-            const match = hand.find(
-                (t) => t.getRank() === rank && t.getSuit() === suit,
-            )
+            const match = hand.find((t) => t.equalsIgnoreRed(ponTile))
             if (match) {
                 options.push(match.toString())
             }
@@ -273,20 +254,21 @@ export class RuleManager {
         const uniqueTiles = new Set<string>()
 
         hand.forEach((tile) => {
-            const rank = tile.getRank()
-            const suit = tile.getSuit()
-
-            // Check if terminal or honor
-            if (suit === 'z' || rank === 1 || rank === 9) {
-                uniqueTiles.add(`${rank}${suit}`)
+            if (tile.isTerminalOrHonor()) {
+                uniqueTiles.add(tile.toIgnoreRedString())
             }
         })
 
         return uniqueTiles.size
     }
 
-    getActualDoraList(indicators: string[]): string[] {
-        return indicators.map((indicator) => this.getActualDora(indicator))
+    getActualDoraList(
+        indicators: string[],
+        isSanma: boolean = false,
+    ): string[] {
+        return indicators.map((indicator) =>
+            this.getActualDora(indicator, isSanma),
+        )
     }
 
     isTenpai(player: Player): boolean {
@@ -342,6 +324,7 @@ export class RuleManager {
     calculateScore(
         player: Player,
         context: WinContext,
+        isSanma: boolean = false,
     ): ScoreCalculation | null {
         // 1. Construct Hand String
         let handStr = player.getHandStringForRiichi()
@@ -383,12 +366,12 @@ export class RuleManager {
         if (context.isTenhou || context.isChiihou) extra += 't'
 
         const riichi = new Riichi(handStr)
-        const dora = context.dora.map((d) => this.getActualDora(d))
+        const dora = context.dora.map((d) => this.getActualDora(d, isSanma))
 
         // Add Uradora if Riichi
         if (context.isRiichi && context.uradora) {
             const uradoraList = context.uradora.map((u) =>
-                this.getActualDora(u),
+                this.getActualDora(u, isSanma),
             )
             dora.push(...uradoraList)
         }
@@ -433,9 +416,10 @@ export class RuleManager {
         player: Player,
         tileString: string,
         context: WinContext,
+        isSanma: boolean = false,
     ): { isAgari: boolean; score?: ScoreCalculation } {
         const ctx = { ...context, winningTile: tileString }
-        const score = this.calculateScore(player, ctx)
+        const score = this.calculateScore(player, ctx, isSanma)
         return {
             isAgari: !!score,
             score: score || undefined,

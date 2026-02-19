@@ -94,11 +94,8 @@ export class ActionManagerSanma extends AbstractActionManager {
                 return
             }
 
-            const rank = Tile.parseRank(tileString)
-            const suit = tileString[1]
-            const matches = hand.filter(
-                (t) => t.getRank() === rank && t.getSuit() === suit,
-            )
+            const targetTile = Tile.fromString(tileString)
+            const matches = hand.filter((t) => t.equalsIgnoreRed(targetTile))
 
             if (matches.length >= 2) {
                 possibleActions.pon = true
@@ -211,7 +208,7 @@ export class ActionManagerSanma extends AbstractActionManager {
             isRiichi: player.isRiichi,
             isDoubleRiichi: player.isDoubleRiichi,
         }
-        return this.ruleManager.verifyWin(player, tileString, winCtx)
+        return this.ruleManager.verifyWin(player, tileString, winCtx, true)
     }
 
     public verifyTsumo(
@@ -237,6 +234,11 @@ export class ActionManagerSanma extends AbstractActionManager {
             dora: context.dora,
             uradora: context.uradora,
         }
-        return this.ruleManager.verifyWin(player, lastTile.toString(), winCtx)
+        return this.ruleManager.verifyWin(
+            player,
+            lastTile.toString(),
+            winCtx,
+            true,
+        )
     }
 }
