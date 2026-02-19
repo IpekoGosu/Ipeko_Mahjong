@@ -141,11 +141,10 @@ export abstract class AbstractActionManager {
         meldTiles?: Tile[]
         tilesToMove?: string[]
     } {
-        const rank = Tile.parseRank(tileString)
-        const suit = tileString[1]
+        const targetTile = Tile.fromString(tileString)
         const matches = player
             .getHand()
-            .filter((t) => t.getRank() === rank && t.getSuit() === suit)
+            .filter((t) => t.equalsIgnoreRed(targetTile))
         if (matches.length < 4)
             return { success: false, error: 'Not enough tiles' }
 
@@ -167,20 +166,15 @@ export abstract class AbstractActionManager {
         meldTiles?: Tile[]
         tilesToMove?: string[]
     } {
-        const rank = Tile.parseRank(tileString)
-        const suit = tileString[1]
-        const tile = player
-            .getHand()
-            .find((t) => t.getRank() === rank && t.getSuit() === suit)
+        const targetTile = Tile.fromString(tileString)
+        const tile = player.getHand().find((t) => t.equalsIgnoreRed(targetTile))
         if (!tile) return { success: false, error: 'Tile not in hand' }
 
         const ponMeld = player
             .getMelds()
             .find(
                 (m) =>
-                    m.type === 'pon' &&
-                    m.tiles[0].getRank() === rank &&
-                    m.tiles[0].getSuit() === suit,
+                    m.type === 'pon' && m.tiles[0].equalsIgnoreRed(targetTile),
             )
         if (!ponMeld)
             return {

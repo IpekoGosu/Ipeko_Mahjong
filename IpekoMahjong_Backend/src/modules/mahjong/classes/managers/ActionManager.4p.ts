@@ -96,11 +96,8 @@ export class ActionManager4p extends AbstractActionManager {
                 return
             }
 
-            const rank = Tile.parseRank(tileString)
-            const suit = tileString[1]
-            const matches = hand.filter(
-                (t) => t.getRank() === rank && t.getSuit() === suit,
-            )
+            const targetTile = Tile.fromString(tileString)
+            const matches = hand.filter((t) => t.equalsIgnoreRed(targetTile))
 
             if (matches.length >= 2) {
                 possibleActions.pon = true
