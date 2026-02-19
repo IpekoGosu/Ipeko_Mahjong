@@ -357,7 +357,7 @@ export class RoundManagerSanma extends AbstractRoundManager {
             roomId,
             isGameOver: true,
             reason: events.find((e) => e.eventName === 'round-ended')?.payload
-                .reason as GameUpdate['reason'],
+                ?.reason as GameUpdate['reason'],
             events: [
                 ...events,
                 {
