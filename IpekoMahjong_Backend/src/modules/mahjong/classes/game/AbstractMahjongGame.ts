@@ -126,6 +126,10 @@ export abstract class AbstractMahjongGame {
         this.actionManager.activeDiscard = v
     }
 
+    protected get isSanma(): boolean {
+        return this.players.length === 3
+    }
+
     constructor(
         playerInfos: { id: string; isAi: boolean; ai?: MahjongAI }[],
         roundManager: AbstractRoundManager,
@@ -216,10 +220,9 @@ export abstract class AbstractMahjongGame {
 
         // 5. Generate round-started events (Everyone has 13 tiles)
         const doraIndicators = this.getDora().map((t) => t.toString())
-        const isSanma = this.players.length === 3
         const actualDora = this.ruleManager.getActualDoraList(
             doraIndicators,
-            isSanma,
+            this.isSanma,
         )
 
         const startEvents: GameUpdate['events'] = this.players.map((p) => ({
@@ -357,10 +360,9 @@ export abstract class AbstractMahjongGame {
             this.wall.revealDora()
             this.pendingDoraReveal = false
             const doraIndicators = this.getDora().map((t) => t.toString())
-            const isSanma = this.players.length === 3
             const actualDora = this.ruleManager.getActualDoraList(
                 doraIndicators,
-                isSanma,
+                this.isSanma,
             )
             doraRevealedEvent = {
                 eventName: 'dora-revealed',
@@ -736,10 +738,9 @@ export abstract class AbstractMahjongGame {
                 this.wall.revealDora()
                 this.pendingDoraReveal = false
                 const doraIndicators = this.getDora().map((t) => t.toString())
-                const isSanma = this.players.length === 3
                 const actualDora = this.ruleManager.getActualDoraList(
                     doraIndicators,
-                    isSanma,
+                    this.isSanma,
                 )
                 events.push({
                     eventName: 'dora-revealed',
@@ -970,7 +971,6 @@ export abstract class AbstractMahjongGame {
 
     public getGameState(): GameState {
         const doraIndicators = this.getDora().map((t) => t.toString())
-        const isSanma = this.players.length === 3
         return {
             bakaze: this.bakaze,
             kyoku: this.kyokuNum,
@@ -985,9 +985,9 @@ export abstract class AbstractMahjongGame {
             doraIndicators: doraIndicators,
             actualDora: this.ruleManager.getActualDoraList(
                 doraIndicators,
-                isSanma,
+                this.isSanma,
             ),
-            gameMode: isSanma ? 'sanma' : '4p',
+            gameMode: this.isSanma ? 'sanma' : '4p',
         }
     }
 
