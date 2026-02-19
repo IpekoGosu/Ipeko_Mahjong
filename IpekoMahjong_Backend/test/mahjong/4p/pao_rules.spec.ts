@@ -222,4 +222,46 @@ describe('Mahjong - Pao (Responsibility Payment) Rules', () => {
         expect(players.find((p) => p.getId() === 'p2')?.points).toBe(1000)
         expect(players.find((p) => p.getId() === 'p4')?.points).toBe(1000)
     })
+
+    it('should split payment between discarder and responsible player for Ron in Pao with honba', () => {
+        const players = game.getPlayers()
+        const p1 = game.getTestPlayer('p1')
+        game.roundManager.honba = 1 // 1 honba = 300 points
+
+        // Setup Daisangen Pao for p1 (p4 responsible)
+        game.setPaoStatus('p1', 'Daisangen', 'p4')
+
+        const yakumanScore: ScoreCalculation = {
+            han: 13,
+            fu: 20,
+            ten: 48000,
+            yaku: { Daisangen: '13' },
+            yakuman: 1,
+            oya: [16000],
+            ko: [16000, 8000],
+            name: 'Daisangen',
+            text: 'Yakuman',
+        }
+
+        // p1 wins by Ron on p2
+        game.callEndKyoku(roomId, {
+            reason: 'ron',
+            winners: [{ winnerId: 'p1', score: yakumanScore }],
+            loserId: 'p2',
+            pao: [{ winnerId: 'p1', responsiblePlayerId: 'p4' }],
+        })
+
+        // Expected (Standard Rules):
+        // totalPoints = 48000 + 300 = 48300
+        // halfBase = 48000 / 2 = 24000
+        // loser (p2) pays halfBase + honba = 24000 + 300 = 24300
+        // responsible (p4) pays halfBase = 24000
+        // p1: 25000 + 48300 = 73300
+        // p2: 25000 - 24300 = 700
+        // p4: 25000 - 24000 = 1000
+
+        expect(p1.points).toBe(73300)
+        expect(players.find((p) => p.getId() === 'p2')?.points).toBe(700)
+        expect(players.find((p) => p.getId() === 'p4')?.points).toBe(1000)
+    })
 })

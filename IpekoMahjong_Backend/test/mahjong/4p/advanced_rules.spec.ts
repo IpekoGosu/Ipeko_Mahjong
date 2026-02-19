@@ -323,8 +323,8 @@ describe('Advanced Mahjong Rules', () => {
 
             // Others discard regular tiles
             const p2 = game.getTestPlayer('p2')
-            p2.setHand([new Tile('m', 2, false, 0)])
-            p2.discard('2m')
+            p2.setHand([new Tile('m', 1, false, 1), new Tile('m', 1, false, 2)])
+            p2.discard('2m') // Placeholder
 
             // Manually set points to see the effect
             players.forEach((p) => (p.points = 25000))
@@ -343,6 +343,57 @@ describe('Advanced Mahjong Rules', () => {
                 (e) => e.eventName === 'score-update',
             )
             expect(scoreUpdate?.payload.reason).toBe('nagashi-mangan')
+        })
+
+        it('should NOT trigger Nagashi Mangan if a terminal discard was stolen', () => {
+            const players = game.getPlayers()
+            const p1 = game.getTestPlayer('p1')
+
+            // Setup p1 discards with only terminals/honors
+            p1.resetKyokuState()
+            p1.setHand([
+                new Tile('m', 1, false, 0),
+                new Tile('m', 9, false, 1),
+                new Tile('z', 1, false, 2),
+            ])
+            p1.discard('1m')
+            p1.discard('9m')
+            p1.discard('1z')
+
+            // p2 steals p1's '1m'
+            // We need activeDiscard to be set for handleOpenMeld (which is called via performAction)
+            game.actionManager.activeDiscard = {
+                playerId: 'p1',
+                tile: new Tile('m', 1, false, 0),
+            }
+            // Populate pendingActions so performAction is allowed
+            game.actionManager.getPossibleActions('p1', '1m', game.getPlayers(), {
+                bakaze: '1z',
+                dora: [],
+                playerContexts: game.getPlayers().map(p => ({
+                    playerId: p.getId(),
+                    seatWind: '1z',
+                    uradora: []
+                })),
+                isHoutei: false
+            })
+
+            // Use performAction to simulate stealing (Pon)
+            game.performAction(roomId, 'p2', 'pon', '1m', ['1m', '1m'])
+
+            // Manually set points
+            players.forEach((p) => (p.points = 25000))
+
+            // Trigger ryuukyoku (wall empty)
+            const result = game.callEndKyoku(roomId, { reason: 'ryuukyoku' })
+
+            const scoreUpdate = result.events.find(
+                (e) =>
+                    e.eventName === 'score-update' &&
+                    e.payload.reason === 'nagashi-mangan',
+            )
+            expect(scoreUpdate).toBeUndefined()
+            expect(p1.points).toBe(25000) // Should not have gained Nagashi points
         })
     })
 

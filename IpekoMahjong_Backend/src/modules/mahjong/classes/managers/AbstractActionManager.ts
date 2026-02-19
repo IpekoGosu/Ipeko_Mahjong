@@ -231,6 +231,7 @@ export abstract class AbstractActionManager {
         const discarder = players.find((p) => p.getId() === stolenFromId)
         if (discarder) {
             discarder.removeDiscard(stolenTile.toString())
+            discarder.isNagashiEligible = false
         }
 
         const meldTiles = [...removedTiles, stolenTile]

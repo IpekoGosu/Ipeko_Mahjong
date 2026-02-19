@@ -57,31 +57,66 @@ export class RoundManagerSanma extends AbstractRoundManager {
                 )!
                 const isHeadbump = idx === 0
                 const honbaPoints = isHeadbump ? this.honba * 300 : 0
+
+                // Check Pao for Ron
+                const paoInfo = result.pao?.find(
+                    (p) => p.winnerId === winnerInfo.winnerId,
+                )
                 const basePoints = this.calculateRonBasePoints(
                     winner,
                     loser,
                     winnerInfo.score,
                 )
                 const totalPoints = basePoints + honbaPoints
-                winner.points += totalPoints
-                loser.points -= totalPoints
-                if (isHeadbump) stickClaimer = winner
-                if (winner.isOya) renchan = true
 
-                events.push({
-                    eventName: 'score-update',
-                    payload: {
-                        winnerId: winnerInfo.winnerId,
-                        loserId: result.loserId,
-                        score: basePoints,
-                        totalPoints:
-                            basePoints +
-                            honbaPoints +
-                            (isHeadbump ? this.kyotaku * 1000 : 0),
-                        reason: 'ron',
-                    },
-                    to: 'all',
-                })
+                if (paoInfo) {
+                    const responsiblePlayer = players.find(
+                        (p) => p.getId() === paoInfo.responsiblePlayerId,
+                    )!
+                    const halfBase = basePoints / 2
+
+                    winner.points += totalPoints
+                    loser.points -= halfBase + honbaPoints
+                    responsiblePlayer.points -= halfBase
+
+                    if (isHeadbump) stickClaimer = winner
+                    if (winner.isOya) renchan = true
+
+                    events.push({
+                        eventName: 'score-update',
+                        payload: {
+                            winnerId: winnerInfo.winnerId,
+                            loserId: result.loserId,
+                            responsiblePlayerId: responsiblePlayer.getId(),
+                            score: basePoints,
+                            totalPoints:
+                                totalPoints +
+                                (isHeadbump ? this.kyotaku * 1000 : 0),
+                            reason: 'ron-pao',
+                        },
+                        to: 'all',
+                    })
+                } else {
+                    winner.points += totalPoints
+                    loser.points -= totalPoints
+
+                    if (isHeadbump) stickClaimer = winner
+                    if (winner.isOya) renchan = true
+
+                    events.push({
+                        eventName: 'score-update',
+                        payload: {
+                            winnerId: winnerInfo.winnerId,
+                            loserId: result.loserId,
+                            score: basePoints,
+                            totalPoints:
+                                totalPoints +
+                                (isHeadbump ? this.kyotaku * 1000 : 0),
+                            reason: 'ron',
+                        },
+                        to: 'all',
+                    })
+                }
             }
             if (renchan) nextHonba++
             else nextHonba = 0
@@ -93,56 +128,137 @@ export class RoundManagerSanma extends AbstractRoundManager {
             const winner = players.find((p) => p.getId() === result.winnerId)!
             const honbaPoints = this.honba * 300
             const totalPoints = result.score.ten + honbaPoints
-            winner.points += totalPoints
-            stickClaimer = winner
 
-            const otherPlayers = players.filter((p) => p !== winner)
-            if (winner.isOya) {
-                // Tsumo as Oya: Ko pays (ten/3) rounded up.
-                // In Sanma, usually it's just divided.
-                const payment = result.score.oya[0] + 100 * this.honba
-                otherPlayers.forEach((p) => (p.points -= payment))
-                renchan = true
-                nextHonba++
-            } else {
-                const oya = players.find((p) => p.isOya)!
-                const ko = otherPlayers.find((p) => !p.isOya)!
-                const oyaPayment = result.score.ko[0] + 100 * this.honba
-                const koPayment = result.score.ko[1] + 100 * this.honba
-                oya.points -= oyaPayment
-                ko.points -= koPayment
-                nextHonba = 0
-            }
-            events.push({
-                eventName: 'score-update',
-                payload: {
-                    winnerId: result.winnerId,
-                    score: result.score.ten,
-                    totalPoints: totalPoints + this.kyotaku * 1000,
-                    reason: 'tsumo',
-                },
-                to: 'all',
-            })
-        } else if (result.reason === 'ryuukyoku') {
-            // Tenpai-noten logic for 3p
-            const tenpaiList = players.filter((p) =>
-                this.ruleManager.isTenpai(p),
+            // Check Pao for Tsumo
+            const paoInfo = result.pao?.find(
+                (p) => p.winnerId === result.winnerId,
             )
-            const notenList = players.filter((p) => !tenpaiList.includes(p))
-            if (tenpaiList.length > 0 && notenList.length > 0) {
-                const flow = 3000
-                const payReceive = flow / tenpaiList.length
-                const payGive = flow / notenList.length
-                tenpaiList.forEach((p) => (p.points += payReceive))
-                notenList.forEach((p) => (p.points -= payGive))
+
+            if (paoInfo) {
+                const responsiblePlayer = players.find(
+                    (p) => p.getId() === paoInfo.responsiblePlayerId,
+                )!
+
+                winner.points += totalPoints
+                responsiblePlayer.points -= totalPoints
+                stickClaimer = winner
+
+                if (winner.isOya) {
+                    renchan = true
+                    nextHonba++
+                } else {
+                    nextHonba = 0
+                }
+
+                events.push({
+                    eventName: 'score-update',
+                    payload: {
+                        winnerId: result.winnerId,
+                        responsiblePlayerId: responsiblePlayer.getId(),
+                        score: result.score.ten,
+                        totalPoints: totalPoints + this.kyotaku * 1000,
+                        reason: 'tsumo-pao',
+                    },
+                    to: 'all',
+                })
+            } else {
+                winner.points += totalPoints
+                stickClaimer = winner
+
+                const otherPlayers = players.filter((p) => p !== winner)
+                if (winner.isOya) {
+                    // Tsumo as Oya: Ko pays (ten/3) rounded up.
+                    // In Sanma, usually it's just divided.
+                    const payment = result.score.oya[0] + 100 * this.honba
+                    otherPlayers.forEach((p) => (p.points -= payment))
+                    renchan = true
+                    nextHonba++
+                } else {
+                    const oya = players.find((p) => p.isOya)!
+                    const ko = otherPlayers.find((p) => !p.isOya)!
+                    const oyaPayment = result.score.ko[0] + 100 * this.honba
+                    const koPayment = result.score.ko[1] + 100 * this.honba
+                    oya.points -= oyaPayment
+                    ko.points -= koPayment
+                    nextHonba = 0
+                }
+
+                events.push({
+                    eventName: 'score-update',
+                    payload: {
+                        winnerId: result.winnerId,
+                        score: result.score.ten,
+                        totalPoints: totalPoints + this.kyotaku * 1000,
+                        reason: 'tsumo',
+                    },
+                    to: 'all',
+                })
             }
-            const oya = players[this.oyaIndex]
-            if (tenpaiList.includes(oya)) {
-                renchan = true
+        } else if (result.reason === 'ryuukyoku') {
+            // 1. Check Nagashi Mangan
+            const nagashiWinners = players.filter((p) => {
+                if (!p.isNagashiEligible) return false
+                const discards = p.getDiscards()
+                if (discards.length === 0) return false
+                return discards.every((t) => {
+                    const rank = t.getRank()
+                    const suit = t.getSuit()
+                    return suit === 'z' || rank === 1 || rank === 9
+                })
+            })
+
+            if (nagashiWinners.length > 0) {
+                for (const winner of nagashiWinners) {
+                    const otherPlayers = players.filter((p) => p !== winner)
+                    let totalNagashi = 0
+                    if (winner.isOya) {
+                        const payment = 4000 // Oya Mangan Tsumo: 4000 all
+                        otherPlayers.forEach((p) => (p.points -= payment))
+                        totalNagashi = payment * 2 // Sanma: 2 other players
+                        renchan = true
+                    } else {
+                        otherPlayers.forEach((p) => {
+                            const payment = p.isOya ? 4000 : 2000
+                            p.points -= payment
+                            totalNagashi += payment
+                        })
+                    }
+                    winner.points += totalNagashi
+                    events.push({
+                        eventName: 'score-update',
+                        payload: {
+                            winnerId: winner.getId(),
+                            score: totalNagashi,
+                            reason: 'nagashi-mangan',
+                        },
+                        to: 'all',
+                    })
+                }
+                if (nagashiWinners.some((p) => p.isOya)) {
+                    renchan = true
+                }
                 nextHonba++
             } else {
-                nextHonba++
-                // nextOyaIndex will handle rotation below
+                // 2. Tenpai-noten logic for 3p
+                const tenpaiList = players.filter((p) =>
+                    this.ruleManager.isTenpai(p),
+                )
+                const notenList = players.filter((p) => !tenpaiList.includes(p))
+                if (tenpaiList.length > 0 && notenList.length > 0) {
+                    const flow = 3000
+                    const payReceive = flow / tenpaiList.length
+                    const payGive = flow / notenList.length
+                    tenpaiList.forEach((p) => (p.points += payReceive))
+                    notenList.forEach((p) => (p.points -= payGive))
+                }
+                const oya = players[this.oyaIndex]
+                if (tenpaiList.includes(oya)) {
+                    renchan = true
+                    nextHonba++
+                } else {
+                    nextHonba++
+                    // nextOyaIndex will handle rotation below
+                }
             }
         }
 

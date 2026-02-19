@@ -20,6 +20,7 @@ export class Player {
     public isFuriten: boolean = false
     public isTemporaryFuriten: boolean = false
     public isRiichiFuriten: boolean = false
+    public isNagashiEligible: boolean = true
     public points: number = 25000
     public initialSeatIndex?: number
     public forbiddenDiscard: string[] = []
@@ -42,6 +43,7 @@ export class Player {
         this.isFuriten = false
         this.isTemporaryFuriten = false
         this.isRiichiFuriten = false
+        this.isNagashiEligible = true
         this.forbiddenDiscard = []
     }
 

@@ -68,13 +68,11 @@ export class RoundManager4p extends AbstractRoundManager {
                     const responsiblePlayer = players.find(
                         (p) => p.getId() === paoInfo.responsiblePlayerId,
                     )!
-                    const halfBase = Math.floor(basePoints / 2)
-                    const halfHonba = Math.floor(honbaPoints / 2)
+                    const halfBase = basePoints / 2
 
                     winner.points += totalPoints
-                    loser.points -= halfBase + halfHonba
-                    responsiblePlayer.points -=
-                        basePoints - halfBase + honbaPoints - halfHonba
+                    loser.points -= halfBase + honbaPoints
+                    responsiblePlayer.points -= halfBase
 
                     if (isHeadbump) stickClaimer = winner
                     if (winner.isOya) renchan = true
@@ -199,6 +197,7 @@ export class RoundManager4p extends AbstractRoundManager {
             } else {
                 // 1. Check Nagashi Mangan
                 const nagashiWinners = players.filter((p) => {
+                    if (!p.isNagashiEligible) return false
                     const discards = p.getDiscards()
                     if (discards.length === 0) return false
                     return discards.every((t) => {
