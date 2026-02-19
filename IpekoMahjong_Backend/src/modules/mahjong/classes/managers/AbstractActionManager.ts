@@ -251,6 +251,7 @@ export abstract class AbstractActionManager {
             isHoutei: boolean
         },
         isKakan?: boolean,
+        isSanma?: boolean,
     ): Record<string, PossibleActions>
 
     public abstract performAction(
@@ -278,6 +279,7 @@ export abstract class AbstractActionManager {
             isHoutei: boolean
         },
         isKakan?: boolean,
+        isSanma?: boolean,
     ): { isAgari: boolean; score?: ScoreCalculation }
 
     public abstract verifyTsumo(
@@ -290,5 +292,6 @@ export abstract class AbstractActionManager {
             isHaitei: boolean
             rinshanFlag: boolean
         },
+        isSanma?: boolean,
     ): { isAgari: boolean; score?: ScoreCalculation }
 }

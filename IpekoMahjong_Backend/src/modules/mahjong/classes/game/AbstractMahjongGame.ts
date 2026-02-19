@@ -898,16 +898,20 @@ export abstract class AbstractMahjongGame {
                 (e) => e.eventName === 'new-tile-drawn',
             )
             if (drawEvent && drawEvent.payload) {
-                const canTsumo = this.actionManager.verifyTsumo(currentPlayer, {
-                    bakaze: this.bakaze,
-                    seatWind: this.getSeatWind(currentPlayer),
-                    dora: this.getDora().map((t) => t.toString()),
-                    uradora: currentPlayer.isRiichi
-                        ? this.wall.getUradora().map((t) => t.toString())
-                        : [],
-                    isHaitei: this.wall.getRemainingTiles() === 0,
-                    rinshanFlag: this.rinshanFlag,
-                }, this.isSanma).isAgari
+                const canTsumo = this.actionManager.verifyTsumo(
+                    currentPlayer,
+                    {
+                        bakaze: this.bakaze,
+                        seatWind: this.getSeatWind(currentPlayer),
+                        dora: this.getDora().map((t) => t.toString()),
+                        uradora: currentPlayer.isRiichi
+                            ? this.wall.getUradora().map((t) => t.toString())
+                            : [],
+                        isHaitei: this.wall.getRemainingTiles() === 0,
+                        rinshanFlag: this.rinshanFlag,
+                    },
+                    this.isSanma,
+                ).isAgari
                 drawEvent.payload.canTsumo = canTsumo
             }
         }
@@ -1027,16 +1031,20 @@ export abstract class AbstractMahjongGame {
     checkCanTsumo(playerId: string): boolean {
         const player = this.getPlayer(playerId)
         if (!player) return false
-        const result = this.actionManager.verifyTsumo(player, {
-            bakaze: this.bakaze,
-            seatWind: this.getSeatWind(player),
-            dora: this.getDora().map((t) => t.toString()),
-            uradora: player.isRiichi
-                ? this.wall.getUradora().map((t) => t.toString())
-                : [],
-            isHaitei: this.wall.getRemainingTiles() === 0,
-            rinshanFlag: this.rinshanFlag,
-        }, this.isSanma)
+        const result = this.actionManager.verifyTsumo(
+            player,
+            {
+                bakaze: this.bakaze,
+                seatWind: this.getSeatWind(player),
+                dora: this.getDora().map((t) => t.toString()),
+                uradora: player.isRiichi
+                    ? this.wall.getUradora().map((t) => t.toString())
+                    : [],
+                isHaitei: this.wall.getRemainingTiles() === 0,
+                rinshanFlag: this.rinshanFlag,
+            },
+            this.isSanma,
+        )
         return result.isAgari
     }
 

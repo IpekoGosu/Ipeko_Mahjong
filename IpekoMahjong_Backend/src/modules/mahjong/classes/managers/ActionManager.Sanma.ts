@@ -31,6 +31,7 @@ export class ActionManagerSanma extends AbstractActionManager {
             isHoutei: boolean
         },
         isKakan: boolean = false,
+        _isSanma: boolean = true,
     ): Record<string, PossibleActions> {
         const discarder = players.find((p) => p.id === discarderId)
         if (!discarder) return {}
@@ -195,6 +196,7 @@ export class ActionManagerSanma extends AbstractActionManager {
             isHoutei: boolean
         },
         isKakan: boolean = false,
+        isSanma: boolean = true,
     ): { isAgari: boolean; score?: ScoreCalculation } {
         const winCtx: WinContext = {
             bakaze: context.bakaze,
@@ -208,7 +210,7 @@ export class ActionManagerSanma extends AbstractActionManager {
             isRiichi: player.isRiichi,
             isDoubleRiichi: player.isDoubleRiichi,
         }
-        return this.ruleManager.verifyWin(player, tileString, winCtx, true)
+        return this.ruleManager.verifyWin(player, tileString, winCtx, isSanma)
     }
 
     public verifyTsumo(
@@ -221,6 +223,7 @@ export class ActionManagerSanma extends AbstractActionManager {
             isHaitei: boolean
             rinshanFlag: boolean
         },
+        isSanma: boolean = true,
     ): { isAgari: boolean; score?: ScoreCalculation } {
         const lastTile = player.hand.slice(-1)[0]
         const winCtx: WinContext = {
@@ -238,7 +241,7 @@ export class ActionManagerSanma extends AbstractActionManager {
             player,
             lastTile.toString(),
             winCtx,
-            true,
+            isSanma,
         )
     }
 }

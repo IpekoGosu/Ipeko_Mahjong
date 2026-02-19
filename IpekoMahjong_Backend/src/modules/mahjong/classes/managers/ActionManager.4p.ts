@@ -31,6 +31,7 @@ export class ActionManager4p extends AbstractActionManager {
             isHoutei: boolean
         },
         isKakan: boolean = false,
+        _isSanma: boolean = false,
     ): Record<string, PossibleActions> {
         const discarder = players.find((p) => p.id === discarderId)
         if (!discarder) return {}
@@ -206,6 +207,7 @@ export class ActionManager4p extends AbstractActionManager {
             isHoutei: boolean
         },
         isKakan: boolean = false,
+        isSanma: boolean = false,
     ): { isAgari: boolean; score?: ScoreCalculation } {
         const winCtx: WinContext = {
             bakaze: context.bakaze,
@@ -222,7 +224,7 @@ export class ActionManager4p extends AbstractActionManager {
             isDoubleRiichi: player.isDoubleRiichi,
         }
 
-        return this.ruleManager.verifyWin(player, tileString, winCtx)
+        return this.ruleManager.verifyWin(player, tileString, winCtx, isSanma)
     }
 
     public verifyTsumo(
@@ -235,6 +237,7 @@ export class ActionManager4p extends AbstractActionManager {
             isHaitei: boolean
             rinshanFlag: boolean
         },
+        isSanma: boolean = false,
     ): { isAgari: boolean; score?: ScoreCalculation } {
         const lastTile = player.hand.slice(-1)[0]
         const winCtx: WinContext = {
@@ -252,7 +255,12 @@ export class ActionManager4p extends AbstractActionManager {
             uradora: context.uradora,
         }
 
-        return this.ruleManager.verifyWin(player, lastTile.toString(), winCtx)
+        return this.ruleManager.verifyWin(
+            player,
+            lastTile.toString(),
+            winCtx,
+            isSanma,
+        )
     }
 
     public checkChi(player: Player, tileString: string): string[][] {
