@@ -9,6 +9,7 @@ export interface Meld {
     type: MeldType
     tiles: Tile[]
     opened: boolean // true if not a closed kan
+    stolenFrom?: string
 }
 
 export interface ScoreCalculation {
@@ -118,4 +119,5 @@ export interface RoundEndResult {
     loserId?: string
     score?: ScoreCalculation
     abortReason?: string
+    pao?: { winnerId: string; responsiblePlayerId: string }[]
 }

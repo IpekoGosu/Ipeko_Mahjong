@@ -32,6 +32,7 @@ export class RoundManagerSanma extends AbstractRoundManager {
             loserId?: string
             score?: ScoreCalculation
             abortReason?: string
+            pao?: { winnerId: string; responsiblePlayerId: string }[]
         },
     ): GameUpdate {
         const startScores: Record<string, number> = {}

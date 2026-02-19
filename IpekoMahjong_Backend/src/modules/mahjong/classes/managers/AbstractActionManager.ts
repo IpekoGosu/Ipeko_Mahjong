@@ -238,6 +238,7 @@ export abstract class AbstractActionManager {
             type: actionType as MeldType,
             tiles: meldTiles,
             opened: true,
+            stolenFrom: stolenFromId,
         })
         const tilesToMove = consumedTiles
         this.activeDiscard = null

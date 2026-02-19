@@ -256,10 +256,7 @@ describe('Advanced Mahjong Rules', () => {
         it('should process Triple Ron when 3 players declare Ron on the same tile', () => {
             const players = game.getPlayers()
             // p1 discards, p2, p3, p4 all Ron
-            const p1 = players[0]
-            const p2 = players[1]
-            const p3 = players[2]
-            const p4 = players[3]
+            const p1 = players[0] as TestPlayer
 
             game.turnManager.currentTurnIndex = 0
             p1.setHand([new Tile('m', 1, false, 0)])
@@ -272,11 +269,17 @@ describe('Advanced Mahjong Rules', () => {
             game.actionManager.potentialRonners = ['p2', 'p3', 'p4']
 
             // Mock score calculation for Ron
-            const mockScore = {
+            const mockScore: ScoreCalculation = {
                 ten: 8000,
                 oya: [8000],
                 ko: [8000],
-            } as any
+                yaku: {},
+                fu: 30,
+                han: 4,
+                yakuman: 0,
+                name: 'Mangan',
+                text: 'Mangan',
+            }
 
             // Since game.performAction calls verifyRon internally, we should mock it or provide real Tenpai hands.
             // But game.performAction handles the winners list correctly.

@@ -36,6 +36,9 @@ export abstract class AbstractMahjongGame {
     public ruleManager: RuleManager
     public gameRulesConfig: GameRulesConfig
 
+    /** Track Pao (responsibility payment) per player. map[playerId][yakumanName] = responsiblePlayerId */
+    protected paoStatus: Map<string, Map<string, string>> = new Map()
+
     // Delegated State
     protected get currentTurnIndex() {
         return this.turnManager.currentTurnIndex
@@ -202,6 +205,7 @@ export abstract class AbstractMahjongGame {
                 player.getId() === this.players[this.oyaIndex].getId()
             player.resetKyokuState()
         })
+        this.paoStatus.clear()
 
         // 3. Deal Tiles
         this.dealInitialHands()
@@ -667,6 +671,25 @@ export abstract class AbstractMahjongGame {
             player.forbiddenDiscard = forbidden
         }
 
+        // Check Pao (Big Three Dragons / Big Four Winds)
+        // This is moved after player.forbiddenDiscard because handleMeldAction already added the meld to player.melds
+        if (
+            actionType === 'pon' ||
+            actionType === 'kan' ||
+            actionType === 'kakan'
+        ) {
+            const latestMeld = player.getMelds().slice(-1)[0]
+            const paoCheck = this.ruleEffectManager.checkPao(player, latestMeld)
+            if (paoCheck) {
+                if (!this.paoStatus.has(playerId)) {
+                    this.paoStatus.set(playerId, new Map())
+                }
+                this.paoStatus
+                    .get(playerId)!
+                    .set(paoCheck.yakumanName, paoCheck.responsiblePlayerId)
+            }
+        }
+
         if (result.roundEnd) {
             if (result.roundEnd.reason === 'ron') {
                 // Fill scores for Ron winners
@@ -779,19 +802,44 @@ export abstract class AbstractMahjongGame {
             loserId?: string // Target for Ron
             score?: ScoreCalculation
             abortReason?: string
+            pao?: { winnerId: string; responsiblePlayerId: string }[]
         },
     ): GameUpdate {
+        const winners =
+            result.winners ||
+            (result.reason === 'ron' && result.winnerId && result.score
+                ? [{ winnerId: result.winnerId, score: result.score }]
+                : undefined)
+
+        const paoInfos: { winnerId: string; responsiblePlayerId: string }[] =
+            result.pao || []
+        if (winners && paoInfos.length === 0) {
+            winners.forEach((w) => {
+                const winnerPaoMap = this.paoStatus.get(w.winnerId)
+                if (winnerPaoMap) {
+                    for (const [
+                        yakumanName,
+                        responsiblePlayerId,
+                    ] of winnerPaoMap.entries()) {
+                        if (w.score.yaku[yakumanName]) {
+                            paoInfos.push({
+                                winnerId: w.winnerId,
+                                responsiblePlayerId,
+                            })
+                        }
+                    }
+                }
+            })
+        }
+
         return this.roundManager.endRound(roomId, this.players, {
             reason: result.reason,
-            winners:
-                result.winners ||
-                (result.reason === 'ron' && result.winnerId && result.score
-                    ? [{ winnerId: result.winnerId, score: result.score }]
-                    : undefined),
+            winners: winners,
             winnerId: result.winnerId,
             loserId: result.loserId,
             score: result.score,
             abortReason: result.abortReason,
+            pao: paoInfos.length > 0 ? paoInfos : undefined,
         })
     }
 

@@ -4,6 +4,7 @@ import { TurnManager } from '@src/modules/mahjong/classes/managers/TurnManager'
 import { AbstractRuleEffectManager } from '@src/modules/mahjong/classes/managers/AbstractRuleEffectManager'
 import { RuleManager } from '@src/modules/mahjong/classes/managers/RuleManager'
 import { Injectable } from '@nestjs/common'
+import { Meld } from '@src/modules/mahjong/interfaces/mahjong.types'
 
 @Injectable()
 export class RuleEffectManager extends AbstractRuleEffectManager {
@@ -155,5 +156,63 @@ export class RuleEffectManager extends AbstractRuleEffectManager {
 
     public checkSanchahou(winnersCount: number): boolean {
         return winnersCount >= 3
+    }
+
+    public checkPao(
+        player: Player,
+        meld: Meld,
+    ): { responsiblePlayerId: string; yakumanName: string } | null {
+        if (!meld.opened || !meld.stolenFrom) return null
+
+        const melds = player.getMelds()
+
+        // 1. Daisangen (Big Three Dragons)
+        const dragonTiles = ['5z', '6z', '7z']
+        const currentMeldTile = meld.tiles[0].toString().substring(0, 2)
+        if (dragonTiles.includes(currentMeldTile)) {
+            const dragonMelds = melds.filter((m) => {
+                const tile = m.tiles[0].toString().substring(0, 2)
+                return dragonTiles.includes(tile)
+            })
+
+            // Trigger Pao only if we have exactly 3 dragon melds now,
+            // and the OTHER 2 were already there (and opened).
+            if (dragonMelds.length === 3) {
+                const otherDragonMelds = dragonMelds.filter((m) => m !== meld)
+                if (
+                    otherDragonMelds.length === 2 &&
+                    otherDragonMelds.every((m) => m.opened)
+                ) {
+                    return {
+                        responsiblePlayerId: meld.stolenFrom,
+                        yakumanName: 'Daisangen',
+                    }
+                }
+            }
+        }
+
+        // 2. Daisuushii (Big Four Winds)
+        const windTiles = ['1z', '2z', '3z', '4z']
+        if (windTiles.includes(currentMeldTile)) {
+            const windMelds = melds.filter((m) => {
+                const tile = m.tiles[0].toString().substring(0, 2)
+                return windTiles.includes(tile)
+            })
+
+            if (windMelds.length === 4) {
+                const otherWindMelds = windMelds.filter((m) => m !== meld)
+                if (
+                    otherWindMelds.length === 3 &&
+                    otherWindMelds.every((m) => m.opened)
+                ) {
+                    return {
+                        responsiblePlayerId: meld.stolenFrom,
+                        yakumanName: 'Daisuushii',
+                    }
+                }
+            }
+        }
+
+        return null
     }
 }
