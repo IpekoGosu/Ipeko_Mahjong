@@ -26,6 +26,7 @@ export class RoundManager4p extends AbstractRoundManager {
             loserId?: string
             score?: ScoreCalculation
             abortReason?: string
+            pao?: { winnerId: string; responsiblePlayerId: string }[]
         },
     ): GameUpdate {
         const startScores: Record<string, number> = {}
@@ -52,6 +53,10 @@ export class RoundManager4p extends AbstractRoundManager {
                 const isHeadbump = idx === 0
                 const honbaPoints = isHeadbump ? this.honba * 300 : 0
 
+                // Check Pao for Ron
+                const paoInfo = result.pao?.find(
+                    (p) => p.winnerId === winnerInfo.winnerId,
+                )
                 const basePoints = this.calculateRonBasePoints(
                     winner,
                     loser,
@@ -59,24 +64,52 @@ export class RoundManager4p extends AbstractRoundManager {
                 )
                 const totalPoints = basePoints + honbaPoints
 
-                winner.points += totalPoints
-                loser.points -= basePoints + honbaPoints
+                if (paoInfo) {
+                    const responsiblePlayer = players.find(
+                        (p) => p.getId() === paoInfo.responsiblePlayerId,
+                    )!
+                    const halfBase = basePoints / 2
 
-                if (isHeadbump) stickClaimer = winner
-                if (winner.isOya) renchan = true
+                    winner.points += totalPoints
+                    loser.points -= halfBase + honbaPoints
+                    responsiblePlayer.points -= halfBase
 
-                const kyotakuPoints = isHeadbump ? this.kyotaku * 1000 : 0
-                events.push({
-                    eventName: 'score-update',
-                    payload: {
-                        winnerId: winnerInfo.winnerId,
-                        loserId: result.loserId,
-                        score: basePoints,
-                        totalPoints: basePoints + honbaPoints + kyotakuPoints,
-                        reason: 'ron',
-                    },
-                    to: 'all',
-                })
+                    if (isHeadbump) stickClaimer = winner
+                    if (winner.isOya) renchan = true
+
+                    const kyotakuPoints = isHeadbump ? this.kyotaku * 1000 : 0
+                    events.push({
+                        eventName: 'score-update',
+                        payload: {
+                            winnerId: winnerInfo.winnerId,
+                            loserId: result.loserId,
+                            responsiblePlayerId: responsiblePlayer.getId(),
+                            score: basePoints,
+                            totalPoints: totalPoints + kyotakuPoints,
+                            reason: 'ron-pao',
+                        },
+                        to: 'all',
+                    })
+                } else {
+                    winner.points += totalPoints
+                    loser.points -= totalPoints
+
+                    if (isHeadbump) stickClaimer = winner
+                    if (winner.isOya) renchan = true
+
+                    const kyotakuPoints = isHeadbump ? this.kyotaku * 1000 : 0
+                    events.push({
+                        eventName: 'score-update',
+                        payload: {
+                            winnerId: winnerInfo.winnerId,
+                            loserId: result.loserId,
+                            score: basePoints,
+                            totalPoints: totalPoints + kyotakuPoints,
+                            reason: 'ron',
+                        },
+                        to: 'all',
+                    })
+                }
             }
 
             if (renchan) nextHonba++
@@ -90,62 +123,145 @@ export class RoundManager4p extends AbstractRoundManager {
             const honbaPoints = this.honba * 300
             const totalPoints = result.score.ten + honbaPoints
 
-            winner.points += totalPoints
-            stickClaimer = winner
+            // Check Pao for Tsumo
+            const paoInfo = result.pao?.find(
+                (p) => p.winnerId === result.winnerId,
+            )
 
-            const otherPlayers = players.filter((p) => p !== winner)
-            if (winner.isOya) {
-                const payment = result.score.oya[0] + 100 * this.honba
-                otherPlayers.forEach((p) => (p.points -= payment))
-                renchan = true
-                nextHonba++
+            if (paoInfo) {
+                const responsiblePlayer = players.find(
+                    (p) => p.getId() === paoInfo.responsiblePlayerId,
+                )!
+
+                winner.points += totalPoints
+                responsiblePlayer.points -= totalPoints
+                stickClaimer = winner
+
+                if (winner.isOya) {
+                    renchan = true
+                    nextHonba++
+                } else {
+                    nextHonba = 0
+                }
+
+                events.push({
+                    eventName: 'score-update',
+                    payload: {
+                        winnerId: result.winnerId,
+                        responsiblePlayerId: responsiblePlayer.getId(),
+                        score: result.score.ten,
+                        totalPoints:
+                            totalPoints +
+                            (isGameOver ? 0 : this.kyotaku * 1000),
+                        reason: 'tsumo-pao',
+                    },
+                    to: 'all',
+                })
             } else {
-                const oya = players.find((p) => p.isOya)!
-                const kos = otherPlayers.filter((p) => !p.isOya)
-                const oyaPayment = result.score.ko[0] + 100 * this.honba
-                const koPayment = result.score.ko[1] + 100 * this.honba
-                oya.points -= oyaPayment
-                kos.forEach((p) => (p.points -= koPayment))
-                nextHonba = 0
-            }
+                winner.points += totalPoints
+                stickClaimer = winner
 
-            events.push({
-                eventName: 'score-update',
-                payload: {
-                    winnerId: result.winnerId,
-                    score: result.score.ten,
-                    totalPoints:
-                        totalPoints + (isGameOver ? 0 : this.kyotaku * 1000),
-                    reason: 'tsumo',
-                },
-                to: 'all',
-            })
+                const otherPlayers = players.filter((p) => p !== winner)
+                if (winner.isOya) {
+                    const payment = result.score.oya[0] + 100 * this.honba
+                    otherPlayers.forEach((p) => (p.points -= payment))
+                    renchan = true
+                    nextHonba++
+                } else {
+                    const oya = players.find((p) => p.isOya)!
+                    const kos = otherPlayers.filter((p) => !p.isOya)
+                    const oyaPayment = result.score.ko[0] + 100 * this.honba
+                    const koPayment = result.score.ko[1] + 100 * this.honba
+                    oya.points -= oyaPayment
+                    kos.forEach((p) => (p.points -= koPayment))
+                    nextHonba = 0
+                }
+
+                events.push({
+                    eventName: 'score-update',
+                    payload: {
+                        winnerId: result.winnerId,
+                        score: result.score.ten,
+                        totalPoints:
+                            totalPoints +
+                            (isGameOver ? 0 : this.kyotaku * 1000),
+                        reason: 'tsumo',
+                    },
+                    to: 'all',
+                })
+            }
         } else if (result.reason === 'ryuukyoku') {
             if (result.abortReason) {
                 renchan = true
                 nextHonba++
             } else {
-                const tenpaiList = players.filter(
-                    (p) =>
-                        p.getHand().length <= 13 &&
-                        this.ruleManager.isTenpai(p),
-                )
-                const notenList = players.filter((p) => !tenpaiList.includes(p))
+                // 1. Check Nagashi Mangan
+                const nagashiWinners = players.filter((p) => {
+                    if (!p.isNagashiEligible) return false
+                    const discards = p.getDiscards()
+                    if (discards.length === 0) return false
+                    return discards.every((t) => {
+                        const rank = t.getRank()
+                        const suit = t.getSuit()
+                        return suit === 'z' || rank === 1 || rank === 9
+                    })
+                })
 
-                if (tenpaiList.length > 0 && notenList.length > 0) {
-                    const flow = 3000
-                    const payReceive = flow / tenpaiList.length
-                    const payGive = flow / notenList.length
-
-                    tenpaiList.forEach((p) => (p.points += payReceive))
-                    notenList.forEach((p) => (p.points -= payGive))
-                }
-
-                const oya = players[this.oyaIndex]
-                if (tenpaiList.includes(oya)) {
-                    renchan = true
+                if (nagashiWinners.length > 0) {
+                    for (const winner of nagashiWinners) {
+                        const otherPlayers = players.filter((p) => p !== winner)
+                        let totalNagashi = 0
+                        if (winner.isOya) {
+                            const payment = 4000 // Oya Mangan Tsumo: 4000 all
+                            otherPlayers.forEach((p) => (p.points -= payment))
+                            totalNagashi = payment * 3
+                            renchan = true
+                        } else {
+                            otherPlayers.forEach((p) => {
+                                const payment = p.isOya ? 4000 : 2000
+                                p.points -= payment
+                                totalNagashi += payment
+                            })
+                        }
+                        winner.points += totalNagashi
+                        events.push({
+                            eventName: 'score-update',
+                            payload: {
+                                winnerId: winner.getId(),
+                                score: totalNagashi,
+                                reason: 'nagashi-mangan',
+                            },
+                            to: 'all',
+                        })
+                    }
+                    if (nagashiWinners.some((p) => p.isOya)) {
+                        renchan = true
+                    }
                     nextHonba++
                 } else {
+                    // 2. Regular Tenpai/Noten payments
+                    const tenpaiList = players.filter(
+                        (p) =>
+                            p.getHand().length <= 13 &&
+                            this.ruleManager.isTenpai(p),
+                    )
+                    const notenList = players.filter(
+                        (p) => !tenpaiList.includes(p),
+                    )
+
+                    if (tenpaiList.length > 0 && notenList.length > 0) {
+                        const flow = 3000
+                        const payReceive = flow / tenpaiList.length
+                        const payGive = flow / notenList.length
+
+                        tenpaiList.forEach((p) => (p.points += payReceive))
+                        notenList.forEach((p) => (p.points -= payGive))
+                    }
+
+                    const oya = players[this.oyaIndex]
+                    if (tenpaiList.includes(oya)) {
+                        renchan = true
+                    }
                     nextHonba++
                 }
             }

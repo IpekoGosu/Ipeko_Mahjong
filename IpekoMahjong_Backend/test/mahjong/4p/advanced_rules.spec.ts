@@ -1,4 +1,4 @@
-import { MahjongGame } from '@src/modules/mahjong/classes/MahjongGame.4p'
+import { MahjongGame } from '@src/modules/mahjong/classes/game/MahjongGame.4p'
 import { Tile } from '@src/modules/mahjong/classes/tile.class'
 import { Player } from '@src/modules/mahjong/classes/player.class'
 import { SimpleAI } from '@src/modules/mahjong/classes/ai/simple.ai'
@@ -15,7 +15,7 @@ class TestPlayer extends Player {
     }
 }
 
-class TestMahjongGame extends MahjongGame {
+class TestMahjongGameAdvanced extends MahjongGame {
     protected createPlayer(info: { id: string; isAi: boolean }): Player {
         const player = new TestPlayer(info.id, false, info.isAi)
         if (info.isAi) {
@@ -66,13 +66,13 @@ class TestMahjongGame extends MahjongGame {
 }
 
 describe('Advanced Mahjong Rules', () => {
-    let game: TestMahjongGame
+    let game: TestMahjongGameAdvanced
     let roomId: string
 
     beforeEach(() => {
         roomId = 'test-room'
         const managers = createTestManagers()
-        game = new TestMahjongGame(
+        game = new TestMahjongGameAdvanced(
             [
                 { id: 'p1', isAi: false },
                 { id: 'p2', isAi: false },
@@ -163,6 +163,238 @@ describe('Advanced Mahjong Rules', () => {
                 (e) => e.eventName === 'round-ended',
             )
             expect(endEvent?.payload.abortReason).toBe('suucha-riichi')
+        })
+
+        it('should trigger Suukan Settsu when 4 kans are made by multiple players', () => {
+            const players = game.getPlayers()
+            // Player 1 and 2 make 2 kans each
+            players[0].addMeld({
+                type: 'ankan',
+                tiles: [
+                    new Tile('m', 1, false, 0),
+                    new Tile('m', 1, false, 1),
+                    new Tile('m', 1, false, 2),
+                    new Tile('m', 1, false, 3),
+                ],
+                opened: false,
+            })
+            players[0].addMeld({
+                type: 'ankan',
+                tiles: [
+                    new Tile('m', 2, false, 0),
+                    new Tile('m', 2, false, 1),
+                    new Tile('m', 2, false, 2),
+                    new Tile('m', 2, false, 3),
+                ],
+                opened: false,
+            })
+            players[1].addMeld({
+                type: 'ankan',
+                tiles: [
+                    new Tile('m', 3, false, 0),
+                    new Tile('m', 3, false, 1),
+                    new Tile('m', 3, false, 2),
+                    new Tile('m', 3, false, 3),
+                ],
+                opened: false,
+            })
+
+            // Now p2 makes the 4th kan
+            // We need to simulate the action that triggers the 4th kan.
+            const p2 = game.getTestPlayer('p2')
+            p2.setHand([
+                new Tile('m', 4, false, 0),
+                new Tile('m', 4, false, 1),
+                new Tile('m', 4, false, 2),
+                new Tile('m', 4, false, 3),
+            ])
+            game.turnManager.currentTurnIndex = 1
+
+            // p2 declares ankan
+            game.turnManager.currentTurnIndex = game.getPlayers().indexOf(p2)
+            const result = game.performAction('room1', 'p2', 'ankan', '4m', [])
+
+            expect(result.reason).toBe('ryuukyoku')
+            const endEvent = result.events.find(
+                (e) => e.eventName === 'round-ended',
+            )
+            expect(endEvent?.payload.abortReason).toBe('suukan-settsu')
+        })
+
+        it('should NOT trigger Suukan Settsu if all 4 kans are made by the same player', () => {
+            const p1 = game.getTestPlayer('p1')
+            // p1 makes 3 kans already
+            for (let i = 1; i <= 3; i++) {
+                p1.addMeld({
+                    type: 'ankan',
+                    tiles: [
+                        new Tile('m', i, false, 0),
+                        new Tile('m', i, false, 1),
+                        new Tile('m', i, false, 2),
+                        new Tile('m', i, false, 3),
+                    ],
+                    opened: false,
+                })
+            }
+
+            p1.setHand([
+                new Tile('m', 4, false, 0),
+                new Tile('m', 4, false, 1),
+                new Tile('m', 4, false, 2),
+                new Tile('m', 4, false, 3),
+            ])
+            game.turnManager.currentTurnIndex = game.getPlayers().indexOf(p1)
+
+            // p1 declares 4th ankan
+            const result = game.performAction('room1', 'p1', 'ankan', '4m', [])
+
+            // Should NOT be ryuukyoku (going for Suukantsu)
+            expect(result.reason).not.toBe('ryuukyoku')
+            expect(p1.getMelds().length).toBe(4)
+        })
+
+        it('should process Triple Ron when 3 players declare Ron on the same tile', () => {
+            const players = game.getPlayers()
+            // p1 discards, p2, p3, p4 all Ron
+            const p1 = players[0] as TestPlayer
+
+            game.turnManager.currentTurnIndex = 0
+            p1.setHand([new Tile('m', 1, false, 0)])
+
+            // Setup potential ronners in actionManager
+            game.actionManager.activeDiscard = {
+                playerId: 'p1',
+                tile: new Tile('m', 1, false, 0),
+            }
+            game.actionManager.potentialRonners = ['p2', 'p3', 'p4']
+
+            // Mock score calculation for Ron
+            const mockScore: ScoreCalculation = {
+                ten: 8000,
+                oya: [8000],
+                ko: [8000],
+                yaku: {},
+                fu: 30,
+                han: 4,
+                yakuman: 0,
+                name: 'Mangan',
+                text: 'Mangan',
+            }
+
+            // Since game.performAction calls verifyRon internally, we should mock it or provide real Tenpai hands.
+            // But game.performAction handles the winners list correctly.
+            // Let's mock verifyRon for this test.
+            jest.spyOn(game.actionManager, 'verifyRon').mockReturnValue({
+                isAgari: true,
+                score: mockScore,
+            })
+
+            // p2, p3 declare Ron
+            game.performAction('room1', 'p2', 'ron', '1m', [])
+            game.performAction('room1', 'p3', 'ron', '1m', [])
+
+            // p4 declares Ron - this should NOT trigger abortive draw, but endKyoku with 3 winners.
+            const result = game.performAction('room1', 'p4', 'ron', '1m', [])
+
+            expect(result.reason).toBe('ron')
+            const endEvent = result.events.find(
+                (e) => e.eventName === 'round-ended',
+            )
+            expect(endEvent?.payload.reason).toBe('ron')
+            expect(endEvent?.payload.allWinners).toHaveLength(3)
+        })
+    })
+
+    describe('Nagashi Mangan', () => {
+        it('should trigger Nagashi Mangan at the end of Kyoku if a player has only terminal/honors in discards and none were called', () => {
+            const players = game.getPlayers()
+            const p1 = game.getTestPlayer('p1')
+
+            // Setup p1 discards with only terminals/honors
+            p1.resetKyokuState()
+            p1.setHand([
+                new Tile('m', 1, false, 0),
+                new Tile('m', 9, false, 1),
+                new Tile('z', 1, false, 2),
+            ])
+            p1.discard('1m')
+            p1.discard('9m')
+            p1.discard('1z')
+
+            // Others discard regular tiles
+            const p2 = game.getTestPlayer('p2')
+            p2.setHand([new Tile('m', 2, false, 0)])
+            p2.discard('2m')
+
+            // Manually set points to see the effect
+            players.forEach((p) => (p.points = 25000))
+
+            // Trigger ryuukyoku (wall empty)
+            const result = game.callEndKyoku(roomId, { reason: 'ryuukyoku' })
+
+            const endEvent = result.events.find(
+                (e) => e.eventName === 'round-ended',
+            )
+            expect(endEvent?.payload.reason).toBe('ryuukyoku')
+            // p1 is Ko (p2 is oya if not set, let's check oya)
+            // If p1 is Ko, they get 2000 from each Ko and 4000 from Oya = 8000
+            expect(p1.points).toBeGreaterThan(25000)
+            const scoreUpdate = result.events.find(
+                (e) => e.eventName === 'score-update',
+            )
+            expect(scoreUpdate?.payload.reason).toBe('nagashi-mangan')
+        })
+
+        it('should NOT trigger Nagashi Mangan if a terminal discard was stolen', () => {
+            const players = game.getPlayers()
+            const p1 = game.getTestPlayer('p1')
+
+            // Setup p1 discards with only terminals/honors
+            p1.resetKyokuState()
+            p1.setHand([
+                new Tile('m', 1, false, 0),
+                new Tile('m', 9, false, 1),
+                new Tile('z', 1, false, 2),
+            ])
+            p1.discard('1m')
+            p1.discard('9m')
+            p1.discard('1z')
+
+            // p2 steals p1's '1m'
+            // We need activeDiscard to be set for handleOpenMeld (which is called via performAction)
+            game.actionManager.activeDiscard = {
+                playerId: 'p1',
+                tile: new Tile('m', 1, false, 0),
+            }
+            // Populate pendingActions so performAction is allowed
+            game.actionManager.pendingActions = {
+                'p2': { pon: true }
+            }
+
+            // Setup p2 hand for Pon (update all instances to handle potential mismatch)
+            game.getPlayers().forEach(p => {
+                if (p.getId() === 'p2') {
+                    (p as TestPlayer).setHand([new Tile('m', 1, false, 1), new Tile('m', 1, false, 2)])
+                }
+            })
+
+            // Use performAction to simulate stealing (Pon)
+            const actionResult = game.performAction(roomId, 'p2', 'pon', '1m', ['1m', '1m'])
+            expect(actionResult.events.some(e => e.eventName === 'error')).toBe(false)
+
+            // Manually set points
+            players.forEach((p) => (p.points = 25000))
+
+            // Trigger ryuukyoku (wall empty)
+            const result = game.callEndKyoku(roomId, { reason: 'ryuukyoku' })
+
+            const scoreUpdate = result.events.find(
+                (e) =>
+                    e.eventName === 'score-update' &&
+                    e.payload.reason === 'nagashi-mangan',
+            )
+            expect(scoreUpdate).toBeUndefined()
+            expect(p1.points).toBe(25000) // Should not have gained Nagashi points
         })
     })
 

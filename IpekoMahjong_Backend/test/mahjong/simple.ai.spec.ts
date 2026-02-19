@@ -1,6 +1,6 @@
 import { SimpleAI } from '@src/modules/mahjong/classes/ai/simple.ai'
 import { GameObservation } from '@src/modules/mahjong/interfaces/mahjong-ai.interface'
-import { MahjongGame } from '@src/modules/mahjong/classes/MahjongGame.4p'
+import { MahjongGame } from '@src/modules/mahjong/classes/game/MahjongGame.4p'
 import { createTestGame } from './test_utils'
 
 describe('SimpleAI', () => {

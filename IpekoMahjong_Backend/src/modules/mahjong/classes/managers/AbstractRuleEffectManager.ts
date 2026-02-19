@@ -1,6 +1,7 @@
 import { Player } from '@src/modules/mahjong/classes/player.class'
 import { AbstractWall } from '@src/modules/mahjong/classes/wall/AbstractWall'
 import { TurnManager } from '@src/modules/mahjong/classes/managers/TurnManager'
+import { Meld } from '@src/modules/mahjong/interfaces/mahjong.types'
 
 export abstract class AbstractRuleEffectManager {
     public abstract handleRiichi(
@@ -31,4 +32,15 @@ export abstract class AbstractRuleEffectManager {
         player: Player,
         anyCallDeclared: boolean,
     ): { success: boolean; error?: string }
+
+    public abstract checkSuukanSettsu(players: Player[]): {
+        isAbortive: boolean
+    }
+
+    public abstract checkSanchahou(winnersCount: number): boolean
+
+    public abstract checkPao(
+        player: Player,
+        meld: Meld,
+    ): { responsiblePlayerId: string; yakumanName: string } | null
 }

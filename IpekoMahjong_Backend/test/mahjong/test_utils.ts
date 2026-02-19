@@ -5,8 +5,8 @@ import { TurnManager } from '@src/modules/mahjong/classes/managers/TurnManager'
 import { ActionManager4p } from '@src/modules/mahjong/classes/managers/ActionManager.4p'
 import { ActionManagerSanma } from '@src/modules/mahjong/classes/managers/ActionManager.Sanma'
 import { RuleEffectManager } from '@src/modules/mahjong/classes/managers/RuleEffectManager'
-import { MahjongGame } from '@src/modules/mahjong/classes/MahjongGame.4p'
-import { SanmaMahjongGame } from '@src/modules/mahjong/classes/MahjongGame.Sanma'
+import { MahjongGame } from '@src/modules/mahjong/classes/game/MahjongGame.4p'
+import { SanmaMahjongGame } from '@src/modules/mahjong/classes/game/MahjongGame.Sanma'
 import {
     DEFAULT_4P_RULES,
     DEFAULT_3P_RULES,

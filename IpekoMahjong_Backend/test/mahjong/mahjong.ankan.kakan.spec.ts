@@ -1,4 +1,4 @@
-import { MahjongGame } from '@src/modules/mahjong/classes/MahjongGame.4p'
+import { MahjongGame } from '@src/modules/mahjong/classes/game/MahjongGame.4p'
 import { Tile } from '@src/modules/mahjong/classes/tile.class'
 import { RuleManager } from '@src/modules/mahjong/classes/managers/RuleManager'
 import { Player } from '@src/modules/mahjong/classes/player.class'

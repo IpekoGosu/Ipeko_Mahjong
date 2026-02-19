@@ -1,5 +1,5 @@
 import { Tile } from '@src/modules/mahjong/classes/tile.class'
-import type { AbstractMahjongGame } from '@src/modules/mahjong/classes/AbstractMahjongGame'
+import type { AbstractMahjongGame } from '@src/modules/mahjong/classes/game/AbstractMahjongGame'
 
 export type Suit = 'm' | 'p' | 's' | 'z'
 
@@ -9,6 +9,7 @@ export interface Meld {
     type: MeldType
     tiles: Tile[]
     opened: boolean // true if not a closed kan
+    stolenFrom?: string
 }
 
 export interface ScoreCalculation {
@@ -118,4 +119,5 @@ export interface RoundEndResult {
     loserId?: string
     score?: ScoreCalculation
     abortReason?: string
+    pao?: { winnerId: string; responsiblePlayerId: string }[]
 }

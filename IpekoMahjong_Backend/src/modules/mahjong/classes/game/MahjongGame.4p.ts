@@ -1,6 +1,6 @@
-import { AbstractMahjongGame } from '@src/modules/mahjong/classes/AbstractMahjongGame'
+import { AbstractMahjongGame } from '@src/modules/mahjong/classes/game/AbstractMahjongGame'
 import { TurnManager } from '@src/modules/mahjong/classes/managers/TurnManager'
-import { WallSanma } from '@src/modules/mahjong/classes/wall/Wall.Sanma'
+import { Wall4p } from '@src/modules/mahjong/classes/wall/Wall.4p'
 import { AbstractWall } from '@src/modules/mahjong/classes/wall/AbstractWall'
 import { MahjongAI } from '@src/modules/mahjong/classes/ai/MahjongAI'
 import { AbstractRoundManager } from '@src/modules/mahjong/classes/managers/AbstractRoundManager'
@@ -10,7 +10,7 @@ import { RuleManager } from '@src/modules/mahjong/classes/managers/RuleManager'
 
 import { GameRulesConfig } from '@src/modules/mahjong/interfaces/game-rules.config'
 
-export class SanmaMahjongGame extends AbstractMahjongGame {
+export class MahjongGame extends AbstractMahjongGame {
     constructor(
         playerInfos: { id: string; isAi: boolean; ai?: MahjongAI }[],
         roundManager: AbstractRoundManager,
@@ -32,6 +32,6 @@ export class SanmaMahjongGame extends AbstractMahjongGame {
     }
 
     protected createWall(): AbstractWall {
-        return new WallSanma()
+        return new Wall4p()
     }
 }

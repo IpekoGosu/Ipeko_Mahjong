@@ -1,6 +1,6 @@
 import { Player } from '@src/modules/mahjong/classes/player.class'
 import { Tile } from '@src/modules/mahjong/classes/tile.class'
-import { MahjongGame } from '@src/modules/mahjong/classes/MahjongGame.4p'
+import { MahjongGame } from '@src/modules/mahjong/classes/game/MahjongGame.4p'
 import { ActionManager4p } from '@src/modules/mahjong/classes/managers/ActionManager.4p'
 import { TurnManager } from '@src/modules/mahjong/classes/managers/TurnManager'
 import { createTestManagers } from '../test_utils'

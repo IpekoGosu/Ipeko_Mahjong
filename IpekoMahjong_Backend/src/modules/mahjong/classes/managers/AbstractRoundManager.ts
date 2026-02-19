@@ -56,6 +56,7 @@ export abstract class AbstractRoundManager {
             loserId?: string
             score?: ScoreCalculation
             abortReason?: string
+            pao?: { winnerId: string; responsiblePlayerId: string }[]
         },
     ): GameUpdate
 

@@ -1,8 +1,8 @@
-import { defineConfig } from '@prisma/config'
 import dotenv from 'dotenv'
-import { getPrismaUrl } from './src/common/utils/prisma-config.utils'
-
 dotenv.config()
+
+import { defineConfig } from '@prisma/config'
+import { getPrismaUrl } from './src/common/utils/prisma-config.utils'
 
 export default defineConfig({
     datasource: {

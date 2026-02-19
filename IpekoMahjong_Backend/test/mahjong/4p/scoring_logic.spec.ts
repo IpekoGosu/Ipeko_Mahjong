@@ -1,4 +1,4 @@
-import { MahjongGame } from '@src/modules/mahjong/classes/MahjongGame.4p'
+import { MahjongGame } from '@src/modules/mahjong/classes/game/MahjongGame.4p'
 import { Player } from '@src/modules/mahjong/classes/player.class'
 import { ScoreCalculation } from '@src/modules/mahjong/interfaces/mahjong.types'
 import { SimpleAI } from '@src/modules/mahjong/classes/ai/simple.ai'

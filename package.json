@@ -14,7 +14,9 @@
     "start:frontend": "pnpm --filter ipeko-mahjong-frontend start",
     "start": "pnpm -r --parallel start",
     "lint:backend": "pnpm --filter ipekomahjong_backend lint",
-    "lint:frontend": "pnpm --filter ipeko-mahjong-frontend lint"
+    "lint:frontend": "pnpm --filter ipeko-mahjong-frontend lint",
+    "prisma:generate": "pnpm --filter ipekomahjong_backend exec ts-node -r tsconfig-paths/register node_modules/prisma/build/index.js generate",
+    "prisma:migrate": "pnpm --filter ipekomahjong_backend exec ts-node -r tsconfig-paths/register node_modules/prisma/build/index.js migrate dev"
   },
   "pnpm": {
     "onlyBuiltDependencies": [

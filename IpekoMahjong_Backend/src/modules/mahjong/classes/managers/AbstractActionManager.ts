@@ -90,7 +90,12 @@ export abstract class AbstractActionManager {
         } else if (actionType === 'kakan') {
             result = this.handleAddedKan(player, tileString)
         } else {
-            result = this.handleOpenMeld(player, actionType, consumedTiles)
+            result = this.handleOpenMeld(
+                player,
+                actionType,
+                consumedTiles,
+                players,
+            )
         }
 
         if (!result.success) {
@@ -197,6 +202,7 @@ export abstract class AbstractActionManager {
         player: Player,
         actionType: 'chi' | 'pon' | 'kan',
         consumedTiles: string[],
+        players: Player[],
     ): {
         success: boolean
         error?: string
@@ -221,11 +227,19 @@ export abstract class AbstractActionManager {
             }
         }
 
+        // Remove from discarder's discard pile
+        const discarder = players.find((p) => p.getId() === stolenFromId)
+        if (discarder) {
+            discarder.removeDiscard(stolenTile.toString())
+            discarder.isNagashiEligible = false
+        }
+
         const meldTiles = [...removedTiles, stolenTile]
         player.addMeld({
             type: actionType as MeldType,
             tiles: meldTiles,
             opened: true,
+            stolenFrom: stolenFromId,
         })
         const tilesToMove = consumedTiles
         this.activeDiscard = null
