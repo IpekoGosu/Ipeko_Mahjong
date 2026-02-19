@@ -7,10 +7,10 @@ import { DEFAULT_3P_RULES } from '@src/modules/mahjong/interfaces/game-rules.con
 
 class TestPlayer extends Player {
     public setHand(tiles: Tile[]) {
-        this.hand = tiles
+        this._hand = tiles
     }
     public setPoints(p: number) {
-        this.points = p
+        this._points = p
     }
 }
 

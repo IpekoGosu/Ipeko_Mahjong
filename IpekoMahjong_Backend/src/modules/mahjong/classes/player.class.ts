@@ -150,9 +150,6 @@ export class Player {
     get hand(): Tile[] {
         return [...this._hand]
     }
-    set hand(value: Tile[]) {
-        this._hand = value
-    }
 
     get melds(): Meld[] {
         return [...this._melds]
@@ -160,9 +157,6 @@ export class Player {
 
     get discards(): Tile[] {
         return [...this._discards]
-    }
-    set discards(value: Tile[]) {
-        this._discards = value
     }
 
     draw(tile: Tile): void {
