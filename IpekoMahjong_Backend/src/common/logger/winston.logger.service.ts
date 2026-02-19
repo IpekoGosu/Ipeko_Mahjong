@@ -50,13 +50,8 @@ export class WinstonLoggerService implements LoggerService {
         })
     }
 
-    log(message: string) {
-        this.logger.info(message)
-    }
-
-    // NestJS LoggerService doesn't have info, but we keep it for direct calls
-    info(message: string) {
-        this.logger.info(message)
+    log(message: unknown) {
+        this.logger.info(JSON.stringify(message, null, 0))
     }
 
     error(message: string, trace?: string) {

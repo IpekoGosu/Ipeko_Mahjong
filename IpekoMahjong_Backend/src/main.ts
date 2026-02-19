@@ -1,6 +1,5 @@
 import { NestFactory } from '@nestjs/core'
 import { AppModule } from '@src/app.module'
-import { WinstonLoggerService } from '@src/common/logger/winston.logger.service'
 import { ValidationPipe } from '@nestjs/common'
 import cookieParser from 'cookie-parser'
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger'
@@ -17,8 +16,6 @@ async function bootstrap() {
         credentials: true,
     })
     app.use(cookieParser())
-    // winston logger
-    app.useLogger(app.get(WinstonLoggerService))
     // validation pipe
     app.useGlobalPipes(
         new ValidationPipe({

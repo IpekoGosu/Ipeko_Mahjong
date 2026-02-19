@@ -16,11 +16,11 @@ export class StartGameDto {
 export class DiscardTileDto {
     @IsString()
     @IsNotEmpty()
-    roomId!: string
+    roomId: string
 
     @IsString()
     @IsNotEmpty()
-    tile!: string
+    tile: string
 
     @IsOptional()
     @IsBoolean()
@@ -30,26 +30,26 @@ export class DiscardTileDto {
 export class DeclareTsumoDto {
     @IsString()
     @IsNotEmpty()
-    roomId!: string
+    roomId: string
 }
 
 export class NextRoundDto {
     @IsString()
     @IsNotEmpty()
-    roomId!: string
+    roomId: string
 }
 
 export class SelectActionDto {
     @IsString()
     @IsNotEmpty()
-    roomId!: string
+    roomId: string
 
     @IsEnum(['chi', 'pon', 'kan', 'ron', 'skip', 'ankan', 'kakan'])
-    type!: 'chi' | 'pon' | 'kan' | 'ron' | 'skip' | 'ankan' | 'kakan'
+    type: 'chi' | 'pon' | 'kan' | 'ron' | 'skip' | 'ankan' | 'kakan'
 
     @IsString()
     @IsNotEmpty()
-    tile!: string
+    tile: string
 
     @IsOptional()
     @IsArray()
