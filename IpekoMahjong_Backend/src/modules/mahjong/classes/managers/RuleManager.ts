@@ -6,11 +6,12 @@ import {
 import { Player } from '@src/modules/mahjong/classes/player.class'
 import { Tile } from '@src/modules/mahjong/classes/tile.class'
 import Riichi from 'riichi'
-import { Injectable, Logger } from '@nestjs/common'
+import { Injectable } from '@nestjs/common'
+import { WinstonLoggerService } from '@src/common/logger/winston.logger.service'
 
 @Injectable()
 export class RuleManager {
-    private readonly logger = new Logger(RuleManager.name)
+    constructor(private readonly logger: WinstonLoggerService) {}
 
     getActualDora(indicator: string, isSanma: boolean = false): string {
         return Tile.getDoraFromIndicator(indicator, isSanma)
@@ -45,7 +46,8 @@ export class RuleManager {
             } catch (e) {
                 this.logger.error(
                     `Error calculating shanten for tile ${tileStr}:`,
-                    e,
+                    String(e),
+                    RuleManager.name,
                 )
             }
         }
@@ -107,7 +109,8 @@ export class RuleManager {
                 } catch (e) {
                     this.logger.error(
                         'Error calculating current waits for Ankan check',
-                        e,
+                        String(e),
+                        RuleManager.name,
                     )
                     return false
                 }
@@ -162,7 +165,11 @@ export class RuleManager {
 
                     return true
                 } catch (e) {
-                    this.logger.error('Error simulating Ankan waits', e)
+                    this.logger.error(
+                        'Error simulating Ankan waits',
+                        String(e),
+                        RuleManager.name,
+                    )
                     return false
                 }
             })
@@ -241,7 +248,11 @@ export class RuleManager {
             }
             return Array.from(new Set(waits))
         } catch (e) {
-            this.logger.error(`Error getting waits for player ${player.id}:`, e)
+            this.logger.error(
+                `Error getting waits for player ${player.id}:`,
+                String(e),
+                RuleManager.name,
+            )
             return []
         }
     }
@@ -295,7 +306,8 @@ export class RuleManager {
         } catch (e) {
             this.logger.error(
                 `Error checking Tenpai for player ${player.id}:`,
-                e,
+                String(e),
+                RuleManager.name,
             )
             return false
         }
@@ -347,7 +359,11 @@ export class RuleManager {
         // This sets isTsumo = false in the library constructor automatically
         if (!context.isTsumo) {
             if (!context.winningTile) {
-                this.logger.error('Winning tile required for Ron')
+                this.logger.error(
+                    'Winning tile required for Ron',
+                    undefined,
+                    RuleManager.name,
+                )
                 return null
             }
             handStr += `+${context.winningTile}`

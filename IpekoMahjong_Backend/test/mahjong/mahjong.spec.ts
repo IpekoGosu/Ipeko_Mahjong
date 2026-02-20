@@ -3,7 +3,7 @@ import { Player } from '@src/modules/mahjong/classes/player.class'
 import { Tile } from '@src/modules/mahjong/classes/tile.class'
 import Riichi from 'riichi'
 import { RiichiResult } from '@src/modules/mahjong/interfaces/mahjong.types'
-import { createTestGame } from './test_utils'
+import { createTestGame, mockLogger } from './test_utils'
 
 class TestWall extends Wall {
     public getTiles() {
@@ -47,7 +47,7 @@ describe('Player', () => {
     let player: Player
 
     beforeEach(() => {
-        player = new Player('p1')
+        player = new Player('p1', false, false, mockLogger)
         createTestGame([{ id: 'p1', isAi: false }])
     })
 

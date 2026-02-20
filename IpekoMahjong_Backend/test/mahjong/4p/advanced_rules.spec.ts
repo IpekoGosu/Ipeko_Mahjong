@@ -3,7 +3,7 @@ import { Tile } from '@src/modules/mahjong/classes/tile.class'
 import { Player } from '@src/modules/mahjong/classes/player.class'
 import { SimpleAI } from '@src/modules/mahjong/classes/ai/simple.ai'
 import { ScoreCalculation } from '@src/modules/mahjong/interfaces/mahjong.types'
-import { createTestManagers } from '../test_utils'
+import { createTestManagers, mockLogger } from '../test_utils'
 import { DEFAULT_4P_RULES } from '@src/modules/mahjong/interfaces/game-rules.config'
 
 class TestPlayer extends Player {
@@ -17,7 +17,7 @@ class TestPlayer extends Player {
 
 class TestMahjongGameAdvanced extends MahjongGame {
     protected createPlayer(info: { id: string; isAi: boolean }): Player {
-        const player = new TestPlayer(info.id, false, info.isAi)
+        const player = new TestPlayer(info.id, false, info.isAi, mockLogger)
         if (info.isAi) {
             player.ai = new SimpleAI()
         }
@@ -85,6 +85,7 @@ describe('Advanced Mahjong Rules', () => {
             managers.ruleEffectManager,
             managers.ruleManager,
             DEFAULT_4P_RULES,
+            mockLogger,
         )
         game.startGame(roomId)
     })

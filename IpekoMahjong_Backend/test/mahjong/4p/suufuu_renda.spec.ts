@@ -2,7 +2,7 @@ import { MahjongGame } from '@src/modules/mahjong/classes/game/MahjongGame.4p'
 import { Tile } from '@src/modules/mahjong/classes/tile.class'
 import { Player } from '@src/modules/mahjong/classes/player.class'
 import { SimpleAI } from '@src/modules/mahjong/classes/ai/simple.ai'
-import { createTestManagers } from '../test_utils'
+import { createTestManagers, mockLogger } from '../test_utils'
 import { DEFAULT_4P_RULES } from '@src/modules/mahjong/interfaces/game-rules.config'
 
 class TestPlayer extends Player {
@@ -14,7 +14,7 @@ class TestPlayer extends Player {
 
 class TestMahjongGame extends MahjongGame {
     protected createPlayer(info: { id: string; isAi: boolean }): Player {
-        const player = new TestPlayer(info.id, false, info.isAi)
+        const player = new TestPlayer(info.id, false, info.isAi, mockLogger)
         if (info.isAi) {
             player.ai = new SimpleAI()
         }
@@ -50,6 +50,7 @@ describe('Suufuu Renda (Four Winds Discard)', () => {
             managers.ruleEffectManager,
             managers.ruleManager,
             DEFAULT_4P_RULES,
+            mockLogger,
         )
         game.startGame(roomId)
     })

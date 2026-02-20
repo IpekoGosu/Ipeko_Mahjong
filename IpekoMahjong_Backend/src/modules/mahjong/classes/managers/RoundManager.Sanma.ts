@@ -6,14 +6,18 @@ import {
 import { RuleManager } from '@src/modules/mahjong/classes/managers/RuleManager'
 import { AbstractRoundManager } from '@src/modules/mahjong/classes/managers/AbstractRoundManager'
 import { Injectable } from '@nestjs/common'
+import { WinstonLoggerService } from '@src/common/logger/winston.logger.service'
 import { DEFAULT_3P_RULES } from '@src/modules/mahjong/interfaces/game-rules.config'
 
 @Injectable()
 export class RoundManagerSanma extends AbstractRoundManager {
     public readonly playerCount = 3
 
-    constructor(private readonly ruleManager: RuleManager) {
-        super()
+    constructor(
+        private readonly ruleManager: RuleManager,
+        protected readonly logger: WinstonLoggerService,
+    ) {
+        super(logger)
     }
 
     public getSeatWind(playerIndex: number): string {

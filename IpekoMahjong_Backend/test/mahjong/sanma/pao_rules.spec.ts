@@ -2,7 +2,7 @@ import { SanmaMahjongGame } from '@src/modules/mahjong/classes/game/MahjongGame.
 import { Tile } from '@src/modules/mahjong/classes/tile.class'
 import { Player } from '@src/modules/mahjong/classes/player.class'
 import { ScoreCalculation } from '@src/modules/mahjong/interfaces/mahjong.types'
-import { createTestSanmaManagers } from '../test_utils'
+import { createTestSanmaManagers, mockLogger } from '../test_utils'
 import { DEFAULT_3P_RULES } from '@src/modules/mahjong/interfaces/game-rules.config'
 
 class TestPlayer extends Player {
@@ -16,7 +16,7 @@ class TestPlayer extends Player {
 
 class TestSanmaMahjongGame extends SanmaMahjongGame {
     protected createPlayer(info: { id: string; isAi: boolean }): Player {
-        const player = new TestPlayer(info.id, false, info.isAi)
+        const player = new TestPlayer(info.id, false, info.isAi, mockLogger)
         return player
     }
 
@@ -82,10 +82,11 @@ describe('Mahjong Sanma - Pao (Responsibility Payment) Rules', () => {
             managers.ruleEffectManager,
             managers.ruleManager,
             DEFAULT_3P_RULES,
+            mockLogger,
         )
-        const p1 = new TestPlayer('p1', true, false)
-        const p2 = new TestPlayer('p2', false, false)
-        const p3 = new TestPlayer('p3', false, false)
+        const p1 = new TestPlayer('p1', true, false, mockLogger)
+        const p2 = new TestPlayer('p2', false, false, mockLogger)
+        const p3 = new TestPlayer('p3', false, false, mockLogger)
         game.setPlayers([p1, p2, p3])
         game.roundManager.initialize(['p1', 'p2', 'p3'])
         game.setOyaIndex(0) // p1 is Oya

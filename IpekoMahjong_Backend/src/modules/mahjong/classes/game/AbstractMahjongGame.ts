@@ -8,7 +8,6 @@ import {
     GameState,
 } from '@src/modules/mahjong/interfaces/mahjong.types'
 import { RuleManager } from '@src/modules/mahjong/classes/managers/RuleManager'
-import { Logger } from '@nestjs/common'
 import { AbstractRoundManager } from '@src/modules/mahjong/classes/managers/AbstractRoundManager'
 import { TurnManager } from '@src/modules/mahjong/classes/managers/TurnManager'
 import { AbstractActionManager } from '@src/modules/mahjong/classes/managers/AbstractActionManager'
@@ -18,6 +17,7 @@ import { GameObservation } from '@src/modules/mahjong/interfaces/mahjong-ai.inte
 import { CommonError } from '@src/common/error/common.error'
 import { ERROR_STATUS } from '@src/common/error/error.status'
 import { GameRulesConfig } from '@src/modules/mahjong/interfaces/game-rules.config'
+import { WinstonLoggerService } from '@src/common/logger/winston.logger.service'
 
 /**
  * AbstractMahjongGame 클래스는 한 판의 마작 게임에 대한 모든 규칙과 상태를 관리합니다.
@@ -25,7 +25,6 @@ import { GameRulesConfig } from '@src/modules/mahjong/interfaces/game-rules.conf
  * 메서드는 게임 상태 변화에 대한 요약본인 GameUpdate 객체를 반환합니다.
  */
 export abstract class AbstractMahjongGame {
-    protected readonly logger = new Logger(AbstractMahjongGame.name)
     protected wall: AbstractWall
     protected players: Player[]
 
@@ -138,6 +137,7 @@ export abstract class AbstractMahjongGame {
         ruleEffectManager: AbstractRuleEffectManager,
         ruleManager: RuleManager,
         gameRulesConfig: GameRulesConfig,
+        protected readonly logger: WinstonLoggerService,
     ) {
         this.roundManager = roundManager
         this.turnManager = turnManager
@@ -161,7 +161,7 @@ export abstract class AbstractMahjongGame {
         isAi: boolean
         ai?: MahjongAI
     }): Player {
-        const player = new Player(info.id, false, info.isAi) // isOya set later
+        const player = new Player(info.id, false, info.isAi, this.logger) // isOya set later
         if (info.isAi) {
             if (!info.ai) throw new CommonError(ERROR_STATUS.AI_NOT_PROVIDED)
             player.ai = info.ai
@@ -173,7 +173,7 @@ export abstract class AbstractMahjongGame {
 
     /** 게임을 시작하고 첫 국(Kyoku)의 정보를 반환합니다. */
     startGame(roomId: string): GameUpdate {
-        this.logger.log('Starting game')
+        this.logger.log('Starting game', AbstractMahjongGame.name)
 
         // Randomize seating (Oya selection)
         // Fisher-Yates shuffle
@@ -195,6 +195,7 @@ export abstract class AbstractMahjongGame {
     private startKyoku(roomId: string): GameUpdate {
         this.logger.log(
             `Starting Kyoku: ${this.bakaze}-${this.kyokuNum}, Honba: ${this.honba}`,
+            AbstractMahjongGame.name,
         )
 
         // 1. Reset Wall

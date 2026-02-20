@@ -2,16 +2,19 @@ import { Player } from '@src/modules/mahjong/classes/player.class'
 import { AbstractWall } from '@src/modules/mahjong/classes/wall/AbstractWall'
 import { GameUpdate } from '@src/modules/mahjong/interfaces/mahjong.types'
 import { RuleManager } from '@src/modules/mahjong/classes/managers/RuleManager'
-import { Injectable, Logger } from '@nestjs/common'
+import { Injectable } from '@nestjs/common'
+import { WinstonLoggerService } from '@src/common/logger/winston.logger.service'
 
 @Injectable()
 export class TurnManager {
-    private readonly logger = new Logger(TurnManager.name)
     public currentTurnIndex: number = 0
     public turnCounter: number = 0
     public firstTurnDiscards: { wind: string; count: number } | null = null
 
-    constructor(private readonly ruleManager: RuleManager) {}
+    constructor(
+        private readonly ruleManager: RuleManager,
+        private readonly logger: WinstonLoggerService,
+    ) {}
 
     public reset(oyaIndex: number) {
         this.currentTurnIndex = oyaIndex
@@ -20,7 +23,10 @@ export class TurnManager {
     }
 
     public advanceTurn(playerCount: number) {
-        this.logger.log(`Advancing turn. Current: ${this.currentTurnIndex}`)
+        this.logger.log(
+            `Advancing turn. Current: ${this.currentTurnIndex}`,
+            TurnManager.name,
+        )
         this.currentTurnIndex = (this.currentTurnIndex + 1) % playerCount
         this.turnCounter++
     }

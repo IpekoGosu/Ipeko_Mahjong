@@ -6,11 +6,9 @@ import {
     ScoreCalculation,
     MeldType,
 } from '@src/modules/mahjong/interfaces/mahjong.types'
-import { Logger } from '@nestjs/common'
+import { WinstonLoggerService } from '@src/common/logger/winston.logger.service'
 
 export abstract class AbstractActionManager {
-    protected readonly logger = new Logger(this.constructor.name)
-
     public pendingActions: Record<string, PossibleActions> = {}
     public activeDiscard: { playerId: string; tile: Tile } | null = null
     public anyCallDeclared: boolean = false
@@ -20,6 +18,8 @@ export abstract class AbstractActionManager {
     public potentialRonners: string[] = []
     public receivedRonCommands: { playerId: string; tileString: string }[] = []
     public processedRonners: string[] = []
+
+    constructor(protected readonly logger: WinstonLoggerService) {}
 
     public reset() {
         this.pendingActions = {}

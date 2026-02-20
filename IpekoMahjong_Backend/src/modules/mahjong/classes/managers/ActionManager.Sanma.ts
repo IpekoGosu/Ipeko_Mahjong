@@ -9,11 +9,15 @@ import {
 import { RuleManager } from '@src/modules/mahjong/classes/managers/RuleManager'
 import { AbstractActionManager } from '@src/modules/mahjong/classes/managers/AbstractActionManager'
 import { Injectable } from '@nestjs/common'
+import { WinstonLoggerService } from '@src/common/logger/winston.logger.service'
 
 @Injectable()
 export class ActionManagerSanma extends AbstractActionManager {
-    constructor(private readonly ruleManager: RuleManager) {
-        super()
+    constructor(
+        private readonly ruleManager: RuleManager,
+        protected readonly logger: WinstonLoggerService,
+    ) {
+        super(logger)
     }
 
     public getPossibleActions(

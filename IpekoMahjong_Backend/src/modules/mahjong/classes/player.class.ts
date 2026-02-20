@@ -1,150 +1,54 @@
 import { Tile } from '@src/modules/mahjong/classes/tile.class'
 import { Meld } from '@src/modules/mahjong/interfaces/mahjong.types'
-import { Logger } from '@nestjs/common'
 import { MahjongAI } from '@src/modules/mahjong/classes/ai/MahjongAI'
+import { WinstonLoggerService } from '@src/common/logger/winston.logger.service'
 
 export class Player {
-    private readonly logger = new Logger(Player.name)
-    protected readonly _id: string
-    protected _isOya: boolean
-    readonly isAi: boolean
+    public isOya: boolean
     public ai?: MahjongAI
     protected _hand: Tile[] = []
     protected _discards: Tile[] = []
     protected _melds: Meld[] = []
-    protected _lastDrawnTile: Tile | null = null
-    protected _isRiichi: boolean = false
-    protected _isDoubleRiichi: boolean = false
-    protected _ippatsuEligible: boolean = false
-    protected _riichiDeclarationTurn: number | null = null
-    protected _isFuriten: boolean = false
-    protected _isTemporaryFuriten: boolean = false
-    protected _isRiichiFuriten: boolean = false
-    protected _isNagashiEligible: boolean = true
-    protected _points: number = 25000
-    protected _initialSeatIndex?: number
-    protected _forbiddenDiscard: string[] = []
+    public lastDrawnTile: Tile | null = null
+    public isRiichi: boolean = false
+    public isDoubleRiichi: boolean = false
+    public ippatsuEligible: boolean = false
+    public riichiDeclarationTurn: number | null = null
+    public isFuriten: boolean = false
+    public isTemporaryFuriten: boolean = false
+    public isRiichiFuriten: boolean = false
+    public isNagashiEligible: boolean = true
+    public points: number = 25000
+    public initialSeatIndex?: number
+    public forbiddenDiscard: string[] = []
 
-    constructor(id: string, isOya: boolean = false, isAi: boolean = false) {
-        this._id = id
-        this._isOya = isOya
-        this.isAi = isAi
-    }
-
-    // Getters and Setters
-    get isOya(): boolean {
-        return this._isOya
-    }
-    set isOya(value: boolean) {
-        this._isOya = value
-    }
-
-    get lastDrawnTile(): Tile | null {
-        return this._lastDrawnTile
-    }
-    set lastDrawnTile(value: Tile | null) {
-        this._lastDrawnTile = value
-    }
-
-    get isRiichi(): boolean {
-        return this._isRiichi
-    }
-    set isRiichi(value: boolean) {
-        this._isRiichi = value
-    }
-
-    get isDoubleRiichi(): boolean {
-        return this._isDoubleRiichi
-    }
-    set isDoubleRiichi(value: boolean) {
-        this._isDoubleRiichi = value
-    }
-
-    get ippatsuEligible(): boolean {
-        return this._ippatsuEligible
-    }
-    set ippatsuEligible(value: boolean) {
-        this._ippatsuEligible = value
-    }
-
-    get riichiDeclarationTurn(): number | null {
-        return this._riichiDeclarationTurn
-    }
-    set riichiDeclarationTurn(value: number | null) {
-        this._riichiDeclarationTurn = value
-    }
-
-    get isFuriten(): boolean {
-        return this._isFuriten
-    }
-    set isFuriten(value: boolean) {
-        this._isFuriten = value
-    }
-
-    get isTemporaryFuriten(): boolean {
-        return this._isTemporaryFuriten
-    }
-    set isTemporaryFuriten(value: boolean) {
-        this._isTemporaryFuriten = value
-    }
-
-    get isRiichiFuriten(): boolean {
-        return this._isRiichiFuriten
-    }
-    set isRiichiFuriten(value: boolean) {
-        this._isRiichiFuriten = value
-    }
-
-    get isNagashiEligible(): boolean {
-        return this._isNagashiEligible
-    }
-    set isNagashiEligible(value: boolean) {
-        this._isNagashiEligible = value
-    }
-
-    get points(): number {
-        return this._points
-    }
-    set points(value: number) {
-        this._points = value
-    }
-
-    get initialSeatIndex(): number | undefined {
-        return this._initialSeatIndex
-    }
-    set initialSeatIndex(value: number | undefined) {
-        this._initialSeatIndex = value
-    }
-
-    get forbiddenDiscard(): string[] {
-        return this._forbiddenDiscard
-    }
-    set forbiddenDiscard(value: string[]) {
-        this._forbiddenDiscard = value
+    constructor(
+        public readonly id: string,
+        isOya: boolean = false,
+        public readonly isAi: boolean = false,
+        private readonly logger: WinstonLoggerService,
+    ) {
+        this.isOya = isOya
     }
 
     resetKyokuState(): void {
         this._hand = []
         this._discards = []
         this._melds = []
-        this._lastDrawnTile = null
-        this._isRiichi = false
-        this._isDoubleRiichi = false
-        this._ippatsuEligible = false
-        this._riichiDeclarationTurn = null
-        this._isFuriten = false
-        this._isTemporaryFuriten = false
-        this._isRiichiFuriten = false
-        this._isNagashiEligible = true
-        this._forbiddenDiscard = []
+        this.lastDrawnTile = null
+        this.isRiichi = false
+        this.isDoubleRiichi = false
+        this.ippatsuEligible = false
+        this.riichiDeclarationTurn = null
+        this.isFuriten = false
+        this.isTemporaryFuriten = false
+        this.isRiichiFuriten = false
+        this.isNagashiEligible = true
+        this.forbiddenDiscard = []
     }
 
     isHandClosed(): boolean {
         return this._melds.every((m) => !m.opened)
-    }
-
-    get id(): string {
-        return this._id
     }
 
     get hand(): Tile[] {
@@ -162,7 +66,7 @@ export class Player {
     draw(tile: Tile): void {
         if (tile) {
             this._hand.push(tile)
-            this._lastDrawnTile = tile
+            this.lastDrawnTile = tile
             this.sortHand()
         }
     }
@@ -174,14 +78,16 @@ export class Player {
 
         if (tileIndex === -1) {
             this.logger.error(
-                `Player ${this._id} does not have tile ${tileString}`,
+                `Player ${this.id} does not have tile ${tileString}`,
+                undefined,
+                Player.name,
             )
             return null // Tile not in hand
         }
 
         const [discardedTile] = this._hand.splice(tileIndex, 1)
         this._discards.push(discardedTile)
-        this._lastDrawnTile = null // Reset after discard
+        this.lastDrawnTile = null // Reset after discard
         return discardedTile
     }
 
@@ -246,9 +152,9 @@ export class Player {
 
         // If we have a drawn tile (Tsumo case), we must place it at the end
         // for the riichi library to correctly identify it as the agari tile.
-        if (this._lastDrawnTile) {
+        if (this.lastDrawnTile) {
             const idx = tilesToSort.findIndex(
-                (t) => t.id === this._lastDrawnTile!.id,
+                (t) => t.id === this.lastDrawnTile!.id,
             )
             if (idx !== -1) {
                 const [lastTile] = tilesToSort.splice(idx, 1)
