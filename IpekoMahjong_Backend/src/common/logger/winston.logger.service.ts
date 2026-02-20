@@ -23,16 +23,20 @@ export class WinstonLoggerService implements LoggerService {
                         return convertUtcToKst(utcDate)
                     },
                 }),
-                winston.format.printf(({ timestamp, level, message }) => {
-                    return `[${String(timestamp)}] ${level}: ${String(message)}`
-                }),
+                winston.format.printf(
+                    ({ timestamp, level, message, context }) => {
+                        const contextStr =
+                            typeof context === 'string' ? ` [${context}]` : ''
+                        return `[${String(timestamp)}] ${level}:${contextStr} ${String(message)}`
+                    },
+                ),
             ),
             transports: [
                 new winston.transports.Console({
                     format: winston.format.combine(
                         winston.format.timestamp(),
                         winston.format.printf(
-                            ({ timestamp, level, message }) => {
+                            ({ timestamp, level, message, context }) => {
                                 let levelStr = level
                                 if (level === 'info') {
                                     levelStr = chalk.green(level)
@@ -41,7 +45,11 @@ export class WinstonLoggerService implements LoggerService {
                                 } else if (level === 'error') {
                                     levelStr = chalk.red(level)
                                 }
-                                return `[${chalk.cyan(String(timestamp))}] [${levelStr}] ${String(message)}`
+                                const contextStr =
+                                    typeof context === 'string'
+                                        ? ` [${chalk.magenta(context)}]`
+                                        : ''
+                                return `[${chalk.cyan(String(timestamp))}] [${levelStr}]${contextStr} ${String(message)}`
                             },
                         ),
                     ),
@@ -50,23 +58,29 @@ export class WinstonLoggerService implements LoggerService {
         })
     }
 
-    log(message: unknown) {
-        this.logger.info(JSON.stringify(message, null, 0))
+    log(message: unknown, context?: string) {
+        if (typeof message === 'string') {
+            this.logger.info(message, { context })
+        } else {
+            this.logger.info(JSON.stringify(message, null, 0), { context })
+        }
     }
 
-    error(message: string, trace?: string) {
-        this.logger.error(`${message}${trace ? ` - ${trace}` : ''}`)
+    error(message: string, trace?: string, context?: string) {
+        this.logger.error(`${message}${trace ? ` - ${trace}` : ''}`, {
+            context,
+        })
     }
 
-    warn(message: string) {
-        this.logger.warn(message)
+    warn(message: string, context?: string) {
+        this.logger.warn(message, { context })
     }
 
-    debug(message: string) {
-        this.logger.debug(message)
+    debug(message: string, context?: string) {
+        this.logger.debug(message, { context })
     }
 
-    verbose(message: string) {
-        this.logger.verbose(message)
+    verbose(message: string, context?: string) {
+        this.logger.verbose(message, { context })
     }
 }

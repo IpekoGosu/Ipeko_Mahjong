@@ -1,6 +1,6 @@
 import { SanmaMahjongGame } from '@src/modules/mahjong/classes/game/MahjongGame.Sanma'
 import { ScoreCalculation } from '@src/modules/mahjong/interfaces/mahjong.types'
-import { createTestSanmaManagers } from '../test_utils'
+import { createTestSanmaManagers, mockLogger } from '../test_utils'
 import { DEFAULT_3P_RULES } from '@src/modules/mahjong/interfaces/game-rules.config'
 
 class TestSanmaGame extends SanmaMahjongGame {
@@ -37,6 +37,7 @@ describe('Sanma Scoring Logic', () => {
             managers.ruleEffectManager,
             managers.ruleManager,
             DEFAULT_3P_RULES,
+            mockLogger,
         )
         game.startGame(roomId)
         game.getPlayers().forEach((p) => (p.points = 25000))
@@ -63,7 +64,7 @@ describe('Sanma Scoring Logic', () => {
 
         game.triggerEndKyoku(roomId, {
             reason: 'tsumo',
-            winnerId: oya.getId(),
+            winnerId: oya.id,
             score,
         })
 
@@ -98,7 +99,7 @@ describe('Sanma Scoring Logic', () => {
 
         game.triggerEndKyoku(roomId, {
             reason: 'tsumo',
-            winnerId: winner.getId(),
+            winnerId: winner.id,
             score,
         })
 

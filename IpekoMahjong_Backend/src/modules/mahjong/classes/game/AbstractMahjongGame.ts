@@ -8,7 +8,6 @@ import {
     GameState,
 } from '@src/modules/mahjong/interfaces/mahjong.types'
 import { RuleManager } from '@src/modules/mahjong/classes/managers/RuleManager'
-import { Logger } from '@nestjs/common'
 import { AbstractRoundManager } from '@src/modules/mahjong/classes/managers/AbstractRoundManager'
 import { TurnManager } from '@src/modules/mahjong/classes/managers/TurnManager'
 import { AbstractActionManager } from '@src/modules/mahjong/classes/managers/AbstractActionManager'
@@ -18,6 +17,7 @@ import { GameObservation } from '@src/modules/mahjong/interfaces/mahjong-ai.inte
 import { CommonError } from '@src/common/error/common.error'
 import { ERROR_STATUS } from '@src/common/error/error.status'
 import { GameRulesConfig } from '@src/modules/mahjong/interfaces/game-rules.config'
+import { WinstonLoggerService } from '@src/common/logger/winston.logger.service'
 
 /**
  * AbstractMahjongGame 클래스는 한 판의 마작 게임에 대한 모든 규칙과 상태를 관리합니다.
@@ -25,7 +25,6 @@ import { GameRulesConfig } from '@src/modules/mahjong/interfaces/game-rules.conf
  * 메서드는 게임 상태 변화에 대한 요약본인 GameUpdate 객체를 반환합니다.
  */
 export abstract class AbstractMahjongGame {
-    protected readonly logger = new Logger(AbstractMahjongGame.name)
     protected wall: AbstractWall
     protected players: Player[]
 
@@ -138,6 +137,7 @@ export abstract class AbstractMahjongGame {
         ruleEffectManager: AbstractRuleEffectManager,
         ruleManager: RuleManager,
         gameRulesConfig: GameRulesConfig,
+        protected readonly logger: WinstonLoggerService,
     ) {
         this.roundManager = roundManager
         this.turnManager = turnManager
@@ -161,7 +161,7 @@ export abstract class AbstractMahjongGame {
         isAi: boolean
         ai?: MahjongAI
     }): Player {
-        const player = new Player(info.id, false, info.isAi) // isOya set later
+        const player = new Player(info.id, false, info.isAi, this.logger) // isOya set later
         if (info.isAi) {
             if (!info.ai) throw new CommonError(ERROR_STATUS.AI_NOT_PROVIDED)
             player.ai = info.ai
@@ -173,7 +173,7 @@ export abstract class AbstractMahjongGame {
 
     /** 게임을 시작하고 첫 국(Kyoku)의 정보를 반환합니다. */
     startGame(roomId: string): GameUpdate {
-        this.logger.log('Starting game')
+        this.logger.log('Starting game', AbstractMahjongGame.name)
 
         // Randomize seating (Oya selection)
         // Fisher-Yates shuffle
@@ -186,7 +186,7 @@ export abstract class AbstractMahjongGame {
         }
 
         // Initialize RoundManager with new seat order
-        this.roundManager.initialize(this.players.map((p) => p.getId()))
+        this.roundManager.initialize(this.players.map((p) => p.id))
 
         return this.startKyoku(roomId)
     }
@@ -195,6 +195,7 @@ export abstract class AbstractMahjongGame {
     private startKyoku(roomId: string): GameUpdate {
         this.logger.log(
             `Starting Kyoku: ${this.bakaze}-${this.kyokuNum}, Honba: ${this.honba}`,
+            AbstractMahjongGame.name,
         )
 
         // 1. Reset Wall
@@ -205,8 +206,7 @@ export abstract class AbstractMahjongGame {
 
         // 2. Reset Players (Hands, Discards, Melds, Flags)
         this.players.forEach((player) => {
-            player.isOya =
-                player.getId() === this.players[this.oyaIndex].getId()
+            player.isOya = player.id === this.players[this.oyaIndex].id
             player.resetKyokuState()
         })
         this.paoStatus.clear()
@@ -228,7 +228,7 @@ export abstract class AbstractMahjongGame {
         const startEvents: GameUpdate['events'] = this.players.map((p) => ({
             eventName: 'round-started',
             payload: {
-                hand: p.getHand().map((t) => t.toString()),
+                hand: p.hand.map((t) => t.toString()),
                 dora: doraIndicators,
                 actualDora: actualDora,
                 wallCount: this.wall.getRemainingTiles(),
@@ -236,16 +236,16 @@ export abstract class AbstractMahjongGame {
                 kyoku: this.kyokuNum,
                 honba: this.honba,
                 kyotaku: this.kyotaku,
-                oyaId: this.players[this.oyaIndex].getId(),
+                oyaId: this.players[this.oyaIndex].id,
                 scores: this.players.map((pl) => ({
-                    id: pl.getId(),
+                    id: pl.id,
                     points: pl.points,
                     jikaze: this.getSeatWind(pl),
                 })),
                 waits: this.ruleManager.getWaits(p),
             },
             to: 'player',
-            playerId: p.getId(),
+            playerId: p.id,
         }))
 
         // Kyuushu Kyuuhai is declared by client action.
@@ -492,7 +492,7 @@ export abstract class AbstractMahjongGame {
                     waits: this.ruleManager.getWaits(player),
                 },
                 to: 'player',
-                playerId: player.getId(),
+                playerId: player.id,
             },
         ]
 
@@ -592,7 +592,7 @@ export abstract class AbstractMahjongGame {
                 bakaze: this.bakaze,
                 dora: this.getDora().map((t) => t.toString()),
                 playerContexts: this.players.map((p) => ({
-                    playerId: p.getId(),
+                    playerId: p.id,
                     seatWind: this.getSeatWind(p),
                     uradora: p.isRiichi
                         ? this.wall.getUradora().map((t) => t.toString())
@@ -601,6 +601,7 @@ export abstract class AbstractMahjongGame {
                 isHoutei: this.wall.getRemainingTiles() === 0,
             },
             isKakan,
+            this.isSanma,
         )
     }
 
@@ -687,7 +688,7 @@ export abstract class AbstractMahjongGame {
             actionType === 'kan' ||
             actionType === 'kakan'
         ) {
-            const latestMeld = player.getMelds().slice(-1)[0]
+            const latestMeld = player.melds.slice(-1)[0]
             const paoCheck = this.ruleEffectManager.checkPao(player, latestMeld)
             if (paoCheck) {
                 if (!this.paoStatus.has(playerId)) {
@@ -719,6 +720,7 @@ export abstract class AbstractMahjongGame {
                             isHoutei: this.wall.getRemainingTiles() === 0,
                         },
                         actionType === 'kakan',
+                        this.isSanma,
                     ).score!
                     return { winnerId: w.winnerId, score }
                 })
@@ -897,16 +899,20 @@ export abstract class AbstractMahjongGame {
                 (e) => e.eventName === 'new-tile-drawn',
             )
             if (drawEvent && drawEvent.payload) {
-                const canTsumo = this.actionManager.verifyTsumo(currentPlayer, {
-                    bakaze: this.bakaze,
-                    seatWind: this.getSeatWind(currentPlayer),
-                    dora: this.getDora().map((t) => t.toString()),
-                    uradora: currentPlayer.isRiichi
-                        ? this.wall.getUradora().map((t) => t.toString())
-                        : [],
-                    isHaitei: this.wall.getRemainingTiles() === 0,
-                    rinshanFlag: this.rinshanFlag,
-                }).isAgari
+                const canTsumo = this.actionManager.verifyTsumo(
+                    currentPlayer,
+                    {
+                        bakaze: this.bakaze,
+                        seatWind: this.getSeatWind(currentPlayer),
+                        dora: this.getDora().map((t) => t.toString()),
+                        uradora: currentPlayer.isRiichi
+                            ? this.wall.getUradora().map((t) => t.toString())
+                            : [],
+                        isHaitei: this.wall.getRemainingTiles() === 0,
+                        rinshanFlag: this.rinshanFlag,
+                    },
+                    this.isSanma,
+                ).isAgari
                 drawEvent.payload.canTsumo = canTsumo
             }
         }
@@ -924,14 +930,14 @@ export abstract class AbstractMahjongGame {
     public createGameObservation(player: Player): GameObservation {
         const myIndex = this.players.indexOf(player)
         return {
-            myHand: player.getHand().map((t) => t.toString()),
+            myHand: player.hand.map((t) => t.toString()),
             myLastDraw: player.lastDrawnTile?.toString() || null,
             myIndex: myIndex,
             players: this.players.map((p, idx) => ({
-                id: p.getId(),
-                handCount: p.getHand().length,
-                discards: p.getDiscards().map((t) => t.toString()),
-                melds: p.getMelds().map((m) => ({
+                id: p.id,
+                handCount: p.hand.length,
+                discards: p.discards.map((t) => t.toString()),
+                melds: p.melds.map((m) => ({
                     type: m.type,
                     tiles: m.tiles.map((t) => t.toString()),
                     opened: m.opened,
@@ -1004,7 +1010,7 @@ export abstract class AbstractMahjongGame {
     }
 
     getPlayer(id: string): Player | undefined {
-        return this.players.find((p) => p.getId() === id)
+        return this.players.find((p) => p.id === id)
     }
 
     getCurrentTurnPlayer(): Player {
@@ -1026,16 +1032,20 @@ export abstract class AbstractMahjongGame {
     checkCanTsumo(playerId: string): boolean {
         const player = this.getPlayer(playerId)
         if (!player) return false
-        const result = this.actionManager.verifyTsumo(player, {
-            bakaze: this.bakaze,
-            seatWind: this.getSeatWind(player),
-            dora: this.getDora().map((t) => t.toString()),
-            uradora: player.isRiichi
-                ? this.wall.getUradora().map((t) => t.toString())
-                : [],
-            isHaitei: this.wall.getRemainingTiles() === 0,
-            rinshanFlag: this.rinshanFlag,
-        })
+        const result = this.actionManager.verifyTsumo(
+            player,
+            {
+                bakaze: this.bakaze,
+                seatWind: this.getSeatWind(player),
+                dora: this.getDora().map((t) => t.toString()),
+                uradora: player.isRiichi
+                    ? this.wall.getUradora().map((t) => t.toString())
+                    : [],
+                isHaitei: this.wall.getRemainingTiles() === 0,
+                rinshanFlag: this.rinshanFlag,
+            },
+            this.isSanma,
+        )
         return result.isAgari
     }
 

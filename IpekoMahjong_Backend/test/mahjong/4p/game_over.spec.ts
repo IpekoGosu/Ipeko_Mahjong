@@ -39,13 +39,11 @@ describe('MahjongGame - Game Over and Ranking', () => {
         // RoundManager uses initialPlayerOrder to tie-break.
         // We need to see who comes first in initialPlayerOrder.
         const order = game.roundManager.initialPlayerOrder
-        const p2Idx = order.indexOf(players[1].getId())
-        const p3Idx = order.indexOf(players[2].getId())
+        const p2Idx = order.indexOf(players[1].id)
+        const p3Idx = order.indexOf(players[2].id)
 
-        const expectedRank2 =
-            p2Idx < p3Idx ? players[1].getId() : players[2].getId()
-        const expectedRank3 =
-            p2Idx < p3Idx ? players[2].getId() : players[1].getId()
+        const expectedRank2 = p2Idx < p3Idx ? players[1].id : players[2].id
+        const expectedRank3 = p2Idx < p3Idx ? players[2].id : players[1].id
 
         // Trigger game over via dobon (simplest way)
         players[3].points = -500
@@ -60,10 +58,10 @@ describe('MahjongGame - Game Over and Ranking', () => {
         const ranking = result.events.find((e) => e.eventName === 'game-over')
             ?.payload.finalRanking as FinalRankingEntry[]
 
-        expect(ranking[0].id).toBe(players[0].getId())
+        expect(ranking[0].id).toBe(players[0].id)
         expect(ranking[1].id).toBe(expectedRank2)
         expect(ranking[2].id).toBe(expectedRank3)
-        expect(ranking[3].id).toBe(players[3].getId())
+        expect(ranking[3].id).toBe(players[3].id)
 
         expect(ranking[0].rank).toBe(1)
         expect(ranking[1].rank).toBe(2)

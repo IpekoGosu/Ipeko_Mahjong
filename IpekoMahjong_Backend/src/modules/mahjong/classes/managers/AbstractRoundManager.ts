@@ -3,11 +3,9 @@ import {
     ScoreCalculation,
     GameUpdate,
 } from '@src/modules/mahjong/interfaces/mahjong.types'
-import { Logger } from '@nestjs/common'
+import { WinstonLoggerService } from '@src/common/logger/winston.logger.service'
 
 export abstract class AbstractRoundManager {
-    protected readonly logger = new Logger(this.constructor.name)
-
     // Hanchan State
     public bakaze: '1z' | '2z' | '3z' | '4z' = '1z'
     public kyokuNum: number = 1
@@ -19,7 +17,7 @@ export abstract class AbstractRoundManager {
 
     public abstract readonly playerCount: 3 | 4
 
-    constructor() {}
+    constructor(protected readonly logger: WinstonLoggerService) {}
 
     public initialize(playerIds: string[]) {
         this.bakaze = '1z'
@@ -40,8 +38,8 @@ export abstract class AbstractRoundManager {
     public getSortedPlayers(players: Player[]): Player[] {
         return [...players].sort((a, b) => {
             if (b.points !== a.points) return b.points - a.points
-            const idxA = this.initialPlayerOrder.indexOf(a.getId())
-            const idxB = this.initialPlayerOrder.indexOf(b.getId())
+            const idxA = this.initialPlayerOrder.indexOf(a.id)
+            const idxB = this.initialPlayerOrder.indexOf(b.id)
             return idxA - idxB
         })
     }

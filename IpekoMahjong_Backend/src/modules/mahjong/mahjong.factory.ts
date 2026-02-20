@@ -17,10 +17,14 @@ import {
     DEFAULT_4P_RULES,
     DEFAULT_3P_RULES,
 } from '@src/modules/mahjong/interfaces/game-rules.config'
+import { WinstonLoggerService } from '@src/common/logger/winston.logger.service'
 
 @Injectable()
 export class MahjongFactory {
-    constructor(private moduleRef: ModuleRef) {}
+    constructor(
+        private moduleRef: ModuleRef,
+        private readonly logger: WinstonLoggerService,
+    ) {}
 
     async create4pGame(
         playerInfos: { id: string; isAi: boolean }[],
@@ -47,6 +51,7 @@ export class MahjongFactory {
             ruleEffectManager,
             ruleManager,
             DEFAULT_4P_RULES,
+            this.logger,
         )
     }
 
@@ -78,6 +83,7 @@ export class MahjongFactory {
             ruleEffectManager,
             ruleManager,
             DEFAULT_3P_RULES,
+            this.logger,
         )
     }
 

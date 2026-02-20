@@ -2,21 +2,21 @@ import { MahjongGame } from '@src/modules/mahjong/classes/game/MahjongGame.4p'
 import { Tile } from '@src/modules/mahjong/classes/tile.class'
 import { Player } from '@src/modules/mahjong/classes/player.class'
 import { ScoreCalculation } from '@src/modules/mahjong/interfaces/mahjong.types'
-import { createTestManagers } from '../test_utils'
+import { createTestManagers, mockLogger } from '../test_utils'
 import { DEFAULT_4P_RULES } from '@src/modules/mahjong/interfaces/game-rules.config'
 
 class TestPlayer extends Player {
     public setHand(tiles: Tile[]) {
-        this.hand = tiles
+        this._hand = tiles
     }
     public setPoints(p: number) {
-        this.points = p
+        this._points = p
     }
 }
 
 class TestMahjongGame extends MahjongGame {
     protected createPlayer(info: { id: string; isAi: boolean }): Player {
-        const player = new TestPlayer(info.id, false, info.isAi)
+        const player = new TestPlayer(info.id, false, info.isAi, mockLogger)
         return player
     }
 
@@ -83,11 +83,12 @@ describe('Mahjong - Pao (Responsibility Payment) Rules', () => {
             managers.ruleEffectManager,
             managers.ruleManager,
             DEFAULT_4P_RULES,
+            mockLogger,
         )
-        const p1 = new TestPlayer('p1', true, false)
-        const p2 = new TestPlayer('p2', false, false)
-        const p3 = new TestPlayer('p3', false, false)
-        const p4 = new TestPlayer('p4', false, false)
+        const p1 = new TestPlayer('p1', true, false, mockLogger)
+        const p2 = new TestPlayer('p2', false, false, mockLogger)
+        const p3 = new TestPlayer('p3', false, false, mockLogger)
+        const p4 = new TestPlayer('p4', false, false, mockLogger)
         game.setPlayers([p1, p2, p3, p4])
         game.roundManager.initialize(['p1', 'p2', 'p3', 'p4'])
         game.setOyaIndex(0) // p1 is Oya
@@ -152,9 +153,9 @@ describe('Mahjong - Pao (Responsibility Payment) Rules', () => {
 
         // p4 (responsible) should pay all 48000
         expect(p1.points).toBe(73000)
-        expect(players.find((p) => p.getId() === 'p4')?.points).toBe(-23000)
-        expect(players.find((p) => p.getId() === 'p2')?.points).toBe(25000)
-        expect(players.find((p) => p.getId() === 'p3')?.points).toBe(25000)
+        expect(players.find((p) => p.id === 'p4')?.points).toBe(-23000)
+        expect(players.find((p) => p.id === 'p2')?.points).toBe(25000)
+        expect(players.find((p) => p.id === 'p3')?.points).toBe(25000)
     })
 
     it('should split payment between discarder and responsible player for Ron in Pao', () => {
@@ -219,8 +220,8 @@ describe('Mahjong - Pao (Responsibility Payment) Rules', () => {
         // p2 (discarder): 25000 - 24000 = 1000
         // p4 (responsible): 25000 - 24000 = 1000
         expect(p1.points).toBe(73000)
-        expect(players.find((p) => p.getId() === 'p2')?.points).toBe(1000)
-        expect(players.find((p) => p.getId() === 'p4')?.points).toBe(1000)
+        expect(players.find((p) => p.id === 'p2')?.points).toBe(1000)
+        expect(players.find((p) => p.id === 'p4')?.points).toBe(1000)
     })
 
     it('should split payment between discarder and responsible player for Ron in Pao with honba', () => {
@@ -261,7 +262,7 @@ describe('Mahjong - Pao (Responsibility Payment) Rules', () => {
         // p4: 25000 - 24000 = 1000
 
         expect(p1.points).toBe(73300)
-        expect(players.find((p) => p.getId() === 'p2')?.points).toBe(700)
-        expect(players.find((p) => p.getId() === 'p4')?.points).toBe(1000)
+        expect(players.find((p) => p.id === 'p2')?.points).toBe(700)
+        expect(players.find((p) => p.id === 'p4')?.points).toBe(1000)
     })
 })

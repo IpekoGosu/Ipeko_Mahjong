@@ -3,7 +3,7 @@ import { Tile } from '@src/modules/mahjong/classes/tile.class'
 import { MahjongGame } from '@src/modules/mahjong/classes/game/MahjongGame.4p'
 import { ActionManager4p } from '@src/modules/mahjong/classes/managers/ActionManager.4p'
 import { TurnManager } from '@src/modules/mahjong/classes/managers/TurnManager'
-import { createTestManagers } from '../test_utils'
+import { createTestManagers, mockLogger } from '../test_utils'
 import { DEFAULT_4P_RULES } from '@src/modules/mahjong/interfaces/game-rules.config'
 
 describe('Action Validation', () => {
@@ -29,6 +29,7 @@ describe('Action Validation', () => {
             managers.ruleEffectManager,
             managers.ruleManager,
             DEFAULT_4P_RULES,
+            mockLogger,
         )
         // Manually start and initialize to have control
         game.startGame('room1')
@@ -41,7 +42,7 @@ describe('Action Validation', () => {
         expect(turnManager.currentTurnIndex).toBe(0)
 
         // Player 0 discards a tile
-        const discardedTileStr = players[0].getHand()[0].toString()
+        const discardedTileStr = players[0].hand[0].toString()
         game.discardTile('room1', 'p1', discardedTileStr)
 
         // Now it's pending actions for others.
@@ -52,7 +53,7 @@ describe('Action Validation', () => {
         actionManager.pendingActions = {}
 
         const p3 = players[2]
-        const p3Id = p3.getId()
+        const p3Id = p3.id
 
         // Player 3 tries to "Pon" the tile discarded by Player 0
         game.performAction('room1', p3Id, 'pon', discardedTileStr, [])
@@ -67,7 +68,7 @@ describe('Action Validation', () => {
         expect(turnManager.currentTurnIndex).toBe(0)
 
         const p2 = players[1]
-        const p2Id = p2.getId()
+        const p2Id = p2.id
 
         // Give p2 four 1m tiles to make ankan possible if it were their turn
         p2.resetKyokuState()
@@ -79,7 +80,7 @@ describe('Action Validation', () => {
         game.performAction('room1', p2Id, 'ankan', '1m', [])
 
         expect(turnManager.currentTurnIndex).toBe(0)
-        expect(p2.getMelds().length).toBe(0)
+        expect(p2.melds.length).toBe(0)
     })
 
     it('should NOT allow an action with consumedTiles not in hand', () => {
@@ -93,7 +94,7 @@ describe('Action Validation', () => {
         actionManager.pendingActions['p2'] = { pon: true }
 
         const p2 = players[1]
-        const p2Id = p2.getId()
+        const p2Id = p2.id
 
         // Clear p2 hand and give only one 1m (not enough for Pon)
         p2.resetKyokuState()
@@ -104,6 +105,6 @@ describe('Action Validation', () => {
 
         // Should fail, currentTurnIndex should not change
         expect(turnManager.currentTurnIndex).toBe(0)
-        expect(p2.getMelds().length).toBe(0)
+        expect(p2.melds.length).toBe(0)
     })
 })

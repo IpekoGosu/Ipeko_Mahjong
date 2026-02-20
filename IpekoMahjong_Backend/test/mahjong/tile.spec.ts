@@ -63,24 +63,24 @@ describe('Tile', () => {
     describe('fromString', () => {
         it('should create a normal tile from string', () => {
             const tile = Tile.fromString('5m', 10)
-            expect(tile.getSuit()).toBe('m')
-            expect(tile.getRank()).toBe(5)
+            expect(tile.suit).toBe('m')
+            expect(tile.rank).toBe(5)
             expect(tile.isRed).toBe(false)
             expect(tile.id).toBe('m_5_10')
         })
 
         it('should create a red tile from string', () => {
             const tile = Tile.fromString('0s', 5)
-            expect(tile.getSuit()).toBe('s')
-            expect(tile.getRank()).toBe(5)
+            expect(tile.suit).toBe('s')
+            expect(tile.rank).toBe(5)
             expect(tile.isRed).toBe(true)
             expect(tile.id).toBe('s_5_5')
         })
 
         it('should create an honor tile from string', () => {
             const tile = Tile.fromString('1z', 1)
-            expect(tile.getSuit()).toBe('z')
-            expect(tile.getRank()).toBe(1)
+            expect(tile.suit).toBe('z')
+            expect(tile.rank).toBe(1)
             expect(tile.isRed).toBe(false)
         })
     })
