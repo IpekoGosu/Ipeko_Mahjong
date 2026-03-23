@@ -2,7 +2,7 @@ import { MahjongGame } from '@src/modules/mahjong/classes/game/MahjongGame.4p'
 import { Player } from '@src/modules/mahjong/classes/player.class'
 import { ScoreCalculation } from '@src/modules/mahjong/interfaces/mahjong.types'
 import { SimpleAI } from '@src/modules/mahjong/classes/ai/simple.ai'
-import { createTestManagers } from '../test_utils'
+import { createTestManagers, mockLogger } from '../test_utils'
 import { DEFAULT_4P_RULES } from '@src/modules/mahjong/interfaces/game-rules.config'
 
 class TestMahjongGame extends MahjongGame {
@@ -42,6 +42,7 @@ describe('Mahjong Scoring Logic', () => {
             managers.ruleEffectManager,
             managers.ruleManager,
             DEFAULT_4P_RULES,
+            mockLogger,
         )
         // Seating is randomized in startGame, but we can force it or inspect it.
         game.startGame('test-room')
@@ -71,8 +72,8 @@ describe('Mahjong Scoring Logic', () => {
         // Scenario 1: Ko wins from Oya
         game.triggerEndKyoku('test-room', {
             reason: 'ron',
-            winners: [{ winnerId: ko.getId(), score: scoreResult }],
-            loserId: oya.getId(),
+            winners: [{ winnerId: ko.id, score: scoreResult }],
+            loserId: oya.id,
         })
 
         expect(oya.points).toBe(25000 - 2000)
@@ -99,8 +100,8 @@ describe('Mahjong Scoring Logic', () => {
 
         game.triggerEndKyoku('test-room', {
             reason: 'ron',
-            winners: [{ winnerId: winner.getId(), score: scoreResult }],
-            loserId: loser.getId(),
+            winners: [{ winnerId: winner.id, score: scoreResult }],
+            loserId: loser.id,
         })
 
         expect(loser.points).toBe(25000 - 1300)
@@ -126,8 +127,8 @@ describe('Mahjong Scoring Logic', () => {
 
         game.triggerEndKyoku('test-room', {
             reason: 'ron',
-            winners: [{ winnerId: oya.getId(), score: scoreResult }],
-            loserId: ko.getId(),
+            winners: [{ winnerId: oya.id, score: scoreResult }],
+            loserId: ko.id,
         })
 
         expect(ko.points).toBe(25000 - 2000)
@@ -154,7 +155,7 @@ describe('Mahjong Scoring Logic', () => {
 
         game.triggerEndKyoku('test-room', {
             reason: 'tsumo',
-            winnerId: winner.getId(),
+            winnerId: winner.id,
             score: scoreResult,
         })
 
@@ -184,7 +185,7 @@ describe('Mahjong Scoring Logic', () => {
 
         game.triggerEndKyoku('test-room', {
             reason: 'tsumo',
-            winnerId: oya.getId(),
+            winnerId: oya.id,
             score: scoreResult,
         })
 

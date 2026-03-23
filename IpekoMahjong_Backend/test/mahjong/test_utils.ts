@@ -12,14 +12,17 @@ import {
     DEFAULT_3P_RULES,
 } from '@src/modules/mahjong/interfaces/game-rules.config'
 import { MahjongAI } from '@src/modules/mahjong/classes/ai/MahjongAI'
+import { WinstonLoggerService } from '@src/common/logger/winston.logger.service'
+
+export const mockLogger = new WinstonLoggerService()
 
 export function createTestGame(
     playerInfos: { id: string; isAi: boolean; ai?: MahjongAI }[],
 ) {
-    const ruleManager = new RuleManager()
-    const roundManager = new RoundManager4p(ruleManager)
-    const turnManager = new TurnManager(ruleManager)
-    const actionManager = new ActionManager4p(ruleManager)
+    const ruleManager = new RuleManager(mockLogger)
+    const roundManager = new RoundManager4p(ruleManager, mockLogger)
+    const turnManager = new TurnManager(ruleManager, mockLogger)
+    const actionManager = new ActionManager4p(ruleManager, mockLogger)
     const ruleEffectManager = new RuleEffectManager(ruleManager)
 
     return new MahjongGame(
@@ -30,16 +33,17 @@ export function createTestGame(
         ruleEffectManager,
         ruleManager,
         DEFAULT_4P_RULES,
+        mockLogger,
     )
 }
 
 export function createTestSanmaGame(
     playerInfos: { id: string; isAi: boolean; ai?: MahjongAI }[],
 ) {
-    const ruleManager = new RuleManager()
-    const roundManager = new RoundManagerSanma(ruleManager)
-    const turnManager = new TurnManager(ruleManager)
-    const actionManager = new ActionManagerSanma(ruleManager)
+    const ruleManager = new RuleManager(mockLogger)
+    const roundManager = new RoundManagerSanma(ruleManager, mockLogger)
+    const turnManager = new TurnManager(ruleManager, mockLogger)
+    const actionManager = new ActionManagerSanma(ruleManager, mockLogger)
     const ruleEffectManager = new RuleEffectManager(ruleManager)
 
     return new SanmaMahjongGame(
@@ -50,27 +54,28 @@ export function createTestSanmaGame(
         ruleEffectManager,
         ruleManager,
         DEFAULT_3P_RULES,
+        mockLogger,
     )
 }
 
 export function createTestManagers() {
-    const ruleManager = new RuleManager()
+    const ruleManager = new RuleManager(mockLogger)
     return {
         ruleManager,
-        roundManager: new RoundManager4p(ruleManager),
-        turnManager: new TurnManager(ruleManager),
-        actionManager: new ActionManager4p(ruleManager),
+        roundManager: new RoundManager4p(ruleManager, mockLogger),
+        turnManager: new TurnManager(ruleManager, mockLogger),
+        actionManager: new ActionManager4p(ruleManager, mockLogger),
         ruleEffectManager: new RuleEffectManager(ruleManager),
     }
 }
 
 export function createTestSanmaManagers() {
-    const ruleManager = new RuleManager()
+    const ruleManager = new RuleManager(mockLogger)
     return {
         ruleManager,
-        roundManager: new RoundManagerSanma(ruleManager),
-        turnManager: new TurnManager(ruleManager),
-        actionManager: new ActionManagerSanma(ruleManager),
+        roundManager: new RoundManagerSanma(ruleManager, mockLogger),
+        turnManager: new TurnManager(ruleManager, mockLogger),
+        actionManager: new ActionManagerSanma(ruleManager, mockLogger),
         ruleEffectManager: new RuleEffectManager(ruleManager),
     }
 }

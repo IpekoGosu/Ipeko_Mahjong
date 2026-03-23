@@ -1,6 +1,8 @@
 import { ApiProperty } from '@nestjs/swagger'
 import { users } from '@prisma/client'
 import { convertUtcToKst } from '@src/common/utils/date.utils'
+import { IsEmail, IsInt, IsNotEmpty, IsString } from 'class-validator'
+
 export class UserDto {
     constructor(
         id: number,
@@ -19,21 +21,33 @@ export class UserDto {
     }
 
     @ApiProperty()
+    @IsInt()
+    @IsNotEmpty()
     readonly id: number
 
     @ApiProperty()
+    @IsEmail()
+    @IsNotEmpty()
     readonly email: string
 
     @ApiProperty()
+    @IsString()
+    @IsNotEmpty()
     readonly name: string
 
     @ApiProperty()
+    @IsInt()
+    @IsNotEmpty()
     readonly type: number
 
     @ApiProperty()
+    @IsString()
+    @IsNotEmpty()
     readonly createdAt: string
 
     @ApiProperty()
+    @IsString()
+    @IsNotEmpty()
     readonly updatedAt: string
 
     static fromUserEntityToDto(userEntity: Omit<users, 'password'>) {

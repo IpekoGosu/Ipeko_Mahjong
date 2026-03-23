@@ -1,17 +1,14 @@
 import { Tile } from '@src/modules/mahjong/classes/tile.class'
 import { Meld } from '@src/modules/mahjong/interfaces/mahjong.types'
-import { Logger } from '@nestjs/common'
 import { MahjongAI } from '@src/modules/mahjong/classes/ai/MahjongAI'
+import { WinstonLoggerService } from '@src/common/logger/winston.logger.service'
 
 export class Player {
-    private readonly logger = new Logger(Player.name)
-    private readonly id: string
     public isOya: boolean
-    readonly isAi: boolean
     public ai?: MahjongAI
-    protected hand: Tile[] = []
-    protected discards: Tile[] = []
-    protected melds: Meld[] = []
+    protected _hand: Tile[] = []
+    protected _discards: Tile[] = []
+    protected _melds: Meld[] = []
     public lastDrawnTile: Tile | null = null
     public isRiichi: boolean = false
     public isDoubleRiichi: boolean = false
@@ -25,16 +22,19 @@ export class Player {
     public initialSeatIndex?: number
     public forbiddenDiscard: string[] = []
 
-    constructor(id: string, isOya: boolean = false, isAi: boolean = false) {
-        this.id = id
+    constructor(
+        public readonly id: string,
+        isOya: boolean = false,
+        public readonly isAi: boolean = false,
+        private readonly logger: WinstonLoggerService,
+    ) {
         this.isOya = isOya
-        this.isAi = isAi
     }
 
     resetKyokuState(): void {
-        this.hand = []
-        this.discards = []
-        this.melds = []
+        this._hand = []
+        this._discards = []
+        this._melds = []
         this.lastDrawnTile = null
         this.isRiichi = false
         this.isDoubleRiichi = false
@@ -48,47 +48,45 @@ export class Player {
     }
 
     isHandClosed(): boolean {
-        return this.melds.every((m) => !m.opened)
+        return this._melds.every((m) => !m.opened)
     }
 
-    getId(): string {
-        return this.id
+    get hand(): Tile[] {
+        return [...this._hand]
     }
 
-    getHand(): Tile[] {
-        return [...this.hand]
+    get melds(): Meld[] {
+        return [...this._melds]
     }
 
-    getMelds(): Meld[] {
-        return [...this.melds]
-    }
-
-    getDiscards(): Tile[] {
-        return [...this.discards]
+    get discards(): Tile[] {
+        return [...this._discards]
     }
 
     draw(tile: Tile): void {
         if (tile) {
-            this.hand.push(tile)
+            this._hand.push(tile)
             this.lastDrawnTile = tile
             this.sortHand()
         }
     }
 
     discard(tileString: string): Tile | null {
-        const tileIndex = this.hand.findIndex(
+        const tileIndex = this._hand.findIndex(
             (t) => t.toString() === tileString,
         )
 
         if (tileIndex === -1) {
             this.logger.error(
                 `Player ${this.id} does not have tile ${tileString}`,
+                undefined,
+                Player.name,
             )
             return null // Tile not in hand
         }
 
-        const [discardedTile] = this.hand.splice(tileIndex, 1)
-        this.discards.push(discardedTile)
+        const [discardedTile] = this._hand.splice(tileIndex, 1)
+        this._discards.push(discardedTile)
         this.lastDrawnTile = null // Reset after discard
         return discardedTile
     }
@@ -96,47 +94,47 @@ export class Player {
     removeTiles(tileStrings: string[]): Tile[] {
         const removed: Tile[] = []
         for (const s of tileStrings) {
-            const idx = this.hand.findIndex((t) => t.toString() === s)
+            const idx = this._hand.findIndex((t) => t.toString() === s)
             if (idx !== -1) {
-                removed.push(this.hand.splice(idx, 1)[0])
+                removed.push(this._hand.splice(idx, 1)[0])
             }
         }
         return removed
     }
 
     removeFromHand(tileString: string): Tile | null {
-        const idx = this.hand.findIndex((t) => t.toString() === tileString)
+        const idx = this._hand.findIndex((t) => t.toString() === tileString)
         if (idx !== -1) {
-            return this.hand.splice(idx, 1)[0]
+            return this._hand.splice(idx, 1)[0]
         }
         return null
     }
 
     removeDiscard(tileString: string): Tile | null {
-        const index = this.discards.findIndex(
+        const index = this._discards.findIndex(
             (t) => t.toString() === tileString,
         )
         if (index !== -1) {
-            return this.discards.splice(index, 1)[0]
+            return this._discards.splice(index, 1)[0]
         }
         return null
     }
 
     addMeld(meld: Meld): void {
-        this.melds.push(meld)
+        this._melds.push(meld)
     }
 
     upgradePonToKan(tileToUpgrade: string, addedTile: Tile): Meld | null {
         const targetTile = Tile.fromString(tileToUpgrade)
 
-        const meldIndex = this.melds.findIndex(
+        const meldIndex = this._melds.findIndex(
             (m) =>
                 m.type === 'pon' &&
                 m.tiles.some((t) => t.equalsIgnoreRed(targetTile)),
         )
 
         if (meldIndex !== -1) {
-            const meld = this.melds[meldIndex]
+            const meld = this._melds[meldIndex]
             meld.tiles.push(addedTile)
             meld.type = 'kan'
             // Keep opened: true (Pon was open)
@@ -147,7 +145,7 @@ export class Player {
 
     getHandStringForRiichi(): string {
         // Concealed tiles are those currently in this.hand
-        const handTiles = this.getHand()
+        const handTiles = this.hand
         const tilesToSort = [...handTiles]
 
         let lastTileStr = ''
@@ -167,7 +165,7 @@ export class Player {
         const handMap: Record<string, string[]> = { m: [], p: [], s: [], z: [] }
         tilesToSort.forEach((t) => {
             const s = t.toString()
-            handMap[t.getSuit()].push(s[0])
+            handMap[t.suit].push(s[0])
         })
 
         let handString = ''
@@ -180,15 +178,15 @@ export class Player {
         return handString + lastTileStr
     }
     getHandString(): string {
-        return this.hand.map((tile) => tile.toString()).join('')
+        return this._hand.map((tile) => tile.toString()).join('')
     }
 
     private sortHand(): void {
-        this.hand.sort((a, b) => {
-            if (a.getSuit() !== b.getSuit()) {
-                return a.getSuit().localeCompare(b.getSuit())
+        this._hand.sort((a, b) => {
+            if (a.suit !== b.suit) {
+                return a.suit.localeCompare(b.suit)
             }
-            return a.getRank() - b.getRank()
+            return a.rank - b.rank
         })
     }
 }
