@@ -14,9 +14,36 @@ import {
 import { UserModule } from '@src/modules/user/user.module'
 import { LoggerMiddleware } from '@src/common/logger/logger.middleware'
 import { WinstonLoggerService } from '@src/common/logger/winston.logger.service'
+import { ClsModule } from 'nestjs-cls'
+import { ClsPluginTransactional } from '@nestjs-cls/transactional'
+import { PrismaModule } from '@src/modules/prisma/prisma.module'
+import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma'
+import { PrismaService } from '@src/modules/prisma/prisma.service'
 
 @Module({
-    imports: [UserModule, MahjongModule],
+    imports: [
+        ClsModule.forRoot({
+            global: true,
+            middleware: { mount: true },
+            plugins: [
+                new ClsPluginTransactional({
+                    imports: [
+                        // module in which the PrismaClient is provided
+                        PrismaModule,
+                    ],
+                    adapter: new TransactionalAdapterPrisma({
+                        // the injection token of the PrismaClient
+                        prismaInjectionToken: PrismaService,
+                        // specify the SQL flavor (if using SQL, see below)
+                        sqlFlavor: 'mysql',
+                    }),
+                }),
+            ],
+        }),
+        PrismaModule,
+        UserModule,
+        MahjongModule,
+    ],
     providers: [
         {
             provide: APP_PIPE,

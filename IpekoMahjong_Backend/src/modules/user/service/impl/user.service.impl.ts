@@ -9,37 +9,34 @@ import { UserLoginDto } from '@src/modules/user/dto/user.login.dto'
 import { hashPassword, matchPassword } from '@src/common/utils/bcrypt.hash'
 import { UserRepository } from '@src/modules/user/repository/user.repository'
 import { UserService } from '@src/modules/user/service/user.service'
-import { PrismaService } from '@src/modules/prisma/prisma.service'
+import { Transactional } from '@nestjs-cls/transactional'
 
 @Injectable()
 export class UserServiceImpl extends UserService {
     constructor(
         private readonly userRepository: UserRepository,
         private readonly authService: AuthService,
-        private readonly prisma: PrismaService,
     ) {
         super()
     }
 
+    @Transactional()
     async create(userCreateDto: UserCreateDto): Promise<UserDto> {
-        const createUserResult = await this.prisma.$transaction(async (tx) => {
-            const type = 2
-            const encryptedPassword = await hashPassword(userCreateDto.password)
-            const createInput = {
-                ...userCreateDto,
-                password: encryptedPassword,
-                type,
-            }
-            return await this.userRepository.create(createInput, tx)
-        })
+        const type = 2
+        const encryptedPassword = await hashPassword(userCreateDto.password)
+        const createInput = {
+            ...userCreateDto,
+            password: encryptedPassword,
+            type,
+        }
+        const createUserResult = await this.userRepository.create(createInput)
         return UserDto.fromUserEntityToDto(createUserResult)
     }
 
+    @Transactional()
     async login(userLoginDto: UserLoginDto) {
         // 1. password match with db user
-        const dbUser = await this.prisma.$transaction(async (tx) => {
-            return await this.userRepository.findByEmail(userLoginDto.email, tx)
-        })
+        const dbUser = await this.userRepository.findByEmail(userLoginDto.email)
 
         if (dbUser === null) {
             throw new CommonError(ERROR_STATUS.LOGIN_FAIL_USER_NOT_FOUND)
@@ -63,10 +60,9 @@ export class UserServiceImpl extends UserService {
         return { jwt, user: userDto }
     }
 
+    @Transactional()
     async findById(id: number) {
-        const user = await this.prisma.$transaction(async (tx) =>
-            this.userRepository.findById(id, tx),
-        )
+        const user = await this.userRepository.findById(id)
         return UserDto.fromUserEntityToDto(user)
     }
 }
