@@ -10,12 +10,15 @@ import { hashPassword, matchPassword } from '@src/common/utils/bcrypt.hash'
 import { UserRepository } from '@src/modules/user/repository/user.repository'
 import { UserService } from '@src/modules/user/service/user.service'
 import { Transactional } from '@nestjs-cls/transactional'
+import { ClsService } from 'nestjs-cls'
+import { AppClsStore } from '@src/common/interface/cls-store.interface'
 
 @Injectable()
 export class UserServiceImpl extends UserService {
     constructor(
         private readonly userRepository: UserRepository,
         private readonly authService: AuthService,
+        private readonly cls: ClsService<AppClsStore>,
     ) {
         super()
     }
@@ -61,8 +64,12 @@ export class UserServiceImpl extends UserService {
     }
 
     @Transactional()
-    async findById(id: number) {
-        const user = await this.userRepository.findById(id)
-        return UserDto.fromUserEntityToDto(user)
+    async findById() {
+        const userId = this.cls.get('user.userId')
+        if (!userId) {
+            throw new CommonError(ERROR_STATUS.LOGIN_FAIL_USER_NOT_FOUND)
+        }
+        const dbUser = await this.userRepository.findById(userId)
+        return UserDto.fromUserEntityToDto(dbUser)
     }
 }
