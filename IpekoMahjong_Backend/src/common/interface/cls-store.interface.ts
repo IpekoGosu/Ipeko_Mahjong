@@ -12,12 +12,13 @@ export interface AppClsStore extends ClsStore {
 /**
  * Type guard to safely check if an object is an AuthenticatedUser
  */
-export function isAuthenticatedUser(obj: object): obj is AuthenticatedUser {
+export function isAuthenticatedUser(obj: unknown): obj is AuthenticatedUser {
     return (
+        typeof obj === 'object' &&
         obj !== null &&
         'userId' in obj &&
-        typeof (obj as AuthenticatedUser).userId === 'number' &&
+        typeof (obj as Record<string, unknown>).userId === 'number' &&
         'email' in obj &&
-        typeof (obj as AuthenticatedUser).email === 'string'
+        typeof (obj as Record<string, unknown>).email === 'string'
     )
 }
