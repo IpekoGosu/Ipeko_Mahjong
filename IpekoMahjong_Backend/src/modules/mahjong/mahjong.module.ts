@@ -2,7 +2,6 @@ import { Module, Scope, Type } from '@nestjs/common'
 import { MahjongGateway } from '@src/modules/mahjong/mahjong.gateway'
 import { GameRoomService } from '@src/modules/mahjong/service/game-room.service'
 import { GameRoomServiceImpl } from '@src/modules/mahjong/service/impl/game-room.service.impl'
-import { WinstonLoggerService } from '@src/common/logger/winston.logger.service'
 import { AuthModule } from '@src/modules/authorization/auth.module'
 import { MahjongFactory } from '@src/modules/mahjong/mahjong.factory'
 import { RoundManager4p } from '@src/modules/mahjong/classes/managers/RoundManager.4p'
@@ -29,7 +28,6 @@ const createTransientProvider = <T>(token: Type<T>) => ({
             provide: GameRoomService,
             useClass: GameRoomServiceImpl,
         },
-        WinstonLoggerService,
         MahjongFactory,
         RuleManager,
         createTransientProvider(RoundManager4p),
