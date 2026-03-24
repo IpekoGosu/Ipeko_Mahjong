@@ -13,7 +13,6 @@ import {
 } from '@src/common/filter/error.filter'
 import { UserModule } from '@src/modules/user/user.module'
 import { LoggerMiddleware } from '@src/common/logger/logger.middleware'
-import { WinstonLoggerService } from '@src/common/logger/winston.logger.service'
 import { ClsModule } from 'nestjs-cls'
 import { ClsPluginTransactional } from '@nestjs-cls/transactional'
 import { PrismaModule } from '@src/modules/prisma/prisma.module'
