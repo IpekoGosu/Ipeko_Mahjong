@@ -19,6 +19,7 @@ import { ClsPluginTransactional } from '@nestjs-cls/transactional'
 import { PrismaModule } from '@src/modules/prisma/prisma.module'
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma'
 import { PrismaService } from '@src/modules/prisma/prisma.service'
+import { WinstonLoggerModule } from '@src/common/logger/winston.logger.module'
 
 @Module({
     imports: [
@@ -40,6 +41,7 @@ import { PrismaService } from '@src/modules/prisma/prisma.service'
                 }),
             ],
         }),
+        WinstonLoggerModule,
         PrismaModule,
         UserModule,
         MahjongModule,
@@ -65,7 +67,6 @@ import { PrismaService } from '@src/modules/prisma/prisma.service'
             provide: APP_FILTER,
             useClass: AllExceptionsFilter,
         },
-        WinstonLoggerService,
     ],
 })
 export class AppModule implements NestModule {

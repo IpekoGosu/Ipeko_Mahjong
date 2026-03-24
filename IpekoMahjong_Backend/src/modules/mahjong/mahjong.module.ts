@@ -29,7 +29,6 @@ const createTransientProvider = <T>(token: Type<T>) => ({
             provide: GameRoomService,
             useClass: GameRoomServiceImpl,
         },
-        WinstonLoggerService,
         MahjongFactory,
         RuleManager,
         createTransientProvider(RoundManager4p),
