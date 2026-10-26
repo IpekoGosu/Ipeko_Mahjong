@@ -356,7 +356,7 @@ export class RuleManager {
         }
 
         // Add winning tile for Ron as a separate segment
-        // This sets isTsumo = false in the library constructor automatically
+        // Or if 13 tiles are in hand for Tsumo, append winningTile to identify agari tile
         if (!context.isTsumo) {
             if (!context.winningTile) {
                 this.logger.error(
@@ -367,9 +367,11 @@ export class RuleManager {
                 return null
             }
             handStr += `+${context.winningTile}`
+        } else if (context.winningTile && player.hand.length === 13) {
+            handStr += `+${context.winningTile}`
         }
 
-        // 3. Construct Extra String (Situational Yaku)
+        // 3. Construct Extra String (Situational Yaku & Winds)
         let extra = ''
         if (context.isRiichi) extra += 'r'
         if (context.isDoubleRiichi) extra += 'w'
@@ -377,6 +379,10 @@ export class RuleManager {
         if (context.isHaitei || context.isHoutei) extra += 'h'
         if (context.isRinshan || context.isChankan) extra += 'k'
         if (context.isTenhou || context.isChiihou) extra += 't'
+
+        const bakazeNum = parseInt(context.bakaze[0])
+        const jikazeNum = parseInt(context.seatWind[0])
+        extra += `${bakazeNum}${jikazeNum}`
 
         const riichi = new Riichi(handStr)
         const dora = context.dora.map((d) => this.getActualDora(d, isSanma))

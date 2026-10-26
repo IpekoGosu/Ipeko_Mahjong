@@ -11,7 +11,7 @@ class TestPlayer extends Player {
         this._hand = tiles
     }
     public setPoints(p: number) {
-        this._points = p
+        this.points = p
     }
 }
 

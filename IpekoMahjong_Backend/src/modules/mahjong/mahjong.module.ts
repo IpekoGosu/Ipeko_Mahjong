@@ -13,6 +13,7 @@ import { SimpleAI } from '@src/modules/mahjong/classes/ai/simple.ai'
 import { MahjongAI } from '@src/modules/mahjong/classes/ai/MahjongAI'
 import { RuleEffectManager } from '@src/modules/mahjong/classes/managers/RuleEffectManager'
 import { RuleManager } from '@src/modules/mahjong/classes/managers/RuleManager'
+import { WinstonLoggerModule } from '@src/common/logger/winston.logger.module'
 
 const createTransientProvider = <T>(token: Type<T>) => ({
     provide: token,
@@ -21,7 +22,7 @@ const createTransientProvider = <T>(token: Type<T>) => ({
 })
 
 @Module({
-    imports: [AuthModule],
+    imports: [AuthModule, WinstonLoggerModule],
     providers: [
         MahjongGateway,
         {
