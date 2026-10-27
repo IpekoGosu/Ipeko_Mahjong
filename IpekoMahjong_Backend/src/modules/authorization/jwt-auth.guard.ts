@@ -5,7 +5,13 @@ import {
 } from '@nestjs/common'
 import { AuthGuard } from '@nestjs/passport'
 import { WsException } from '@nestjs/websockets'
-import { Socket } from 'socket.io'
+import type { Socket } from 'socket.io'
+import { ClsService } from 'nestjs-cls'
+import type { Request } from 'express'
+import {
+    AppClsStore,
+    isAuthenticatedUser,
+} from '@src/common/interface/cls-store.interface'
 
 interface JwtError extends Error {
     name: string
@@ -13,31 +19,36 @@ interface JwtError extends Error {
 
 @Injectable()
 export class JwtAuthGuard extends AuthGuard('jwt') {
-    override getRequest(context: ExecutionContext): unknown {
+    constructor(private readonly cls: ClsService<AppClsStore>) {
+        super()
+    }
+
+    override getRequest(
+        context: ExecutionContext,
+    ): Request | Socket['handshake'] {
         if (context.getType() === 'ws') {
             const client = context.switchToWs().getClient<Socket>()
             return client.handshake
         }
-        return context.switchToHttp().getRequest<unknown>()
+        return context.switchToHttp().getRequest<Request>()
     }
 
-    override handleRequest<TUser = unknown>(
-        err: unknown,
+    override handleRequest<TUser>(
+        err: Error | null,
         user: TUser,
-        info: unknown,
+        info: JwtError | undefined,
         context: ExecutionContext,
     ): TUser {
         const isWs = context.getType() === 'ws'
 
         if (err || !user) {
-            const jwtInfo = info as JwtError | undefined
             let exception: Error
 
-            if (jwtInfo?.name === 'JsonWebTokenError') {
+            if (info?.name === 'JsonWebTokenError') {
                 exception = isWs
                     ? new WsException('Invalid token')
                     : new UnauthorizedException('Invalid token')
-            } else if (jwtInfo?.name === 'TokenExpiredError') {
+            } else if (info?.name === 'TokenExpiredError') {
                 exception = isWs
                     ? new WsException('Token expired')
                     : new UnauthorizedException('Token expired')
@@ -50,6 +61,12 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
             }
             throw exception
         }
+
+        // Use the type guard to set the user in CLS context safely
+        if (typeof user === 'object' && isAuthenticatedUser(user)) {
+            this.cls.set('user', user)
+        }
+
         return user
     }
 }

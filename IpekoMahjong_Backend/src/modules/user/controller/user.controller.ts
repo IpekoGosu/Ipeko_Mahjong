@@ -27,7 +27,6 @@ import {
 } from '@nestjs/swagger'
 import { ApiSuccessResponse } from '@src/common/decorator/swagger.decorator'
 import { JwtAuthGuard } from '@src/modules/authorization/jwt-auth.guard'
-import { CurrentUser } from '@src/common/decorator/current-user.decorator'
 import { FileInterceptor } from '@nestjs/platform-express'
 import {
     downloadFileFromGoogleStorage,
@@ -80,8 +79,8 @@ export class UserController {
     @ApiOperation({ summary: 'Get current user profile' })
     @ApiSuccessResponse(UserDto)
     @HttpCode(HttpStatus.OK)
-    public async getMe(@CurrentUser() user: { userId: number; email: string }) {
-        const data = await this.userService.findById(user.userId)
+    public async getMe() {
+        const data = await this.userService.findById()
         return new CommonSuccessResponse(data)
     }
 

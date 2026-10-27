@@ -55,10 +55,10 @@ describe('Seat Wind Calculation', () => {
 
         // Find another player to be the discarder
         const discarder = game.getPlayers().find((p) => p !== westPlayer)!
-        const actions = game.getPossibleActions(discarder.getId(), '1s')
+        const actions = game.getPossibleActions(discarder.id, '1s')
 
-        expect(actions[westPlayer.getId()]).toBeDefined()
-        expect(actions[westPlayer.getId()].ron).toBe(true)
+        expect(actions[westPlayer.id]).toBeDefined()
+        expect(actions[westPlayer.id].ron).toBe(true)
     })
 
     it('should allow North player to win with North wind yaku', () => {
@@ -93,10 +93,10 @@ describe('Seat Wind Calculation', () => {
         })
 
         const discarder = game.getPlayers().find((p) => p !== northPlayer)!
-        const actions = game.getPossibleActions(discarder.getId(), '1s')
+        const actions = game.getPossibleActions(discarder.id, '1s')
 
-        expect(actions[northPlayer.getId()]).toBeDefined()
-        expect(actions[northPlayer.getId()].ron).toBe(true)
+        expect(actions[northPlayer.id]).toBeDefined()
+        expect(actions[northPlayer.id].ron).toBe(true)
     })
 
     it('should NOT allow West player to win with North wind Pung if it is not their seat wind', () => {
@@ -130,11 +130,11 @@ describe('Seat Wind Calculation', () => {
         })
 
         const discarder = game.getPlayers().find((p) => p !== westPlayer)!
-        const actions = game.getPossibleActions(discarder.getId(), '1s')
+        const actions = game.getPossibleActions(discarder.id, '1s')
 
         // Should not have Ron because no Yaku
-        if (actions[westPlayer.getId()]) {
-            expect(actions[westPlayer.getId()].ron).toBeUndefined()
+        if (actions[westPlayer.id]) {
+            expect(actions[westPlayer.id].ron).toBeUndefined()
         }
     })
 })

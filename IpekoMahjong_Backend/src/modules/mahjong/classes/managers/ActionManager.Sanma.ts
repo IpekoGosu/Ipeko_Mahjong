@@ -9,11 +9,15 @@ import {
 import { RuleManager } from '@src/modules/mahjong/classes/managers/RuleManager'
 import { AbstractActionManager } from '@src/modules/mahjong/classes/managers/AbstractActionManager'
 import { Injectable } from '@nestjs/common'
+import { WinstonLoggerService } from '@src/common/logger/winston.logger.service'
 
 @Injectable()
 export class ActionManagerSanma extends AbstractActionManager {
-    constructor(private readonly ruleManager: RuleManager) {
-        super()
+    constructor(
+        private readonly ruleManager: RuleManager,
+        protected readonly logger: WinstonLoggerService,
+    ) {
+        super(logger)
     }
 
     public getPossibleActions(
@@ -31,8 +35,9 @@ export class ActionManagerSanma extends AbstractActionManager {
             isHoutei: boolean
         },
         isKakan: boolean = false,
+        _isSanma: boolean = true,
     ): Record<string, PossibleActions> {
-        const discarder = players.find((p) => p.getId() === discarderId)
+        const discarder = players.find((p) => p.id === discarderId)
         if (!discarder) return {}
 
         this.potentialRonners = []
@@ -42,14 +47,14 @@ export class ActionManagerSanma extends AbstractActionManager {
         const actions: Record<string, PossibleActions> = {}
 
         players.forEach((player) => {
-            if (player.getId() === discarderId) return
+            if (player.id === discarderId) return
 
-            const hand = player.getHand()
+            const hand = player.hand
             const possibleActions: PossibleActions = {}
             let hasAction = false
 
             const playerCtx = context.playerContexts.find(
-                (c) => c.playerId === player.getId(),
+                (c) => c.playerId === player.id,
             )!
 
             const result = this.verifyRon(
@@ -73,32 +78,29 @@ export class ActionManagerSanma extends AbstractActionManager {
             if (result.isAgari && !isFuriten) {
                 possibleActions.ron = true
                 hasAction = true
-                this.potentialRonners.push(player.getId())
+                this.potentialRonners.push(player.id)
             }
 
             if (isKakan) {
-                if (hasAction) actions[player.getId()] = possibleActions
+                if (hasAction) actions[player.id] = possibleActions
                 return
             }
 
             // Houtei restriction: cannot call last tile except for Ron
             if (context.isHoutei) {
                 if (possibleActions.ron) {
-                    actions[player.getId()] = { ron: true }
+                    actions[player.id] = { ron: true }
                 }
                 return
             }
 
             if (player.isRiichi) {
-                if (hasAction) actions[player.getId()] = possibleActions
+                if (hasAction) actions[player.id] = possibleActions
                 return
             }
 
-            const rank = Tile.parseRank(tileString)
-            const suit = tileString[1]
-            const matches = hand.filter(
-                (t) => t.getRank() === rank && t.getSuit() === suit,
-            )
+            const targetTile = Tile.fromString(tileString)
+            const matches = hand.filter((t) => t.equalsIgnoreRed(targetTile))
 
             if (matches.length >= 2) {
                 possibleActions.pon = true
@@ -112,7 +114,7 @@ export class ActionManagerSanma extends AbstractActionManager {
             // Sanma: No Chi.
 
             if (hasAction) {
-                actions[player.getId()] = possibleActions
+                actions[player.id] = possibleActions
             }
         })
 
@@ -128,7 +130,7 @@ export class ActionManagerSanma extends AbstractActionManager {
         players: Player[],
         currentPlayerIndex: number,
     ): ActionResult {
-        const player = players.find((p) => p.getId() === playerId)!
+        const player = players.find((p) => p.id === playerId)!
         const playerIndex = players.indexOf(player)
 
         if (actionType === 'ron') {
@@ -173,7 +175,7 @@ export class ActionManagerSanma extends AbstractActionManager {
     ): { shouldProceed: boolean; actionsRemaining: boolean } {
         const pending = this.pendingActions[playerId]
         if (pending && pending.ron) {
-            const player = players.find((p) => p.getId() === playerId)
+            const player = players.find((p) => p.id === playerId)
             if (player) {
                 player.isTemporaryFuriten = true
                 if (player.isRiichi) player.isRiichiFuriten = true
@@ -198,6 +200,7 @@ export class ActionManagerSanma extends AbstractActionManager {
             isHoutei: boolean
         },
         isKakan: boolean = false,
+        isSanma: boolean = true,
     ): { isAgari: boolean; score?: ScoreCalculation } {
         const winCtx: WinContext = {
             bakaze: context.bakaze,
@@ -211,7 +214,7 @@ export class ActionManagerSanma extends AbstractActionManager {
             isRiichi: player.isRiichi,
             isDoubleRiichi: player.isDoubleRiichi,
         }
-        return this.ruleManager.verifyWin(player, tileString, winCtx)
+        return this.ruleManager.verifyWin(player, tileString, winCtx, isSanma)
     }
 
     public verifyTsumo(
@@ -224,8 +227,9 @@ export class ActionManagerSanma extends AbstractActionManager {
             isHaitei: boolean
             rinshanFlag: boolean
         },
+        isSanma: boolean = true,
     ): { isAgari: boolean; score?: ScoreCalculation } {
-        const lastTile = player.getHand().slice(-1)[0]
+        const lastTile = player.hand.slice(-1)[0]
         const winCtx: WinContext = {
             bakaze: context.bakaze,
             seatWind: context.seatWind,
@@ -237,6 +241,11 @@ export class ActionManagerSanma extends AbstractActionManager {
             dora: context.dora,
             uradora: context.uradora,
         }
-        return this.ruleManager.verifyWin(player, lastTile.toString(), winCtx)
+        return this.ruleManager.verifyWin(
+            player,
+            lastTile.toString(),
+            winCtx,
+            isSanma,
+        )
     }
 }

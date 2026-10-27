@@ -3,7 +3,7 @@ import { Player } from '@src/modules/mahjong/classes/player.class'
 import { Tile } from '@src/modules/mahjong/classes/tile.class'
 import Riichi from 'riichi'
 import { RiichiResult } from '@src/modules/mahjong/interfaces/mahjong.types'
-import { createTestGame } from './test_utils'
+import { createTestGame, mockLogger } from './test_utils'
 
 class TestWall extends Wall {
     public getTiles() {
@@ -47,14 +47,14 @@ describe('Player', () => {
     let player: Player
 
     beforeEach(() => {
-        player = new Player('p1')
+        player = new Player('p1', false, false, mockLogger)
         createTestGame([{ id: 'p1', isAi: false }])
     })
 
     it('should draw a tile and sort the hand', () => {
         player.draw(new Tile('m', 3, false, 0))
         player.draw(new Tile('m', 1, false, 1))
-        expect(player.getHand().map((t) => t.toString())).toEqual(['1m', '3m'])
+        expect(player.hand.map((t) => t.toString())).toEqual(['1m', '3m'])
     })
 
     it('should discard a tile', () => {
@@ -62,8 +62,8 @@ describe('Player', () => {
         player.draw(tile)
         const discarded = player.discard(tile.toString())
         expect(discarded).toEqual(tile)
-        expect(player.getHand().length).toBe(0)
-        expect(player.getDiscards().length).toBe(1)
+        expect(player.hand.length).toBe(0)
+        expect(player.discards.length).toBe(1)
     })
 
     it('should return the correct hand string', () => {

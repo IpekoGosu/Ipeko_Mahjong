@@ -37,9 +37,9 @@ describe('Sanma Mahjong Game Basics', () => {
 
         // currentPlayer discards a tile that could be chi'd in 4p
         // But in Sanma, getPossibleActions should not return chi
-        const actions = game.getPossibleActions(currentPlayer.getId(), '2s')
+        const actions = game.getPossibleActions(currentPlayer.id, '2s')
 
-        expect(actions[nextPlayer.getId()]?.chi).toBeFalsy()
+        expect(actions[nextPlayer.id]?.chi).toBeFalsy()
     })
 
     it('should handle round transition correctly in Sanma (skip North)', () => {

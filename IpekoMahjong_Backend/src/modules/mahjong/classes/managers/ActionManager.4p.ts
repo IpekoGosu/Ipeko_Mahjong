@@ -9,11 +9,15 @@ import {
 import { RuleManager } from '@src/modules/mahjong/classes/managers/RuleManager'
 import { AbstractActionManager } from '@src/modules/mahjong/classes/managers/AbstractActionManager'
 import { Injectable } from '@nestjs/common'
+import { WinstonLoggerService } from '@src/common/logger/winston.logger.service'
 
 @Injectable()
 export class ActionManager4p extends AbstractActionManager {
-    constructor(private readonly ruleManager: RuleManager) {
-        super()
+    constructor(
+        private readonly ruleManager: RuleManager,
+        protected readonly logger: WinstonLoggerService,
+    ) {
+        super(logger)
     }
 
     public getPossibleActions(
@@ -31,8 +35,10 @@ export class ActionManager4p extends AbstractActionManager {
             isHoutei: boolean
         },
         isKakan: boolean = false,
+        // _isSanma is unused here as 4p rules are fixed, retained to satisfy AbstractActionManager signature
+        _isSanma: boolean = false,
     ): Record<string, PossibleActions> {
-        const discarder = players.find((p) => p.getId() === discarderId)
+        const discarder = players.find((p) => p.id === discarderId)
         if (!discarder) return {}
 
         this.potentialRonners = []
@@ -43,14 +49,14 @@ export class ActionManager4p extends AbstractActionManager {
         const actions: Record<string, PossibleActions> = {}
 
         players.forEach((player, index) => {
-            if (player.getId() === discarderId) return
+            if (player.id === discarderId) return
 
-            const hand = player.getHand()
+            const hand = player.hand
             const possibleActions: PossibleActions = {}
             let hasAction = false
 
             const playerCtx = context.playerContexts.find(
-                (c) => c.playerId === player.getId(),
+                (c) => c.playerId === player.id,
             )!
 
             const result = this.verifyRon(
@@ -74,33 +80,30 @@ export class ActionManager4p extends AbstractActionManager {
             if (result.isAgari && !isFuriten) {
                 possibleActions.ron = true
                 hasAction = true
-                this.potentialRonners.push(player.getId())
+                this.potentialRonners.push(player.id)
             }
 
             // Chankan (Ron on Kakan) is only Ron. No Pon/Chi/Kan allowed on Kakan.
             if (isKakan) {
-                if (hasAction) actions[player.getId()] = possibleActions
+                if (hasAction) actions[player.id] = possibleActions
                 return
             }
 
             // Houtei restriction: cannot call last tile except for Ron
             if (context.isHoutei) {
                 if (possibleActions.ron) {
-                    actions[player.getId()] = { ron: true }
+                    actions[player.id] = { ron: true }
                 }
                 return
             }
 
             if (player.isRiichi) {
-                if (hasAction) actions[player.getId()] = possibleActions
+                if (hasAction) actions[player.id] = possibleActions
                 return
             }
 
-            const rank = Tile.parseRank(tileString)
-            const suit = tileString[1]
-            const matches = hand.filter(
-                (t) => t.getRank() === rank && t.getSuit() === suit,
-            )
+            const targetTile = Tile.fromString(tileString)
+            const matches = hand.filter((t) => t.equalsIgnoreRed(targetTile))
 
             if (matches.length >= 2) {
                 possibleActions.pon = true
@@ -121,7 +124,7 @@ export class ActionManager4p extends AbstractActionManager {
             }
 
             if (hasAction) {
-                actions[player.getId()] = possibleActions
+                actions[player.id] = possibleActions
             }
         })
 
@@ -137,7 +140,7 @@ export class ActionManager4p extends AbstractActionManager {
         players: Player[],
         currentPlayerIndex: number,
     ): ActionResult {
-        const player = players.find((p) => p.getId() === playerId)!
+        const player = players.find((p) => p.id === playerId)!
         const playerIndex = players.indexOf(player)
 
         if (actionType === 'ron') {
@@ -184,7 +187,7 @@ export class ActionManager4p extends AbstractActionManager {
     ): { shouldProceed: boolean; actionsRemaining: boolean } {
         const pending = this.pendingActions[playerId]
         if (pending && pending.ron) {
-            const player = players.find((p) => p.getId() === playerId)
+            const player = players.find((p) => p.id === playerId)
             if (player) {
                 player.isTemporaryFuriten = true
                 if (player.isRiichi) player.isRiichiFuriten = true
@@ -209,6 +212,7 @@ export class ActionManager4p extends AbstractActionManager {
             isHoutei: boolean
         },
         isKakan: boolean = false,
+        isSanma: boolean = false,
     ): { isAgari: boolean; score?: ScoreCalculation } {
         const winCtx: WinContext = {
             bakaze: context.bakaze,
@@ -225,7 +229,7 @@ export class ActionManager4p extends AbstractActionManager {
             isDoubleRiichi: player.isDoubleRiichi,
         }
 
-        return this.ruleManager.verifyWin(player, tileString, winCtx)
+        return this.ruleManager.verifyWin(player, tileString, winCtx, isSanma)
     }
 
     public verifyTsumo(
@@ -238,8 +242,9 @@ export class ActionManager4p extends AbstractActionManager {
             isHaitei: boolean
             rinshanFlag: boolean
         },
+        isSanma: boolean = false,
     ): { isAgari: boolean; score?: ScoreCalculation } {
-        const lastTile = player.getHand().slice(-1)[0]
+        const lastTile = player.hand.slice(-1)[0]
         const winCtx: WinContext = {
             bakaze: context.bakaze,
             seatWind: context.seatWind,
@@ -255,7 +260,12 @@ export class ActionManager4p extends AbstractActionManager {
             uradora: context.uradora,
         }
 
-        return this.ruleManager.verifyWin(player, lastTile.toString(), winCtx)
+        return this.ruleManager.verifyWin(
+            player,
+            lastTile.toString(),
+            winCtx,
+            isSanma,
+        )
     }
 
     public checkChi(player: Player, tileString: string): string[][] {
@@ -263,12 +273,12 @@ export class ActionManager4p extends AbstractActionManager {
         if (suit === 'z') return []
 
         const rank = Tile.parseRank(tileString)
-        const hand = player.getHand()
+        const hand = player.hand
 
         const options: string[][] = []
 
         const getTilesOfRank = (r: number) =>
-            hand.filter((t) => t.getSuit() === suit && t.getRank() === r)
+            hand.filter((t) => t.suit === suit && t.rank === r)
 
         const checkGroup = (r1: number, r2: number) => {
             const tiles1 = getTilesOfRank(r1)

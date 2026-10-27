@@ -3,12 +3,12 @@ import { Tile } from '@src/modules/mahjong/classes/tile.class'
 import { Player } from '@src/modules/mahjong/classes/player.class'
 import { SimpleAI } from '@src/modules/mahjong/classes/ai/simple.ai'
 import { ScoreCalculation } from '@src/modules/mahjong/interfaces/mahjong.types'
-import { createTestManagers } from '../test_utils'
+import { createTestManagers, mockLogger } from '../test_utils'
 import { DEFAULT_4P_RULES } from '@src/modules/mahjong/interfaces/game-rules.config'
 
 class TestPlayer extends Player {
     public setHand(tiles: Tile[]) {
-        this.hand = tiles
+        this._hand = tiles
     }
     public setPoints(p: number) {
         this.points = p
@@ -17,7 +17,7 @@ class TestPlayer extends Player {
 
 class TestMahjongGameAdvanced extends MahjongGame {
     protected createPlayer(info: { id: string; isAi: boolean }): Player {
-        const player = new TestPlayer(info.id, false, info.isAi)
+        const player = new TestPlayer(info.id, false, info.isAi, mockLogger)
         if (info.isAi) {
             player.ai = new SimpleAI()
         }
@@ -85,6 +85,7 @@ describe('Advanced Mahjong Rules', () => {
             managers.ruleEffectManager,
             managers.ruleManager,
             DEFAULT_4P_RULES,
+            mockLogger,
         )
         game.startGame(roomId)
     })
@@ -127,7 +128,7 @@ describe('Advanced Mahjong Rules', () => {
 
             // Make all but p4 riichi
             players.forEach((p) => {
-                if (p.getId() !== p4.getId()) {
+                if (p.id !== p4.id) {
                     p.isRiichi = true
                 }
             })
@@ -156,7 +157,7 @@ describe('Advanced Mahjong Rules', () => {
             p4.setPoints(10000)
             const tile = '2s'
 
-            const result = game.discardTile(roomId, p4.getId(), tile, true)
+            const result = game.discardTile(roomId, p4.id, tile, true)
 
             expect(result.reason).toBe('ryuukyoku')
             const endEvent = result.events.find(
@@ -250,7 +251,7 @@ describe('Advanced Mahjong Rules', () => {
 
             // Should NOT be ryuukyoku (going for Suukantsu)
             expect(result.reason).not.toBe('ryuukyoku')
-            expect(p1.getMelds().length).toBe(4)
+            expect(p1.melds.length).toBe(4)
         })
 
         it('should process Triple Ron when 3 players declare Ron on the same tile', () => {
@@ -368,19 +369,27 @@ describe('Advanced Mahjong Rules', () => {
             }
             // Populate pendingActions so performAction is allowed
             game.actionManager.pendingActions = {
-                'p2': { pon: true }
+                p2: { pon: true },
             }
 
             // Setup p2 hand for Pon (update all instances to handle potential mismatch)
-            game.getPlayers().forEach(p => {
-                if (p.getId() === 'p2') {
-                    (p as TestPlayer).setHand([new Tile('m', 1, false, 1), new Tile('m', 1, false, 2)])
+            game.getPlayers().forEach((p) => {
+                if (p.id === 'p2') {
+                    ;(p as TestPlayer).setHand([
+                        new Tile('m', 1, false, 1),
+                        new Tile('m', 1, false, 2),
+                    ])
                 }
             })
 
             // Use performAction to simulate stealing (Pon)
-            const actionResult = game.performAction(roomId, 'p2', 'pon', '1m', ['1m', '1m'])
-            expect(actionResult.events.some(e => e.eventName === 'error')).toBe(false)
+            const actionResult = game.performAction(roomId, 'p2', 'pon', '1m', [
+                '1m',
+                '1m',
+            ])
+            expect(
+                actionResult.events.some((e) => e.eventName === 'error'),
+            ).toBe(false)
 
             // Manually set points
             players.forEach((p) => (p.points = 25000))
@@ -538,7 +547,7 @@ describe('Advanced Mahjong Rules', () => {
                 reason: 'ron',
                 winners: [
                     {
-                        winnerId: players[1].getId(),
+                        winnerId: players[1].id,
                         score: {
                             ten: 8000,
                             oya: [8000],
@@ -546,7 +555,7 @@ describe('Advanced Mahjong Rules', () => {
                         } as unknown as ScoreCalculation,
                     },
                     {
-                        winnerId: players[2].getId(),
+                        winnerId: players[2].id,
                         score: {
                             ten: 8000,
                             oya: [8000],
@@ -554,7 +563,7 @@ describe('Advanced Mahjong Rules', () => {
                         } as unknown as ScoreCalculation,
                     },
                 ],
-                loserId: players[0].getId(),
+                loserId: players[0].id,
             })
 
             // p2 (Head-bump): 25000 + 8000 (base) + 300 (honba) + 1000 (kyotaku) = 34300
@@ -576,7 +585,7 @@ describe('Advanced Mahjong Rules', () => {
             game.setOyaIndex(3)
 
             // Force initial seat order to match current players array
-            const playerIds = players.map((p) => p.getId())
+            const playerIds = players.map((p) => p.id)
             game.roundManager.initialPlayerOrder = playerIds
 
             // Give everyone same points
@@ -589,7 +598,7 @@ describe('Advanced Mahjong Rules', () => {
                 reason: 'ron',
                 winners: [
                     {
-                        winnerId: players[0].getId(),
+                        winnerId: players[0].id,
                         score: {
                             ten: 8000,
                             oya: [8000],
@@ -597,7 +606,7 @@ describe('Advanced Mahjong Rules', () => {
                         } as unknown as ScoreCalculation,
                     },
                 ],
-                loserId: players[1].getId(),
+                loserId: players[1].id,
             })
 
             expect(result.isGameOver).toBe(true)
@@ -609,10 +618,10 @@ describe('Advanced Mahjong Rules', () => {
             }[]
             // p[0] is Rank 1
             // p[2] and p[3] tied at 25000. p[2] was earlier in order.
-            expect(ranking[0].id).toBe(players[0].getId())
-            expect(ranking[1].id).toBe(players[2].getId()) // Rank 2
-            expect(ranking[2].id).toBe(players[3].getId()) // Rank 3
-            expect(ranking[3].id).toBe(players[1].getId()) // Rank 4
+            expect(ranking[0].id).toBe(players[0].id)
+            expect(ranking[1].id).toBe(players[2].id) // Rank 2
+            expect(ranking[2].id).toBe(players[3].id) // Rank 3
+            expect(ranking[3].id).toBe(players[1].id) // Rank 4
         })
     })
 })

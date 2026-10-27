@@ -1,6 +1,7 @@
 import { Injectable, LoggerService } from '@nestjs/common'
 import * as winston from 'winston'
 import chalk from 'chalk'
+import safeStringify from 'fast-safe-stringify'
 import { convertUtcToKst } from '@src/common/utils/date.utils'
 import { ENV } from '@src/common/utils/env'
 
@@ -23,16 +24,20 @@ export class WinstonLoggerService implements LoggerService {
                         return convertUtcToKst(utcDate)
                     },
                 }),
-                winston.format.printf(({ timestamp, level, message }) => {
-                    return `[${String(timestamp)}] ${level}: ${String(message)}`
-                }),
+                winston.format.printf(
+                    ({ timestamp, level, message, context }) => {
+                        const contextStr =
+                            typeof context === 'string' ? ` [${context}]` : ''
+                        return `[${String(timestamp)}] ${level}:${contextStr} ${String(message)}`
+                    },
+                ),
             ),
             transports: [
                 new winston.transports.Console({
                     format: winston.format.combine(
                         winston.format.timestamp(),
                         winston.format.printf(
-                            ({ timestamp, level, message }) => {
+                            ({ timestamp, level, message, context }) => {
                                 let levelStr = level
                                 if (level === 'info') {
                                     levelStr = chalk.green(level)
@@ -41,7 +46,11 @@ export class WinstonLoggerService implements LoggerService {
                                 } else if (level === 'error') {
                                     levelStr = chalk.red(level)
                                 }
-                                return `[${chalk.cyan(String(timestamp))}] [${levelStr}] ${String(message)}`
+                                const contextStr =
+                                    typeof context === 'string'
+                                        ? ` [${chalk.magenta(context)}]`
+                                        : ''
+                                return `[${chalk.cyan(String(timestamp))}] [${levelStr}]${contextStr} ${String(message)}`
                             },
                         ),
                     ),
@@ -50,23 +59,37 @@ export class WinstonLoggerService implements LoggerService {
         })
     }
 
-    log(message: unknown) {
-        this.logger.info(JSON.stringify(message, null, 0))
+    log(message: string | object | number | boolean, context?: string) {
+        if (typeof message === 'string') {
+            this.logger.info(message, { context })
+        } else {
+            this.logger.info(safeStringify(message), { context })
+        }
     }
 
-    error(message: string, trace?: string) {
-        this.logger.error(`${message}${trace ? ` - ${trace}` : ''}`)
+    error(message: string | object, trace?: string, context?: string) {
+        const msg =
+            typeof message === 'string' ? message : safeStringify(message)
+        this.logger.error(`${msg}${trace ? ` - ${trace}` : ''}`, {
+            context,
+        })
     }
 
-    warn(message: string) {
-        this.logger.warn(message)
+    warn(message: string | object, context?: string) {
+        const msg =
+            typeof message === 'string' ? message : safeStringify(message)
+        this.logger.warn(msg, { context })
     }
 
-    debug(message: string) {
-        this.logger.debug(message)
+    debug(message: string | object, context?: string) {
+        const msg =
+            typeof message === 'string' ? message : safeStringify(message)
+        this.logger.debug(msg, { context })
     }
 
-    verbose(message: string) {
-        this.logger.verbose(message)
+    verbose(message: string | object, context?: string) {
+        const msg =
+            typeof message === 'string' ? message : safeStringify(message)
+        this.logger.verbose(msg, { context })
     }
 }

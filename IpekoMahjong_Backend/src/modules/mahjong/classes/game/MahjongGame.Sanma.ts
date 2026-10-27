@@ -9,6 +9,7 @@ import { AbstractRuleEffectManager } from '@src/modules/mahjong/classes/managers
 import { RuleManager } from '@src/modules/mahjong/classes/managers/RuleManager'
 
 import { GameRulesConfig } from '@src/modules/mahjong/interfaces/game-rules.config'
+import { WinstonLoggerService } from '@src/common/logger/winston.logger.service'
 
 export class SanmaMahjongGame extends AbstractMahjongGame {
     constructor(
@@ -19,6 +20,7 @@ export class SanmaMahjongGame extends AbstractMahjongGame {
         ruleEffectManager: AbstractRuleEffectManager,
         ruleManager: RuleManager,
         gameRulesConfig: GameRulesConfig,
+        protected readonly logger: WinstonLoggerService,
     ) {
         super(
             playerInfos,
@@ -28,6 +30,7 @@ export class SanmaMahjongGame extends AbstractMahjongGame {
             ruleEffectManager,
             ruleManager,
             gameRulesConfig,
+            logger,
         )
     }
 

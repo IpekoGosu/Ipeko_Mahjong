@@ -4,37 +4,23 @@ import {
     WinContext,
 } from '@src/modules/mahjong/interfaces/mahjong.types'
 import { Player } from '@src/modules/mahjong/classes/player.class'
+import { Tile } from '@src/modules/mahjong/classes/tile.class'
 import Riichi from 'riichi'
-import { Injectable, Logger } from '@nestjs/common'
+import { Injectable } from '@nestjs/common'
+import { WinstonLoggerService } from '@src/common/logger/winston.logger.service'
 
 @Injectable()
 export class RuleManager {
-    private readonly logger = new Logger(RuleManager.name)
+    constructor(private readonly logger: WinstonLoggerService) {}
 
-    getActualDora(indicator: string): string {
-        const rank = parseInt(indicator[0])
-        const suit = indicator[1]
-
-        if (suit === 'z') {
-            if (rank <= 4) {
-                // Winds: E->S->W->N->E (1->2->3->4->1)
-                return `${(rank % 4) + 1}z`
-            } else {
-                // Dragons: White->Green->Red->White (5->6->7->5)
-                return rank === 7 ? '5z' : `${rank + 1}z`
-            }
-        } else {
-            // Numbers: 1-9-1
-            // Handle aka dora indicator (0) - technically doesn't happen but safe to handle as 5
-            const actualRank = rank === 0 ? 5 : rank
-            return `${(actualRank % 9) + 1}${suit}`
-        }
+    getActualDora(indicator: string, isSanma: boolean = false): string {
+        return Tile.getDoraFromIndicator(indicator, isSanma)
     }
 
     getRiichiDiscards(player: Player): string[] {
         if (!player.isHandClosed() || player.isRiichi) return []
 
-        const hand = player.getHand()
+        const hand = player.hand
         const uniqueTiles = Array.from(new Set(hand.map((t) => t.toString())))
         const validDiscards: string[] = []
 
@@ -60,7 +46,8 @@ export class RuleManager {
             } catch (e) {
                 this.logger.error(
                     `Error calculating shanten for tile ${tileStr}:`,
-                    e,
+                    String(e),
+                    RuleManager.name,
                 )
             }
         }
@@ -69,7 +56,7 @@ export class RuleManager {
     }
 
     getAnkanOptions(player: Player): string[] {
-        const hand = player.getHand()
+        const hand = player.hand
         const counts: Record<string, number> = {}
         hand.forEach((t) => {
             const s = t.toString()
@@ -96,7 +83,7 @@ export class RuleManager {
                 // Current waits
                 // We need waits for the 13-tile hand (before drawing the 4th tile)
                 const currentHand = hand.filter(
-                    (t) => t.id !== player.lastDrawnTile!.id,
+                    (t) => t.id !== player.lastDrawnTile?.id,
                 )
                 const currentHandStr = this.convertTilesToRiichiString(
                     currentHand.map((t) => t.toString()),
@@ -122,7 +109,8 @@ export class RuleManager {
                 } catch (e) {
                     this.logger.error(
                         'Error calculating current waits for Ankan check',
-                        e,
+                        String(e),
+                        RuleManager.name,
                     )
                     return false
                 }
@@ -137,9 +125,9 @@ export class RuleManager {
                 )
 
                 // Add existing melds
-                const melds = player.getMelds()
+                const melds = player.melds
                 melds.forEach((meld) => {
-                    const suit = meld.tiles[0].getSuit()
+                    const suit = meld.tiles[0].suit
                     const ranks = meld.tiles
                         .map((t) => t.toString()[0])
                         .sort()
@@ -177,7 +165,11 @@ export class RuleManager {
 
                     return true
                 } catch (e) {
-                    this.logger.error('Error simulating Ankan waits', e)
+                    this.logger.error(
+                        'Error simulating Ankan waits',
+                        String(e),
+                        RuleManager.name,
+                    )
                     return false
                 }
             })
@@ -189,8 +181,8 @@ export class RuleManager {
     getKakanOptions(player: Player): string[] {
         if (player.isRiichi) return [] // Cannot Kakan in Riichi
 
-        const hand = player.getHand()
-        const melds = player.getMelds()
+        const hand = player.hand
+        const melds = player.melds
         const ponMelds = melds.filter((m) => m.type === 'pon')
 
         if (ponMelds.length === 0) return []
@@ -199,13 +191,9 @@ export class RuleManager {
         ponMelds.forEach((pon) => {
             // Pon tiles are all same, take first
             const ponTile = pon.tiles[0]
-            const rank = ponTile.getRank()
-            const suit = ponTile.getSuit()
 
             // Check if we have the 4th tile in hand
-            const match = hand.find(
-                (t) => t.getRank() === rank && t.getSuit() === suit,
-            )
+            const match = hand.find((t) => t.equalsIgnoreRed(ponTile))
             if (match) {
                 options.push(match.toString())
             }
@@ -215,14 +203,14 @@ export class RuleManager {
     }
 
     calculateFuriten(player: Player): boolean {
-        const hand = player.getHand().map((t) => t.toString())
+        const hand = player.hand.map((t) => t.toString())
         const handStr = this.convertTilesToRiichiString(hand)
         const result = new Riichi(handStr).calc() as RiichiResult
 
         // hairi.now 0 means Tenpai
         if (result.hairi?.now === 0 && result.hairi.wait) {
             const waits = Object.keys(result.hairi.wait)
-            const discards = player.getDiscards().map((t) => t.toString())
+            const discards = player.discards.map((t) => t.toString())
 
             // Check if any discard is in waits
             return discards.some((d) => waits.includes(d))
@@ -233,10 +221,10 @@ export class RuleManager {
 
     getWaits(player: Player): string[] {
         let handStr = player.getHandStringForRiichi()
-        const melds = player.getMelds()
+        const melds = player.melds
         if (melds.length > 0) {
             melds.forEach((meld) => {
-                const suit = meld.tiles[0].getSuit()
+                const suit = meld.tiles[0].suit
                 const ranks = meld.tiles
                     .map((t) => {
                         const s = t.toString()
@@ -261,41 +249,43 @@ export class RuleManager {
             return Array.from(new Set(waits))
         } catch (e) {
             this.logger.error(
-                `Error getting waits for player ${player.getId()}:`,
-                e,
+                `Error getting waits for player ${player.id}:`,
+                String(e),
+                RuleManager.name,
             )
             return []
         }
     }
 
     countTerminalsAndHonors(player: Player): number {
-        const hand = player.getHand()
+        const hand = player.hand
         const uniqueTiles = new Set<string>()
 
         hand.forEach((tile) => {
-            const rank = tile.getRank()
-            const suit = tile.getSuit()
-
-            // Check if terminal or honor
-            if (suit === 'z' || rank === 1 || rank === 9) {
-                uniqueTiles.add(`${rank}${suit}`)
+            if (tile.isTerminalOrHonor()) {
+                uniqueTiles.add(tile.toIgnoreRedString())
             }
         })
 
         return uniqueTiles.size
     }
 
-    getActualDoraList(indicators: string[]): string[] {
-        return indicators.map((indicator) => this.getActualDora(indicator))
+    getActualDoraList(
+        indicators: string[],
+        isSanma: boolean = false,
+    ): string[] {
+        return indicators.map((indicator) =>
+            this.getActualDora(indicator, isSanma),
+        )
     }
 
     isTenpai(player: Player): boolean {
         // Construct hand string including melds
         let handStr = player.getHandStringForRiichi()
-        const melds = player.getMelds()
+        const melds = player.melds
         if (melds.length > 0) {
             melds.forEach((meld) => {
-                const suit = meld.tiles[0].getSuit()
+                const suit = meld.tiles[0].suit
                 const ranks = meld.tiles
                     .map((t) => {
                         const s = t.toString()
@@ -315,8 +305,9 @@ export class RuleManager {
             )
         } catch (e) {
             this.logger.error(
-                `Error checking Tenpai for player ${player.getId()}:`,
-                e,
+                `Error checking Tenpai for player ${player.id}:`,
+                String(e),
+                RuleManager.name,
             )
             return false
         }
@@ -342,16 +333,17 @@ export class RuleManager {
     calculateScore(
         player: Player,
         context: WinContext,
+        isSanma: boolean = false,
     ): ScoreCalculation | null {
         // 1. Construct Hand String
         let handStr = player.getHandStringForRiichi()
 
         // Add melds
-        const melds = player.getMelds()
+        const melds = player.melds
         if (melds.length > 0) {
             melds.forEach((meld) => {
                 // The riichi library expects melds in format: "123m" or "111z"
-                const suit = meld.tiles[0].getSuit()
+                const suit = meld.tiles[0].suit
                 const ranks = meld.tiles
                     .map((t) => {
                         const s = t.toString()
@@ -364,16 +356,22 @@ export class RuleManager {
         }
 
         // Add winning tile for Ron as a separate segment
-        // This sets isTsumo = false in the library constructor automatically
+        // Or if 13 tiles are in hand for Tsumo, append winningTile to identify agari tile
         if (!context.isTsumo) {
             if (!context.winningTile) {
-                this.logger.error('Winning tile required for Ron')
+                this.logger.error(
+                    'Winning tile required for Ron',
+                    undefined,
+                    RuleManager.name,
+                )
                 return null
             }
             handStr += `+${context.winningTile}`
+        } else if (context.winningTile && player.hand.length === 13) {
+            handStr += `+${context.winningTile}`
         }
 
-        // 3. Construct Extra String (Situational Yaku)
+        // 3. Construct Extra String (Situational Yaku & Winds)
         let extra = ''
         if (context.isRiichi) extra += 'r'
         if (context.isDoubleRiichi) extra += 'w'
@@ -382,13 +380,17 @@ export class RuleManager {
         if (context.isRinshan || context.isChankan) extra += 'k'
         if (context.isTenhou || context.isChiihou) extra += 't'
 
+        const bakazeNum = parseInt(context.bakaze[0])
+        const jikazeNum = parseInt(context.seatWind[0])
+        extra += `${bakazeNum}${jikazeNum}`
+
         const riichi = new Riichi(handStr)
-        const dora = context.dora.map((d) => this.getActualDora(d))
+        const dora = context.dora.map((d) => this.getActualDora(d, isSanma))
 
         // Add Uradora if Riichi
         if (context.isRiichi && context.uradora) {
             const uradoraList = context.uradora.map((u) =>
-                this.getActualDora(u),
+                this.getActualDora(u, isSanma),
             )
             dora.push(...uradoraList)
         }
@@ -433,9 +435,10 @@ export class RuleManager {
         player: Player,
         tileString: string,
         context: WinContext,
+        isSanma: boolean = false,
     ): { isAgari: boolean; score?: ScoreCalculation } {
         const ctx = { ...context, winningTile: tileString }
-        const score = this.calculateScore(player, ctx)
+        const score = this.calculateScore(player, ctx, isSanma)
         return {
             isAgari: !!score,
             score: score || undefined,

@@ -2,21 +2,21 @@ import { SanmaMahjongGame } from '@src/modules/mahjong/classes/game/MahjongGame.
 import { Tile } from '@src/modules/mahjong/classes/tile.class'
 import { Player } from '@src/modules/mahjong/classes/player.class'
 import { ScoreCalculation } from '@src/modules/mahjong/interfaces/mahjong.types'
-import { createTestSanmaManagers } from '../test_utils'
+import { createTestSanmaManagers, mockLogger } from '../test_utils'
 import { DEFAULT_3P_RULES } from '@src/modules/mahjong/interfaces/game-rules.config'
 
 class TestPlayer extends Player {
     public setHand(tiles: Tile[]) {
-        this.hand = tiles
+        this._hand = tiles
     }
     public setPoints(p: number) {
-        this.points = p
+        this._points = p
     }
 }
 
 class TestSanmaMahjongGame extends SanmaMahjongGame {
     protected createPlayer(info: { id: string; isAi: boolean }): Player {
-        const player = new TestPlayer(info.id, false, info.isAi)
+        const player = new TestPlayer(info.id, false, info.isAi, mockLogger)
         return player
     }
 
@@ -82,10 +82,11 @@ describe('Mahjong Sanma - Pao (Responsibility Payment) Rules', () => {
             managers.ruleEffectManager,
             managers.ruleManager,
             DEFAULT_3P_RULES,
+            mockLogger,
         )
-        const p1 = new TestPlayer('p1', true, false)
-        const p2 = new TestPlayer('p2', false, false)
-        const p3 = new TestPlayer('p3', false, false)
+        const p1 = new TestPlayer('p1', true, false, mockLogger)
+        const p2 = new TestPlayer('p2', false, false, mockLogger)
+        const p3 = new TestPlayer('p3', false, false, mockLogger)
         game.setPlayers([p1, p2, p3])
         game.roundManager.initialize(['p1', 'p2', 'p3'])
         game.setOyaIndex(0) // p1 is Oya
@@ -130,8 +131,8 @@ describe('Mahjong Sanma - Pao (Responsibility Payment) Rules', () => {
         // p3: 35000 - 24000 = 11000
 
         expect(p1.points).toBe(83300)
-        expect(players.find((p) => p.getId() === 'p2')?.points).toBe(10700)
-        expect(players.find((p) => p.getId() === 'p3')?.points).toBe(11000)
+        expect(players.find((p) => p.id === 'p2')?.points).toBe(10700)
+        expect(players.find((p) => p.id === 'p3')?.points).toBe(11000)
     })
 
     it('should handle Tsumo Pao in Sanma', () => {
@@ -164,9 +165,7 @@ describe('Mahjong Sanma - Pao (Responsibility Payment) Rules', () => {
 
         // p3 (responsible) should pay all 48000
         expect(p1.points).toBe(83000)
-        expect(players.find((p) => p.getId() === 'p3')?.points).toBe(
-            35000 - 48000,
-        ) // -13000
-        expect(players.find((p) => p.getId() === 'p2')?.points).toBe(35000)
+        expect(players.find((p) => p.id === 'p3')?.points).toBe(35000 - 48000) // -13000
+        expect(players.find((p) => p.id === 'p2')?.points).toBe(35000)
     })
 })

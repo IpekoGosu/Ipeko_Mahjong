@@ -6,11 +6,9 @@ import {
     ScoreCalculation,
     MeldType,
 } from '@src/modules/mahjong/interfaces/mahjong.types'
-import { Logger } from '@nestjs/common'
+import { WinstonLoggerService } from '@src/common/logger/winston.logger.service'
 
 export abstract class AbstractActionManager {
-    protected readonly logger = new Logger(this.constructor.name)
-
     public pendingActions: Record<string, PossibleActions> = {}
     public activeDiscard: { playerId: string; tile: Tile } | null = null
     public anyCallDeclared: boolean = false
@@ -20,6 +18,8 @@ export abstract class AbstractActionManager {
     public potentialRonners: string[] = []
     public receivedRonCommands: { playerId: string; tileString: string }[] = []
     public processedRonners: string[] = []
+
+    constructor(protected readonly logger: WinstonLoggerService) {}
 
     public reset() {
         this.pendingActions = {}
@@ -110,7 +110,7 @@ export abstract class AbstractActionManager {
             {
                 eventName: 'update-meld',
                 payload: {
-                    playerId: player.getId(),
+                    playerId: player.id,
                     type: actionType,
                     tiles: meldTiles.map((t) => t.toString()),
                     stolenFrom: stolenFromId,
@@ -141,11 +141,8 @@ export abstract class AbstractActionManager {
         meldTiles?: Tile[]
         tilesToMove?: string[]
     } {
-        const rank = Tile.parseRank(tileString)
-        const suit = tileString[1]
-        const matches = player
-            .getHand()
-            .filter((t) => t.getRank() === rank && t.getSuit() === suit)
+        const targetTile = Tile.fromString(tileString)
+        const matches = player.hand.filter((t) => t.equalsIgnoreRed(targetTile))
         if (matches.length < 4)
             return { success: false, error: 'Not enough tiles' }
 
@@ -167,21 +164,14 @@ export abstract class AbstractActionManager {
         meldTiles?: Tile[]
         tilesToMove?: string[]
     } {
-        const rank = Tile.parseRank(tileString)
-        const suit = tileString[1]
-        const tile = player
-            .getHand()
-            .find((t) => t.getRank() === rank && t.getSuit() === suit)
+        const targetTile = Tile.fromString(tileString)
+        const tile = player.hand.find((t) => t.equalsIgnoreRed(targetTile))
         if (!tile) return { success: false, error: 'Tile not in hand' }
 
-        const ponMeld = player
-            .getMelds()
-            .find(
-                (m) =>
-                    m.type === 'pon' &&
-                    m.tiles[0].getRank() === rank &&
-                    m.tiles[0].getSuit() === suit,
-            )
+        const ponMeld = player.melds.find(
+            (m) => m.type === 'pon' && m.tiles[0].equalsIgnoreRed(targetTile),
+        )
+
         if (!ponMeld)
             return {
                 success: false,
@@ -228,7 +218,7 @@ export abstract class AbstractActionManager {
         }
 
         // Remove from discarder's discard pile
-        const discarder = players.find((p) => p.getId() === stolenFromId)
+        const discarder = players.find((p) => p.id === stolenFromId)
         if (discarder) {
             discarder.removeDiscard(stolenTile.toString())
             discarder.isNagashiEligible = false
@@ -261,6 +251,7 @@ export abstract class AbstractActionManager {
             isHoutei: boolean
         },
         isKakan?: boolean,
+        isSanma?: boolean,
     ): Record<string, PossibleActions>
 
     public abstract performAction(
@@ -288,6 +279,7 @@ export abstract class AbstractActionManager {
             isHoutei: boolean
         },
         isKakan?: boolean,
+        isSanma?: boolean,
     ): { isAgari: boolean; score?: ScoreCalculation }
 
     public abstract verifyTsumo(
@@ -300,5 +292,6 @@ export abstract class AbstractActionManager {
             isHaitei: boolean
             rinshanFlag: boolean
         },
+        isSanma?: boolean,
     ): { isAgari: boolean; score?: ScoreCalculation }
 }

@@ -2,7 +2,6 @@ import { Module, Scope, Type } from '@nestjs/common'
 import { MahjongGateway } from '@src/modules/mahjong/mahjong.gateway'
 import { GameRoomService } from '@src/modules/mahjong/service/game-room.service'
 import { GameRoomServiceImpl } from '@src/modules/mahjong/service/impl/game-room.service.impl'
-import { WinstonLoggerService } from '@src/common/logger/winston.logger.service'
 import { AuthModule } from '@src/modules/authorization/auth.module'
 import { MahjongFactory } from '@src/modules/mahjong/mahjong.factory'
 import { RoundManager4p } from '@src/modules/mahjong/classes/managers/RoundManager.4p'
@@ -14,6 +13,7 @@ import { SimpleAI } from '@src/modules/mahjong/classes/ai/simple.ai'
 import { MahjongAI } from '@src/modules/mahjong/classes/ai/MahjongAI'
 import { RuleEffectManager } from '@src/modules/mahjong/classes/managers/RuleEffectManager'
 import { RuleManager } from '@src/modules/mahjong/classes/managers/RuleManager'
+import { WinstonLoggerModule } from '@src/common/logger/winston.logger.module'
 
 const createTransientProvider = <T>(token: Type<T>) => ({
     provide: token,
@@ -22,14 +22,13 @@ const createTransientProvider = <T>(token: Type<T>) => ({
 })
 
 @Module({
-    imports: [AuthModule],
+    imports: [AuthModule, WinstonLoggerModule],
     providers: [
         MahjongGateway,
         {
             provide: GameRoomService,
             useClass: GameRoomServiceImpl,
         },
-        WinstonLoggerService,
         MahjongFactory,
         RuleManager,
         createTransientProvider(RoundManager4p),
