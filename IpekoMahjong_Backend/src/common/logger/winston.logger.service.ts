@@ -1,6 +1,7 @@
 import { Injectable, LoggerService } from '@nestjs/common'
 import * as winston from 'winston'
 import chalk from 'chalk'
+import safeStringify from 'fast-safe-stringify'
 import { convertUtcToKst } from '@src/common/utils/date.utils'
 import { ENV } from '@src/common/utils/env'
 
@@ -58,29 +59,37 @@ export class WinstonLoggerService implements LoggerService {
         })
     }
 
-    log(message: unknown, context?: string) {
+    log(message: string | object | number | boolean, context?: string) {
         if (typeof message === 'string') {
             this.logger.info(message, { context })
         } else {
-            this.logger.info(JSON.stringify(message, null, 0), { context })
+            this.logger.info(safeStringify(message), { context })
         }
     }
 
-    error(message: string, trace?: string, context?: string) {
-        this.logger.error(`${message}${trace ? ` - ${trace}` : ''}`, {
+    error(message: string | object, trace?: string, context?: string) {
+        const msg =
+            typeof message === 'string' ? message : safeStringify(message)
+        this.logger.error(`${msg}${trace ? ` - ${trace}` : ''}`, {
             context,
         })
     }
 
-    warn(message: string, context?: string) {
-        this.logger.warn(message, { context })
+    warn(message: string | object, context?: string) {
+        const msg =
+            typeof message === 'string' ? message : safeStringify(message)
+        this.logger.warn(msg, { context })
     }
 
-    debug(message: string, context?: string) {
-        this.logger.debug(message, { context })
+    debug(message: string | object, context?: string) {
+        const msg =
+            typeof message === 'string' ? message : safeStringify(message)
+        this.logger.debug(msg, { context })
     }
 
-    verbose(message: string, context?: string) {
-        this.logger.verbose(message, { context })
+    verbose(message: string | object, context?: string) {
+        const msg =
+            typeof message === 'string' ? message : safeStringify(message)
+        this.logger.verbose(msg, { context })
     }
 }

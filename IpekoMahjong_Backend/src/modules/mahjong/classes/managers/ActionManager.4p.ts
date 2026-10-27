@@ -35,6 +35,7 @@ export class ActionManager4p extends AbstractActionManager {
             isHoutei: boolean
         },
         isKakan: boolean = false,
+        // _isSanma is unused here as 4p rules are fixed, retained to satisfy AbstractActionManager signature
         _isSanma: boolean = false,
     ): Record<string, PossibleActions> {
         const discarder = players.find((p) => p.id === discarderId)
