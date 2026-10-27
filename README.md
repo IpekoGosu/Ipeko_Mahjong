@@ -43,11 +43,20 @@ The goal of this project is to implement a complete Mahjong engine that adheres 
 ### Prerequisites
 - Node.js (v22+)
 - pnpm
-- MariaDB
+- Docker & Docker Compose
 
 ### Installation
 ```bash
 pnpm install:all
+```
+
+### Database Setup (Docker)
+```bash
+# Start local MySQL container
+pnpm docker:up
+
+# Deploy Prisma schema & migrations
+pnpm prisma:deploy
 ```
 
 ### Running the Project

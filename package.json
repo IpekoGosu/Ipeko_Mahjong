@@ -16,7 +16,10 @@
     "lint:backend": "pnpm --filter ipekomahjong_backend lint",
     "lint:frontend": "pnpm --filter ipeko-mahjong-frontend lint",
     "prisma:generate": "pnpm --filter ipekomahjong_backend exec ts-node -r tsconfig-paths/register node_modules/prisma/build/index.js generate",
-    "prisma:migrate": "pnpm --filter ipekomahjong_backend exec ts-node -r tsconfig-paths/register node_modules/prisma/build/index.js migrate dev"
+    "prisma:migrate": "pnpm --filter ipekomahjong_backend exec ts-node -r tsconfig-paths/register node_modules/prisma/build/index.js migrate dev",
+    "prisma:deploy": "pnpm --filter ipekomahjong_backend exec ts-node -r tsconfig-paths/register node_modules/prisma/build/index.js migrate deploy",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
